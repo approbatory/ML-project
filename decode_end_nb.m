@@ -1,6 +1,14 @@
 function [poss, err, err_map] = decode_end_nb(ds, step_size, final_pos)
-%DECODE_END_NB Summary of this function goes here
-%   Detailed explanation goes here
+%DECODE_END_NB Runs multinomial naive bayes on each position from 0 to
+%final_pos, with a specified step_size
+%   Takes a DaySummary object ds, a step_size and a final position
+%   (final_pos). Returns the vector poss, with each of the positions from 0
+%   to final_pos with step size 'step_size', the vector err with the
+%   classification error for each position in poss, and err_map with a
+%   logical array denoting which data elements, when left out from the
+%   training set, were correctly classified (this is leave-one-out
+%   cross-validation), so that the data points where the algorithm made
+%   mistakes can be analyzed or plotted.
 MIN_POS = 0;
 if ~exist('step_size', 'var')
     step_size = 0.05;
@@ -40,13 +48,7 @@ for j = 1:size(frame_of_interest,2)
         [log_prior, log_conditional] = multinom_nb_encode(X_train, ks_train, K);
         ks_predicted = multinom_nb_decode(X_test, log_prior, log_conditional);
         mistakes = sum(ks_test ~= ks_predicted);
-        %
-        %if mistakes~=0
-        %    fprintf('at pos %f: ', poss(j));
-        %    fprintf('class %d | ', ks_test(ks_test ~= ks_predicted));
-        %    disp(i);
-        %end
-        %
+
         total = length(ks_test);
         count = count + 1;
         err(j) = err(j) + (mistakes/total);

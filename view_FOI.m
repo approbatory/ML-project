@@ -1,6 +1,5 @@
 function view_FOI(frame_of_interest, pos)
-%VIEW_FOI Summary of this function goes here
-%   Detailed explanation goes here
+%VIEW_FOI Plot where the frames of interest are
 figure
 for i = 1:size(frame_of_interest,1)
     c = pos{i};

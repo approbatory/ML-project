@@ -1,6 +1,8 @@
 function [frame_of_interest, pos] = find_frame_at_pos(ds, poss)
-%FIND_FRAME_AT_POS Summary of this function goes here
-%   Detailed explanation goes here
+%FIND_FRAME_AT_POS For each position in poss, find frame closest to it in
+%each trial
+%   Return the relavant frames in each trial for each value in poss 'frame_of_interest'
+%   and the preprocessed xy positions in 'pos'
 pos = preprocess_xy(ds);
 start_labels = {ds.trials.start};
 frame_of_interest = zeros(length(ds.trials), length(poss));

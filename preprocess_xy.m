@@ -1,6 +1,5 @@
-function [pos] = preprocess_xy(ds)
-%PREPROCESS_XY Summary of this function goes here
-%   Detailed explanation goes here
+function pos = preprocess_xy(ds)
+%PREPROCESS_XY Rotate the xy-coordinates from ds and rescale from 0-1
 n_trials = length(ds.trials);
 
 pos = cell(n_trials,1);
@@ -12,7 +11,6 @@ all_pos = cell2mat(pos);
 mins = min(all_pos);
 maxs = max(all_pos);
 
-%all_pos_resc = (all_pos - mins)./(maxs - mins);
 for i = 1:n_trials
     pos{i} = (pos{i} - mins)./(maxs-mins);
 end

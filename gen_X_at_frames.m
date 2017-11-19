@@ -1,4 +1,5 @@
 function X = gen_X_at_frames(evs, frames)
+%generates the feature vector from the given events at the given frames
 assert(length(evs)==length(frames));
 n_trials = length(evs);
 n_cells = length(evs{1});

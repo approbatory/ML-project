@@ -1,18 +1,40 @@
 function view_err(ds, poss, err, err_map, label, varargin)
-%VIEW_ERR Summary of this function goes here
-%   Detailed explanation goes here
-save_figs = ~isempty(varargin) && strcmp(varargin{1}, 'save');
+%VIEW_ERR Plot error curves / error map from the output of decode_end_nb
+%optionally save the plots, or hide the appearance of the plots in windows
+save_figs = false;
+show_figs = true;
+savedir = '.';
+for k = 1:length(varargin)
+    if ischar(varargin{k})
+        switch varargin{k}
+            case 'save'
+                save_figs = true;
+                savedir = varargin{k+1};
+            case 'hide'
+                show_figs = false;
+        end
+    end
+end
 POS_LABEL = 'position along arm (0.25=middle of arm)';
-figure;
+if show_figs
+    figure;
+else
+    figure('Visible','Off');
+end
 plot(poss, err, '-x');
 title(sprintf('%s: End arm decoding (NB) vs. position', label));
 xlabel(POS_LABEL);
 ylabel('Leave-1-out x-val error');
 if save_figs
-    print(sprintf('Multinomial_NB_error_curve_for_%s.png',label), '-dpng');
+    fname = fullfile(savedir, sprintf('Multinomial_NB_error_curve_for_%s.png',label));
+    print(fname, '-dpng');
 end
 
-figure;
+if show_figs
+    figure;
+else
+    figure('Visible','Off');
+end
 imagesc(1 - err_map - (1-err_map).*0.1.*mod((1:size(err_map,1))',2));
 colormap('gray');
 [n_trials, n_pos] = size(err_map);
@@ -33,7 +55,8 @@ xlabel(POS_LABEL);
 ylabel('Trial number');
 title(sprintf('%s: Map of errors (black)', label));
 if save_figs
-    print(sprintf('Multinomial_NB_error_map_for_%s.png',label), '-dpng');
+    fname = fullfile(savedir,sprintf('Multinomial_NB_error_map_for_%s.png',label));
+    print(fname, '-dpng');
 end
 
 end
