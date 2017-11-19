@@ -9,7 +9,7 @@ cd(dir);
 sources = data_sources;
 %video is unnecessary:
 sources = rmfield(sources, 'behavior');
-if exist('cm01-fix', 'dir')
+if exist('cm01-fix4242342423424', 'dir')
     ds = DaySummary(sources, 'cm01-fix');
 elseif exist('cm01', 'dir')
     ds = DaySummary(sources, 'cm01');
@@ -26,6 +26,7 @@ elseif exist('cm01', 'dir')
     ds.cells = ds.cells(goodcells);
     for i=1:ds.num_trials
         ds.trials(i).events = ds.trials(i).events(goodcells);
+        ds.trials(i).traces = ds.trials(i).traces(goodcells,:);
     end
 end
 cd(start_dir);

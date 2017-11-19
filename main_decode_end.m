@@ -16,7 +16,7 @@ if ~exist('figs', 'dir')
     mkdir('figs');
 end
 for i = 1:3
-    ds = load_ds(fullfile(directory, days{i}));
+    ds = quick_ds(fullfile(directory, days{i}), 'deprobe', 'nocells');
     [poss, err, err_map] = decode_end_nb(ds, 0.005, 0.4);
     view_err(ds, poss, err, err_map, labels{i}, 'save', 'figs', 'hide');
 end
