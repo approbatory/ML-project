@@ -25,7 +25,9 @@ fclose(fid);
 %disp(XY);
 
 class_file_name = ls(fullfile('cm01','class*.txt'));
-class_file_name = class_file_name(1:end-1); %removing trailing newline
+if strcmp(class_file_name(end),newline)
+    class_file_name = class_file_name(1:end-1); %removing trailing newline
+end
 lines = strsplit(fileread(class_file_name), '\n');
 goodcells = [];
 for l=lines
@@ -37,7 +39,9 @@ ds.num_cells = length(goodcells);
 
 
 traces_filters_filename = ls(fullfile('cm01','rec*.mat'));
-traces_filters_filename = traces_filters_filename(1:end-1);
+if strcmp(traces_filters_filename(end), newline)
+    traces_filters_filename = traces_filters_filename(1:end-1);
+end
 %traces_filters = load(traces_filters_filename);
 %traces = traces_filters.traces(:,goodcells);
 s = load(traces_filters_filename, 'traces');
@@ -56,7 +60,9 @@ if ~nocells
 end
 
 events_fname = ls(fullfile('cm01','events*.mat'));
-events_fname = events_fname(1:end-1);
+if strcmp(events_fname(end), newline)
+    events_fname = events_fname(1:end-1);
+end
 events = load(events_fname);
 events.events = events.events(goodcells);
 events = events.events;
