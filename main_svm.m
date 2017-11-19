@@ -1,4 +1,3 @@
-%This is the main script for end-arm decoding:
 
 clear;
 directory = '~/brain/hpc/assets'; %replace with wherever your data is
@@ -19,14 +18,14 @@ end
 figure;
 for i = 1:3
     ds = quick_ds(fullfile(directory, days{i}), 'deprobe', 'nocells');
-    [poss, err, err_map] = decode_end_nb(ds, 0.005, 0.4);
+    fprintf('loaded %s\n', labels{i});
+    [poss, err, err_map] = decode_end_svm(ds, 0.005, 0.4);
     fprintf('trained %s\n', labels{i});
     plot(poss, err, '-x');
     hold on;
     %view_err(ds, poss, err, err_map, labels{i}, 'save', 'figs', 'hide');
 end
-
 xlabel('arm position');
-ylabel('Multinomial NB err');
-title('Multinomial NB errors vs. arm pos');
+ylabel('SVM err');
+title('SVM errors vs. arm pos');
 legend(labels{:});
