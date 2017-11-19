@@ -24,10 +24,11 @@ fclose(fid);
 %    'gate_close', 'trial_end'};
 %disp(XY);
 
-class_file_name = ls(fullfile('cm01','class*.txt'));
-if strcmp(class_file_name(end),newline)
-    class_file_name = class_file_name(1:end-1); %removing trailing newline
-end
+class_file_name = file_pattern('cm01', 'class*.txt');
+%class_file_name = ls(fullfile('cm01','class*.txt'));
+%if strcmp(class_file_name(end),newline)
+%    class_file_name = class_file_name(1:end-1); %removing trailing newline
+%end
 lines = strsplit(fileread(class_file_name), '\n');
 goodcells = [];
 for l=lines
@@ -38,10 +39,11 @@ end
 ds.num_cells = length(goodcells);
 
 
-traces_filters_filename = ls(fullfile('cm01','rec*.mat'));
-if strcmp(traces_filters_filename(end), newline)
-    traces_filters_filename = traces_filters_filename(1:end-1);
-end
+traces_filters_filename = file_pattern('cm01', 'rec*.mat');
+%traces_filters_filename = ls(fullfile('cm01','rec*.mat'));
+%if strcmp(traces_filters_filename(end), newline)
+%    traces_filters_filename = traces_filters_filename(1:end-1);
+%end
 %traces_filters = load(traces_filters_filename);
 %traces = traces_filters.traces(:,goodcells);
 s = load(traces_filters_filename, 'traces');
@@ -59,10 +61,11 @@ if ~nocells
     end
 end
 
-events_fname = ls(fullfile('cm01','events*.mat'));
-if strcmp(events_fname(end), newline)
-    events_fname = events_fname(1:end-1);
-end
+events_fname = file_pattern('cm01', 'events*.mat');
+%events_fname = ls(fullfile('cm01','events*.mat'));
+%if strcmp(events_fname(end), newline)
+%    events_fname = events_fname(1:end-1);
+%end
 events = load(events_fname);
 events.events = events.events(goodcells);
 events = events.events;
@@ -145,4 +148,12 @@ ds_deprobed = ds;
 ds_deprobed.trials = ds_deprobed.trials(mask);
 ds_deprobed.trial_indices = ds_deprobed.trial_indices(mask,:);
 ds_deprobed.num_trials = sum(mask);
+end
+
+function res = file_pattern(d, pat)
+    S = dir(fullfile(d,pat));
+    if numel(S) ~= 1
+        error('Too many such files %s/%s', d, pat);
+    end
+    res = fullfile(S.folder, S.name);
 end
