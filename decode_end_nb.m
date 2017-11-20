@@ -1,4 +1,4 @@
-function [poss, err, err_map] = decode_end_nb(ds, step_size, final_pos)
+function [poss, err, err_map] = decode_end_nb(ds, step_size, final_pos, gen_all_X_at_pos)
 %DECODE_END_NB Runs multinomial naive bayes on each position from 0 to
 %final_pos, with a specified step_size
 %   Takes a DaySummary object ds, a step_size and a final position
@@ -16,25 +16,29 @@ end
 if ~exist('final_pos', 'var')
     final_pos = 0.4;
 end
+if ~exist('gen_X_at_pos', 'var')
+    gen_all_X_at_pos = @gen_all_X_at_pos_closest;
+end
 
 label_to_class = containers.Map({'north','south','east','west'},{1,2,3,4});
 %class_to_label = containers.Map({1,2,3,4},{'north','south','east','west'});
 
 end_labels = {ds.trials.end};
-evs = {ds.trials.events};
 poss = MIN_POS:step_size:final_pos;
-[frame_of_interest, ~] = find_frame_at_pos(ds, poss);
 
-ks = zeros(1,size(frame_of_interest,1));
+ks = zeros(1, ds.num_trials);
 K = 4;
-for i=1:size(frame_of_interest,1)
+for i=1:ds.num_trials
     ks(i) = label_to_class(end_labels{i});
 end
 
-err = zeros(1,size(frame_of_interest,2));
-err_map = zeros(size(frame_of_interest));
-for j = 1:size(frame_of_interest,2)
-    X = gen_X_at_frames(evs, frame_of_interest(:,j));
+err = zeros(1, size(poss, 2));
+err_map = zeros(ds.num_trials, size(poss, 2));
+
+X_all = gen_all_X_at_pos(ds, poss);
+
+for j = 1:size(poss, 2)
+    X = X_all(:,:,j);
     mask = false(1,size(X,2));
     
     count = 0;

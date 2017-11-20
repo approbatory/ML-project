@@ -7,6 +7,11 @@ pos = preprocess_xy(ds);
 start_labels = {ds.trials.start};
 frame_of_interest = zeros(length(ds.trials), length(poss));
 for i = 1:length(ds.trials)
+%     distance_to_center = sqrt(sum( (pos{i}-[0.5, 0.5]).^2, 2));
+%     [M, I] = min(distance_to_center);
+%     path_distace = [M - distance_to_center(1:(I-1)); distance_to_center(I:end) - M ];
+%     tr_pos = (path_distace - min(path_distace))/(max(path_distace) - min(path_distace));
+
     xs = pos{i}(:,1);
     ys = pos{i}(:,2);
     sl = start_labels{i};
@@ -21,8 +26,12 @@ for i = 1:length(ds.trials)
     else
         error('%s is an invalid value',sl);
     end
+    start_to_end_indexes = ...
+        (ds.trial_indices(i,2):ds.trial_indices(i,3)) - ds.trial_indices(i,1) + 1;
+    
     for j = 1:length(poss)
-        frame_after = find(tr_pos > poss(j),1);
+        frame_after = find(tr_pos(start_to_end_indexes) > poss(j),1) ...
+            + start_to_end_indexes(1) - 1;
         if isempty(frame_after)
             continue;
         end
