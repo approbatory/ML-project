@@ -19,8 +19,7 @@ end
 %figure;
 for i = 1:3
     ds = quick_ds(fullfile(directory, days{i}), 'deprobe', 'nocells');
-    [poss, err, err_map] = decode_end_nb(ds, 0.005, 0.4, ...
-                                         @gen_all_X_at_pos_closest_shuffled_start_keeped);
+    [poss, err, err_map] = decode_end_nb(ds, 0.005, 0.4, true);
     fprintf('trained %s\n', labels{i});
     plot(poss, err, '-x');
     hold on;
@@ -29,5 +28,5 @@ end
 
 xlabel('arm position');
 ylabel('Multinomial NB err');
-title('Multinomial NB errors vs. arm pos SHUFFLED (START ARM KEEPED)');
+title('Multinomial NB errors vs. arm pos SHUFFLED');
 legend(labels{:});

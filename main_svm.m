@@ -2,7 +2,7 @@
 clear;
 rng(10);
 
-directory = '~/brain/hpc/assets'; %replace with wherever your data is
+directory = '../c14m4'; %replace with wherever your data is
 
 labels{1} = 'd15, ego left';
 days{1} = 'c14m4d15';
@@ -21,7 +21,7 @@ figure;
 for i = 1:3
     ds = quick_ds(fullfile(directory, days{i}), 'deprobe', 'nocells');
     fprintf('loaded %s\n', labels{i});
-    [poss, err, err_map] = decode_end_svm(ds, 0.005, 0.4, @gen_all_X_at_pos_closest_shuffled);
+    [poss, err, err_map] = decode_end_svm(ds, 0.005, 0.4, true);
     fprintf('trained %s\n', labels{i});
     plot(poss, err, '-x');
     hold on;
