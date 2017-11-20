@@ -1,5 +1,7 @@
 
 clear;
+rng(10);
+
 directory = '~/brain/hpc/assets'; %replace with wherever your data is
 
 labels{1} = 'd15, ego left';
