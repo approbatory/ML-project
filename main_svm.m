@@ -2,7 +2,7 @@
 clear;
 rng(10);
 
-directory = '../c14m4'; %replace with wherever your data is
+directory = '~/brain/hpc/assets'; %replace with wherever your data is
 
 labels{1} = 'd15, ego left';
 days{1} = 'c14m4d15';
