@@ -16,7 +16,7 @@ end
 if ~exist('final_pos', 'var')
     final_pos = 0.4;
 end
-if ~exist('gen_X_at_pos', 'var')
+if ~exist('gen_all_X_at_pos', 'var')
     gen_all_X_at_pos = @gen_all_X_at_pos_closest;
 end
 
