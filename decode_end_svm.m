@@ -1,4 +1,4 @@
-function [poss, err, err_map] = decode_end_svm(ds, step_size, final_pos)
+function [poss, err, err_map] = decode_end_svm(ds, step_size, final_pos, gen_X_at_pos)
 MIN_POS = 0;
 if ~exist('step_size', 'var')
     step_size = 0.05;
@@ -6,25 +6,31 @@ end
 if ~exist('final_pos', 'var')
     final_pos = 0.4;
 end
+if ~exist('gen_X_at_pos', 'var')
+    gen_X_at_pos = @gen_X_at_pos_closest;
+end
+
 
 label_to_class = containers.Map({'north','south','east','west'},{1,2,3,4});
 
 end_labels = {ds.trials.end};
-evs = {ds.trials.events};
-poss = MIN_POS:step_size:final_pos;
-[frame_of_interest, ~] = find_frame_at_pos(ds, poss);
 
-ks = zeros(1,size(frame_of_interest,1));
-K = 4;
-for i=1:size(frame_of_interest,1)
+poss = MIN_POS:step_size:final_pos;
+
+ks = zeros(1, ds.num_trials);
+
+for i=1:ds.num_trials
     ks(i) = label_to_class(end_labels{i});
 end
 
 err = zeros(size(poss));
-err_map = zeros(size(frame_of_interest));
+err_map = zeros(ds.num_trials, size(poss, 2));
+
+X_all = gen_X_at_pos(ds, poss);
+
 for j = 1:length(poss)
     %needs to be transposed since svm needs observations in rows
-    X = gen_X_at_frames(evs, frame_of_interest(:,j)); 
+    X = X_all(:,:,j); 
     %SVMModel = fitcsvm(X', end_labels, 'KernelFunction', 'linear',...
     %    'Standardize', true, 'ClassNames', {'south','north'});
 %    CVMdl = fitclinear(X, end_labels, 'ObservationsIn', 'columns',...
