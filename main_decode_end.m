@@ -17,14 +17,20 @@ if ~exist('figs', 'dir')
 end
 
 %figure;
-for i = 1:3
+parfor i = 1:3
     ds = quick_ds(fullfile(directory, days{i}), 'deprobe', 'nocells');
-    [poss, err, err_map] = decode_end_nb(ds, 0.005, 0.4, true);
+    [poss{i}, err{i}, err_map{i}] = decode_end_nb(ds, 0.005, 0.4, true);
     fprintf('trained %s\n', labels{i});
-    plot(poss, err, '-x');
-    hold on;
+    %plot(poss, err, '-x');
+    %hold on;
     %view_err(ds, poss, err, err_map, labels{i});%, 'save', 'figs', 'hide');
 end
+for i = 1:3
+    plot(poss{i}, err{i}, '-x');
+    hold on;
+    %view_err(ds, poss{i}, err{i}, err_map{i}, labels{i});
+end
+
 
 xlabel('arm position');
 ylabel('Multinomial NB err');

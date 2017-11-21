@@ -153,7 +153,7 @@ end
 function res = file_pattern(d, pat)
     S = dir(fullfile(d,pat));
     if numel(S) ~= 1
-        error('Too many such files %s/%s', d, pat);
+        error('There must be exactly one file matching the pattern: %s/%s', d, pat);
     end
     res = fullfile(S.folder, S.name);
 end
