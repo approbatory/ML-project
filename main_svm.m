@@ -7,7 +7,7 @@ directory = '../c14m4'; %replace with wherever your data is
 labels{1} = 'd15, ego left';
 days{1} = 'c14m4d15';
 
-labels{2} = 'd16, ego left -> allo south';
+labels{2} = 'd16, ego left to allo south';
 days{2} = 'c14m4d16';
 
 labels{3} = 'd17, allo south';
