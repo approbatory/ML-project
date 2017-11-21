@@ -1,4 +1,4 @@
-function view_err(ds, poss, err, err_map, label, varargin)
+function view_err(ds, poss, err, err_map, label, alg_label, varargin)
 %VIEW_ERR Plot error curves / error map from the output of decode_end_nb
 %optionally save the plots, or hide the appearance of the plots in windows
 save_figs = false;
@@ -22,11 +22,11 @@ else
     figure('Visible','Off');
 end
 plot(poss, err, '-x');
-title(sprintf('%s: End arm decoding (NB) vs. position', label));
+title(sprintf('%s: End arm decoding (%s) vs. position', label, alg_label));
 xlabel(POS_LABEL);
 ylabel('Leave-1-out x-val error');
 if save_figs
-    fname = fullfile(savedir, sprintf('Multinomial_NB_error_curve_for_%s.png',label));
+    fname = fullfile(savedir, sprintf('%s_error_curve_for_%s.png',alg_label, label));
     print(fname, '-dpng');
 end
 
@@ -53,9 +53,9 @@ t = text(n_pos+2, n_trials/4, 'non-rewarded in red');
 t.Rotation = -90;
 xlabel(POS_LABEL);
 ylabel('Trial number');
-title(sprintf('%s: Map of errors (black)', label));
+title(sprintf('%s: Map of errors (black) for %s', label, alg_label));
 if save_figs
-    fname = fullfile(savedir,sprintf('Multinomial_NB_error_map_for_%s.png',label));
+    fname = fullfile(savedir,sprintf('%s_error_map_for_%s.png',alg_label, label));
     print(fname, '-dpng');
 end
 

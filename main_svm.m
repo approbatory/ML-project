@@ -21,11 +21,11 @@ figure;
 parfor i = 1:3
     ds = quick_ds(fullfile(directory, days{i}), 'deprobe', 'nocells');
     fprintf('loaded %s\n', labels{i});
-    [poss{i}, err{i}, err_map{i}] = decode_end_svm(ds, 0.005, 0.4, true);
+    [poss{i}, err{i}, err_map{i}] = decode_end_svm(ds, 0.005, 0.4, false);
     fprintf('trained %s\n', labels{i});
     %plot(poss, err, '-x');
     %hold on;
-    %view_err(ds, poss, err, err_map, labels{i}, 'save', 'figs', 'hide');
+    view_err(ds, poss{i}, err{i}, err_map{i}, labels{i}, 'SVM', 'save', 'newfigs', 'hide');
 end
 for i = 1:3
     plot(poss{i}, err{i}, '-x');
@@ -35,5 +35,5 @@ end
 
 xlabel('arm position');
 ylabel('SVM err');
-title('SVM errors vs. arm pos SHUFFLED');
+title('SVM errors vs. arm pos');
 legend(labels{:});
