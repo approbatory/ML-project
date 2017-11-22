@@ -1,7 +1,7 @@
 clear;
 rng(10);
 
-directory = '../c14m4'; %replace with wherever your data is
+directory = '../c14m4';
 
 labels{1} = 'd15, ego left';
 days{1} = 'c14m4d15';
