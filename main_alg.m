@@ -2,14 +2,14 @@
 %run_alg(@mnb_train, @mnb_test, 'MultinomialNB', 'step', 0.04);
 
 %%%%%%running GaussNB <- can't run this because some features have 0 variance
-%another Multinomial_NB, arbitrarily discretize it, using a factor of 40
+%% another Multinomial_NB, arbitrarily discretize it, using a factor of 40
 %(approx. value of mn dist. n parameter)
-m2nb_pre = @(X) round(40*X);
+m2nb_pre = @(X) round(X);
 m2nb_train = @(X_train, ks_train) fitcnb(X_train, ks_train, 'Distribution', 'mn');
 m2nb_test = @(model, X_test) predict(model, X_test);
-run_alg(m2nb_train, m2nb_test, 'MultinomialNB2', 'preprocessor', @round, 'step', 0.04);
+run_alg(m2nb_train, m2nb_test, 'MultinomialNB', 'preprocessor', m2nb_pre, 'step', 0.04);
 
-%running SVM
+%% running SVM
 svm_train = @(X_train, ks_train) fitclinear(X_train, ks_train,...
     'Learner', 'svm', 'ClassNames', [1 2]);
 svm_test = @(model, X_test) predict(model, X_test);
