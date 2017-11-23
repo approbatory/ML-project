@@ -20,6 +20,10 @@ for k = 1:length(varargin)
         end
     end
 end
+disp_label = alg_label;
+if DO_SHUFFLE
+    disp_label = [disp_label '_shuf'];
+end
 rng(10);
 directory = '../c14m4';
 
@@ -44,9 +48,9 @@ end
 parfor i = 1:3
 %for i = 1:3
     ds = quick_ds(fullfile(directory, days{i}), 'deprobe', 'nocells');
-    fprintf('loaded %s\n', labels{i});
+    fprintf('%s: loaded %s\n', disp_label, labels{i});
     [poss{i}, err{i}, err_map] = decode_end_alg(preprocessor, model_generator, predictor, ds, STEP, POS_END, DO_SHUFFLE);
-    fprintf('trained %s\n', labels{i});
+    fprintf('%s: trained %s\n', disp_label, labels{i});
     if ERRMAPS
         view_err(ds, poss{i}, err{i}, err_map, labels{i}, alg_label, 'save', 'newfigs', 'hide');
     end
@@ -68,5 +72,6 @@ if DO_SHUFFLE
 end
 title([plot_title title_note]);
 legend(labels{:});
+print(fullfile('better_figs',[disp_label '_errs.png']), '-dpng');
 end
 
