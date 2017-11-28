@@ -1,4 +1,4 @@
-function [poss, err, err_map] = decode_end_alg(preprocessor, model_generator, predictor, ds, step_size, final_pos, do_shuffle)
+function [poss, err, err_map, vals, masks] = decode_end_alg(preprocessor, model_generator, predictor, ds, step_size, final_pos, do_shuffle)
 MIN_POS = 0;
 if ~exist('step_size', 'var')
     step_size = 0.05;
@@ -10,27 +10,53 @@ if ~exist('do_shuffle', 'var')
     do_shuffle = false;
 end
 
-
-label_to_class = containers.Map({'north','south','east','west'},{1,2,3,4});
 end_labels = {ds.trials.end};
-poss = MIN_POS:step_size:final_pos;
-ks = zeros(1, ds.num_trials);
+ks = classify_labels(end_labels);
 
-for i=1:ds.num_trials
-    ks(i) = label_to_class(end_labels{i});
+poss = MIN_POS:step_size:final_pos;
+X_all = gen_all_X_at_pos_closest(ds, poss);
+start_labels = {ds.trials.start};
+ks_start = classify_labels(start_labels);
+[X_partition, ks_partition, vals, masks] = partition_data(X_all, ks, ks_start);
+err = cell(1,length(vals));
+err_map = cell(1,length(vals));
+for i = 1:length(vals)
+    [err{i}, err_map{i}] = evaluate_on_data(X_partition{i}, ks_partition{i}, preprocessor, model_generator, predictor, do_shuffle);
+end
 end
 
-err = zeros(size(poss));
-err_map = zeros(ds.num_trials, length(poss));
+function [X_partition, ks_partition, vals, masks] = partition_data(X_all, ks, classes)
+vals = unique(classes);
+X_partition = cell(1,length(vals));
+ks_partition = cell(1,length(vals));
+masks = cell(1,length(vals));
+for i = 1:length(vals)
+    masks{i} = classes == vals(i);
+    X_partition{i} = X_all(masks{i},:,:);
+    ks_partition{i} = ks(masks{i});
+end
+end
 
-X_all = gen_all_X_at_pos_closest(ds, poss);
+function ks = classify_labels(labels)
+label_to_class = containers.Map({'north','south','east','west'},{1,2,3,4});
+ks = zeros(1, length(labels));
+for i = 1:length(labels)
+    ks(i) = label_to_class(labels{i});
+end
+end
+
+function [err, err_map] = evaluate_on_data(X_all, ks, preprocessor, model_generator, predictor, do_shuffle)
+[M,~,P] = size(X_all);
+err = zeros(1,P);
+err_map = zeros(M,P);
+
 X_all = preprocessor(X_all);
-for j = 1:length(poss)
-    X = X_all(:,:,j); 
-    mask = false(1,ds.num_trials);
+for j = 1:P
+    X = X_all(:,:,j);
+    mask = false(1,M);
     
     count = 0;
-    for i = 1:ds.num_trials %leave one out xval
+    for i = 1:M %leave one out xval
         mask(i) = true;
         
         X_train  = X(~mask,:);
