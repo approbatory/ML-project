@@ -1,4 +1,4 @@
-function [poss, err, err_map, vals, masks] = decode_end_alg(preprocessor, model_generator, predictor, ds, step_size, final_pos, do_shuffle)
+function [poss, err, err_map, vals, masks] = decode_end_alg(preprocessor, model_generator, predictor, ds, step_size, final_pos, do_shuffle, do_label_shuffle)
 MIN_POS = 0;
 if ~exist('step_size', 'var')
     step_size = 0.05;
@@ -8,6 +8,9 @@ if ~exist('final_pos', 'var')
 end
 if ~exist('do_shuffle', 'var')
     do_shuffle = false;
+end
+if ~exist('do_label_shuffle', 'var')
+    do_label_shuffle = false;
 end
 
 end_labels = {ds.trials.end};
@@ -21,7 +24,7 @@ ks_start = classify_labels(start_labels);
 err = cell(1,length(vals));
 err_map = cell(1,length(vals));
 for i = 1:length(vals)
-    [err{i}, err_map{i}] = evaluate_on_data(X_partition{i}, ks_partition{i}, preprocessor, model_generator, predictor, do_shuffle);
+    [err{i}, err_map{i}] = evaluate_on_data(X_partition{i}, ks_partition{i}, preprocessor, model_generator, predictor, do_shuffle, do_label_shuffle);
 end
 end
 
@@ -45,7 +48,7 @@ for i = 1:length(labels)
 end
 end
 
-function [err, err_map] = evaluate_on_data(X_all, ks, preprocessor, model_generator, predictor, do_shuffle)
+function [err, err_map] = evaluate_on_data(X_all, ks, preprocessor, model_generator, predictor, do_shuffle, do_label_shuffle)
 [M,~,P] = size(X_all);
 err = zeros(1,P);
 err_map = zeros(M,P);
@@ -63,6 +66,9 @@ for j = 1:P
         ks_train = ks(~mask);
         if(do_shuffle) 
             X_train = shuffle(X_train, ks_train);
+        end
+        if(do_label_shuffle)
+            ks_train = ks_train(randperm(length(ks_train)));
         end
         
         X_test   = X(mask,:);

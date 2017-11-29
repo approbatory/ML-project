@@ -1,5 +1,9 @@
 function view_FOI(frame_of_interest, pos)
 %VIEW_FOI Plot where the frames of interest are
+if isstruct(frame_of_interest)
+    [frame_of_interest, pos] = find_frame_at_pos(frame_of_interest, pos);
+end
+
 figure
 for i = 1:size(frame_of_interest,1)
     c = pos{i};
