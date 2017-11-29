@@ -28,26 +28,6 @@ for i = 1:length(vals)
 end
 end
 
-function [X_partition, ks_partition, vals, masks] = partition_data(X_all, ks, classes)
-vals = unique(classes);
-X_partition = cell(1,length(vals));
-ks_partition = cell(1,length(vals));
-masks = cell(1,length(vals));
-for i = 1:length(vals)
-    masks{i} = classes == vals(i);
-    X_partition{i} = X_all(masks{i},:,:);
-    ks_partition{i} = ks(masks{i});
-end
-end
-
-function ks = classify_labels(labels)
-label_to_class = containers.Map({'north','south','east','west'},{1,2,3,4});
-ks = zeros(1, length(labels));
-for i = 1:length(labels)
-    ks(i) = label_to_class(labels{i});
-end
-end
-
 function [err, err_map] = evaluate_on_data(X_all, ks, preprocessor, model_generator, predictor, do_shuffle, do_label_shuffle)
 [M,~,P] = size(X_all);
 err = zeros(1,P);
