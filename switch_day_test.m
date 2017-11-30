@@ -1,9 +1,9 @@
 %% declarations
 clear;
-SHOW_ERRMAP = false;
-SHOW_ERR = false;
-%pre = @(X) double(X ~= 0);
+SHOW_ERRMAP = true;
+SHOW_ERR = true;
 Lambda = 0.1; %lambda value chosen by cross-validation
+%pre = @(X) double(X ~= 0);
 pre = @(X) X;
 train = @(X_train, ks_train) fitclinear(X_train, ks_train,...
     'Learner', 'logistic', 'ClassNames', [1 2],...
@@ -14,7 +14,7 @@ train = @(X_train, ks_train) fitclinear(X_train, ks_train,...
 %    'ClassNames', [1 2]);
 test = @(model, X_test) predict(model, X_test);
 
-poss = linspace(0.1,0.4,4); %maybe change
+poss = linspace(0,0.4,20); %maybe change
 
 alg_label = 'logisticL1';
 num_runs = 3;
@@ -48,10 +48,12 @@ for j = 1:length(vals)
     for i = 1:num_runs
         err{i,j} = ones(1,length(poss));
         err_map{i,j} = ones(length(ks),length(poss));
+        fprintf('\nj%d i%d: %d %d\n',length(vals), num_runs, j,i);
         parfor k = 1:length(poss)
             X = X_all(:,:,k);
             [my_err(k), my_err_map(:,k), my_models{k}, my_fitinfos{k}]...
                 = leave_1_out(X, ks, train, test, to_shuf(i), to_labelshuf(i));
+            fprintf('*');
         end
         err{i,j} = my_err; err_map{i,j} = my_err_map;
         models{i,j} = my_models; fitinfos{i,j} = my_fitinfos;
@@ -105,7 +107,16 @@ betas = zeros(ds.num_cells, length(CV_set));
 for i = 1:length(CV_set)
     betas(:,i) = CV_set{i}.Beta;
 end
+used_features = find(any(betas~=0,2))';
 fprintf('Lambda: %f\t', Lambda);
 fprintf('nonzero betas: %d\t', sum(any(betas~=0,2)));
 fprintf('residual error: %f\t', final_err);
-fprintf('used features: '); disp(find(any(betas~=0,2))');
+fprintf('used features: '); disp(used_features);
+
+%looking at correlations:
+r_neurons = corr(ks_part{2}', X_part{2}(:,:,end));
+[~, order] = sort(r_neurons.^2, 'descend');
+clean_order = order(~isnan(r_neurons(order)));
+
+[~, feature_order] = sort(r_neurons(used_features).^2, 'descend');
+ranked_features = used_features(feature_order);
