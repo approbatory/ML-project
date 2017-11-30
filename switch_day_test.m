@@ -1,14 +1,20 @@
 %% declarations
 clear;
+SHOW_ERRMAP = false;
+SHOW_ERR = false;
 %pre = @(X) double(X ~= 0);
+Lambda = 0.1; %lambda value chosen by cross-validation
 pre = @(X) X;
 train = @(X_train, ks_train) fitclinear(X_train, ks_train,...
     'Learner', 'logistic', 'ClassNames', [1 2],...
-    'Regularization', 'lasso', 'Lambda', 0.002);
+    'Regularization', 'lasso', 'Lambda', Lambda,...
+    'IterationLimit', 1000, 'Solver', 'sparsa');
 %train = @(X_train, ks_train) fitcsvm(X_train, ks_train,...
 %    'KernelFunction', 'linear', 'Standardize', true,...
 %    'ClassNames', [1 2]);
 test = @(model, X_test) predict(model, X_test);
+
+poss = linspace(0.1,0.4,4); %maybe change
 
 alg_label = 'logisticL1';
 num_runs = 3;
@@ -22,7 +28,6 @@ specific_arm_labeling = cell(1,num_runs);
 for i = 1:num_runs
     specific_arm_labeling{i} = [labeling{i} specific_arm];
 end
-poss = 0:0.01:0.4;
 
 %% Run training alg
 ds = quick_ds(fullfile('../c14m4', 'c14m4d16'), 'deprobe', 'nocells');
@@ -58,25 +63,28 @@ end
 %        pre, train, test, ds, 0.08, 0.4, to_shuf(i), to_labelshuf(i));
 %end
 %% Plot error maps
-for i = 1:num_runs
-    view_errmap(ds, poss, err_map(i,:), vals, masks,...
-        day_label, labeling{i});
+if ~exist('SHOW_ERRMAP', 'var') || SHOW_ERRMAP
+    for i = 1:num_runs
+        view_errmap(ds, poss, err_map(i,:), vals, masks,...
+            day_label, labeling{i});
+    end
 end
-
 %% plot error as function of position
-figure;
-ylim([0 inf]);
-hold on;
-formatting = {'-x' '-or' '-og'};
-for i = 1:num_runs
-    plot(poss, err{i,2}, formatting{i}, 'DisplayName', specific_arm_labeling{i});
+if ~exist('SHOW_ERR', 'var') || SHOW_ERR
+    figure;
+    ylim([0 inf]);
+    hold on;
+    grid on;
+    formatting = {'-x' '-or' '-og'};
+    for i = 1:num_runs
+        plot(poss, err{i,2}, formatting{i}, 'DisplayName', specific_arm_labeling{i});
+    end
+    
+    xlabel('arm position');
+    ylabel('err');
+    title([alg_label ' errs']);
+    legend(gca, 'show', 'Location', 'best');
 end
-
-xlabel('arm position');
-ylabel('err');
-title([alg_label ' errs']);
-legend(gca, 'show', 'Location', 'best');
-
 %% TODO: FIX THIS
 %mean_beta = cell(1,length(models));
 %for k = 1:length(models)
@@ -90,8 +98,14 @@ legend(gca, 'show', 'Location', 'best');
 %[~,order] = sort(mean_beta(:,end));
 %mean_beta = mean_beta(order,:);
 %figure; imagesc(mean_beta);
-%%%
-%figure; hold on;
-%for i = 1:length(models{end})
-%    plot(models{end}{i}.Beta(order));
-%end
+%% Looking at fit params
+CV_set = models{1,2}{end};
+final_err = err{1,2}(end);
+betas = zeros(ds.num_cells, length(CV_set));
+for i = 1:length(CV_set)
+    betas(:,i) = CV_set{i}.Beta;
+end
+fprintf('Lambda: %f\t', Lambda);
+fprintf('nonzero betas: %d\t', sum(any(betas~=0,2)));
+fprintf('residual error: %f\t', final_err);
+fprintf('used features: '); disp(find(any(betas~=0,2))');
