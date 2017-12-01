@@ -11,19 +11,20 @@ figure;
 for k = 1:num_partitions
     subplot(1,num_partitions,k);
     err_map = err_maps{k};
+    [n_trials, n_pos] = size(err_map);
+    err_map = [err_map ones(n_trials, 1)];
     imagesc(1 - err_map - (1-err_map).*0.1.*mod((1:size(err_map,1))',2), [0 1]);
     colormap('gray');
-    [n_trials, n_pos] = size(err_map);
     for i = 1:n_trials
         if trials{k}{i}
             c = 'g';
         else
             c = 'r';
         end
-        rectangle('Position', [(n_pos-0.5) (i-0.5) 2 1], 'FaceColor', c);
+        rectangle('Position', [(1+n_pos-0.5) (i-0.5) 2 1], 'FaceColor', c);
     end
     ticks = get(gca, 'XTick');
-    set(gca, 'XTick', ticks, 'XTickLabel', poss(ticks));
+    set(gca, 'XTick', ticks(1:end-1), 'XTickLabel', poss(ticks(1:end-1)));
     %t = text(n_pos+2, n_trials/4, 'non-rewarded in red');
     %t.Rotation = -90;
     xlabel(POS_LABEL);

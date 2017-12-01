@@ -1,10 +1,12 @@
-function [err, err_map, models, fitinfos] = leave_1_out(X, ks, train, test,...
+%function [err, err_map, models, fitinfos] = leave_1_out(X, ks, train, test,...
+%    do_shuffle, do_label_shuffle)
+function [err, err_map, models] = leave_1_out(X, ks, train, test,...
     do_shuffle, do_label_shuffle)
 M = length(ks);
 err = 0;
 err_map = zeros(M,1);
 models = cell(1,M);
-fitinfos = cell(1,M);
+%fitinfos = cell(1,M);
 mask = false(1,M);
 count = 0;
 for i = 1:M
@@ -22,7 +24,8 @@ for i = 1:M
     X_test = X(mask,:);
     ks_test = ks(mask);
     
-    [models{i}, fitinfos{i}] = train(X_train, ks_train);
+%    [models{i}, fitinfos{i}] = train(X_train, ks_train);
+    models{i} = train(X_train, ks_train);
     ks_predicted = test(models{i}, X_test);
     mistakes = sum(ks_test ~= ks_predicted);
     
