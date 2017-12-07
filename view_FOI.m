@@ -4,15 +4,24 @@ if isstruct(frame_of_interest)
     [frame_of_interest, pos] = find_frame_at_pos(frame_of_interest, pos);
 end
 
+%pts = linspace(0,1,200);
+%[X,Y] = meshgrid(pts,pts);
+
+%bins = bin_f(X,Y);
+%disp(unique(bins(:))');
 figure
+%sizes = 10*mod(bins,2)+1;
+%scatter(X(:),Y(:),sizes(:),bins(:));
+%hold on;
 for i = 1:size(frame_of_interest,1)
     c = pos{i};
-    plot(c(:,1), c(:,2), 'b.');
+    %plot(c(:,1), c(:,2), 'k.');
+    scatter(c(:,1), c(:,2), 1, bin_f(c));
     hold on
     xlim([0 1]);
     ylim([0 1]);
 end
-colors = {'r', 'g', 'c', 'y', 'm', 'k'};
+colors = {'r', 'g', 'b', 'c', 'y', 'm'};
 for i = 1:size(frame_of_interest,1)
     c = pos{i};
     hold on
@@ -24,3 +33,16 @@ for i = 1:size(frame_of_interest,1)
 end
 end
 
+function bins = bin_f(X,Y)
+if nargin == 1
+    Y = X(:,2); X = X(:,1);
+end
+X(X==1) = 1-eps;
+Y(Y==1) = 1-eps;
+N = 10;
+X_bins = mod(floor(N*X),N)+1;
+Y_bins = mod(floor(N*Y),N)+1;
+tb = (Y>(1-X)) == (Y>X);
+bins(tb) = Y_bins(tb);
+bins(~tb) = -X_bins(~tb);
+end
