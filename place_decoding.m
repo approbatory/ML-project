@@ -1,16 +1,25 @@
 clear;
+
+shuf_train = @(tr) @(X,k) tr(shuffle(X,k),k);
+shuf_alg = @(a) struct('name', [a.name ' shuf'], 'pre', a.pre, 'train', shuf_train(a.train), 'test', a.test);
+
 mv_pre = @(X) int64(X ~= 0);
 mv_train = @(X_train, ks_train) fitcnb(X_train, ks_train, 'Distribution', 'mvmn',...
     'CategoricalPredictors', 'all');
 mv_test = @(model, X_test) predict(model, X_test);
 
 ecoc_pre = @(X) X;
-ecoc_train = @(X_train, ks_train) fitcecoc(X_train, ks_train);
+t = templateSVM('Standardize',1,'KernelFunction','linear');
+t2 = templateSVM('Standardize',1,'KernelFunction','polynomial', 'PolynomialOrder', 2);
+ecoc_train = @(X_train, ks_train) fitcecoc(X_train, ks_train, 'Learners', t);
+ecoc_train2 = @(X_train, ks_train) fitcecoc(X_train, ks_train, 'Learners', t2);
 ecoc_test = @(model, X_test) predict(model, X_test);
 
-%%%choose model here: need to implement shuffled ecoc, compare with it
-%pre = mv_pre; train = mv_train; test = mv_test;
-pre = ecoc_pre; train = ecoc_train; test = ecoc_test;
+mvnb = struct('name', 'Bernoulli NB', 'pre', mv_pre, 'train', mv_train, 'test', mv_test);
+ecoc = struct('name', 'ECOC SVM', 'pre', ecoc_pre, 'train', ecoc_train, 'test', ecoc_test);
+ecoc2 = struct('name', 'ECOC SVM quadratic', 'pre', ecoc_pre, 'train', ecoc_train2, 'test', ecoc_test);
+
+algs = [mvnb, shuf_alg(mvnb), ecoc, shuf_alg(ecoc)];%, ecoc2, shuf_alg(ecoc2)];
 %%
 ds = quick_ds(fullfile('../c14m4', 'c14m4d15'), 'deprobe', 'nocells');
 reindexed_trial_indices = zeros(size(ds.trial_indices));
@@ -42,22 +51,26 @@ keep_it = @(k,p) [k,p];
 err_funcs = {mean_dist, mean_err, @confusionmat, keep_it};
 func_names = {'dist', '0-1', 'conf', 'keep'};
 
-[main, sub] = ...
-    evaluate_decoder(pre, train, test, X, ks, eval_over,...
-    err_funcs, func_names, training_frac);
-sub_only = evaluate_decoder(pre, train, test,...
-    X(eval_over,:), ks(eval_over), [],...
-    err_funcs, func_names, training_frac);
+for i = 1:length(algs)
+    fprintf('Running %s\n', algs(i).name);
+    pre = algs(i).pre; train = algs(i).train; test = algs(i).test;
+    [main, sub] = ...
+        evaluate_decoder(pre, train, test, X, ks, eval_over,...
+        err_funcs, func_names, training_frac);
+    sub_only = evaluate_decoder(pre, train, test,...
+        X(eval_over,:), ks(eval_over), [],...
+        err_funcs, func_names, training_frac);
+    res(i).alg = algs(i); res(i).main = main; res(i).sub = sub; res(i).sub_only = sub_only;
+    fprintf('main:\ttrain dist: %f\ttest dist: %f\n', main(1).train_err, main(1).test_err);
+    fprintf('main:\ttrain err: %f\ttest err: %f\n', main(2).train_err, main(2).test_err);
 
-fprintf('main:\ttrain dist: %f\ttest dist: %f\n', main(1).train_err, main(1).test_err);
-fprintf('main:\ttrain err: %f\ttest err: %f\n', main(2).train_err, main(2).test_err);
+    fprintf('sub:\ttrain dist: %f\ttest dist: %f\n', sub(1).train_err, sub(1).test_err);
+    fprintf('sub:\ttrain err: %f\ttest err: %f\n', sub(2).train_err, sub(2).test_err);
 
-fprintf('sub:\ttrain dist: %f\ttest dist: %f\n', sub(1).train_err, sub(1).test_err);
-fprintf('sub:\ttrain err: %f\ttest err: %f\n', sub(2).train_err, sub(2).test_err);
-
-fprintf('Xsub:\ttrain dist: %f\ttest dist: %f\n', sub_only(1).train_err, sub_only(1).test_err);
-fprintf('Xsub:\ttrain err: %f\ttest err: %f\n', sub_only(2).train_err, sub_only(2).test_err);
-
+    fprintf('Xsub:\ttrain dist: %f\ttest dist: %f\n', sub_only(1).train_err, sub_only(1).test_err);
+    fprintf('Xsub:\ttrain err: %f\ttest err: %f\n', sub_only(2).train_err, sub_only(2).test_err);
+    fprintf('\n');
+end
 %%
 function [main, sub] =...
     evaluate_decoder(pre, train, test, X, ks, subset, err_funcs, func_names, train_frac)

@@ -1,4 +1,5 @@
 function X = shuffle(X, ks)
+ks = ks(:)';
 K_vals = unique(ks);
 N = size(X,2);
 for j = 1:N
