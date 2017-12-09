@@ -18,12 +18,12 @@ for ix = 1:length(decoding_results)
             out = div(j).out;
             for k = 1:length(out)
                 if strcmp(out(k).err_type, errtype)
-                    d(j,i) = out(k).test_err;
+                    d(j,i) = mean(cell2mat(out(k).test_err));
                 end
             end
         end
     end
-    bar(categorical(div_types), d);
+    bar(categorical(div_types), mean(d,3));
     title(label);
     ylabel(errdesc);
     legend(algs);
