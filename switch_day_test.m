@@ -15,19 +15,22 @@ pre = @(X) X;
 %    'Learner', 'svm', 'ClassNames', [1 2],...
 %    'Regularization', 'lasso', 'Lambda', Lambda_svm,...
 %    'IterationLimit', 1000, 'Solver', 'sparsa');
-
+%mean_error = zeros(30,0);
+%for KernelScale = 1:30
+%disp(KernelScale);
 train = @(X_train, ks_train) fitcsvm(X_train, ks_train,...
-    'KernelFunction', 'polynomial',...
-    'PolynomialOrder', 2, 'Standardize', true,...
+    'Standardize', true,...
     'IterationLimit', 10000, 'BoxConstraint', 1,...
     'ClassNames', [1 2], 'Verbose', 0); NONLIN = true;
+%    'KernelFunction', 'gaussian', 'KernelScale', KernelScale,...
+%    'PolynomialOrder', 2
 test = @(model, X_test) predict(model, X_test);
 
 poss = linspace(0,0.4,20); %maybe change
 
 %alg_label = 'logisticL1';
 %alg_label = 'svmL1';
-alg_label = 'svmP2';
+alg_label = ['svm_L'];
 num_runs = 3;
 day_label = 'EL2AS';
 specific_arm = ', changing arm';
@@ -97,12 +100,15 @@ if ~exist('SHOW_ERR', 'var') || SHOW_ERR
     for i = 1:num_runs
         plot(poss, err{i,2}, formatting{i}, 'DisplayName', specific_arm_labeling{i});
     end
-    
+
     xlabel('arm position');
     ylabel('err');
     title([alg_label ' errs']);
     legend(gca, 'show', 'Location', 'best');
 end
+%%
+%     mean_error(KernelScale) = mean(err{1,2});
+% end
 %%
 if ~exist('NONLIN', 'var') || ~NONLIN
 CV_set = models{1,2};
