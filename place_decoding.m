@@ -34,6 +34,8 @@ days{2} = 'c14m4d16';
 labels{3} = 'd17, allo south';
 days{3} = 'c14m4d17';
 
+par_loops = 12;
+
 for ix = 1:length(days)
     disp(labels{ix});
     decoding_results(ix).label = labels{ix};
@@ -64,18 +66,18 @@ for ix = 1:length(days)
     mean_err = @(k,p) mean(err_func(k,p));
     keep_it = @(k,p) [k,p];
     
-    err_funcs = {mean_dist, mean_err, @confusionmat, keep_it};
-    func_names = {'dist', '0-1', 'conf', 'keep'};
+    err_funcs = {mean_dist, mean_err};%, @confusionmat, keep_it};
+    func_names = {'dist', '0-1'};%, 'conf', 'keep'};
     
     for i = 1:length(algs)
         fprintf('Running %s\n', algs(i).name);
         pre = algs(i).pre; train = algs(i).train; test = algs(i).test;
         [main, sub] = ...
             evaluate_decoder(pre, train, test, X, ks, eval_over,...
-            err_funcs, func_names, training_frac);
+            err_funcs, func_names, training_frac, par_loops);
         sub_only = evaluate_decoder(pre, train, test,...
             X(eval_over,:), ks(eval_over), [],...
-            err_funcs, func_names, training_frac);
+            err_funcs, func_names, training_frac, par_loops);
         decoding_results(ix).res(i).alg = algs(i);
         decoding_results(ix).res(i).division(1).desc = 'full';
         decoding_results(ix).res(i).division(1).out = main;
@@ -83,40 +85,46 @@ for ix = 1:length(days)
         decoding_results(ix).res(i).division(2).out = sub;
         decoding_results(ix).res(i).division(3).desc = 'moving';
         decoding_results(ix).res(i).division(3).out = sub_only;
-        fprintf('main:\ttrain dist: %f\ttest dist: %f\n', main(1).train_err, main(1).test_err);
-        fprintf('main:\ttrain err: %f\ttest err: %f\n', main(2).train_err, main(2).test_err);
+        %fprintf('main:\ttrain dist: %f\ttest dist: %f\n', main(1).train_err, main(1).test_err);
+        %fprintf('main:\ttrain err: %f\ttest err: %f\n', main(2).train_err, main(2).test_err);
         
-        fprintf('sub:\ttrain dist: %f\ttest dist: %f\n', sub(1).train_err, sub(1).test_err);
-        fprintf('sub:\ttrain err: %f\ttest err: %f\n', sub(2).train_err, sub(2).test_err);
+        %fprintf('sub:\ttrain dist: %f\ttest dist: %f\n', sub(1).train_err, sub(1).test_err);
+        %fprintf('sub:\ttrain err: %f\ttest err: %f\n', sub(2).train_err, sub(2).test_err);
         
-        fprintf('Xsub:\ttrain dist: %f\ttest dist: %f\n', sub_only(1).train_err, sub_only(1).test_err);
-        fprintf('Xsub:\ttrain err: %f\ttest err: %f\n', sub_only(2).train_err, sub_only(2).test_err);
+        %fprintf('Xsub:\ttrain dist: %f\ttest dist: %f\n', sub_only(1).train_err, sub_only(1).test_err);
+        %fprintf('Xsub:\ttrain err: %f\ttest err: %f\n', sub_only(2).train_err, sub_only(2).test_err);
         fprintf('\n');
     end
 end
 %%
 function [main, sub] =...
-    evaluate_decoder(pre, train, test, X, ks, subset, err_funcs, func_names, train_frac)
-train_slice = randperm(length(ks))/length(ks) < train_frac;
+    evaluate_decoder(pre, train, test, X, ks, subset, err_funcs, func_names, train_frac, par_loops)
+if ~exist('par_loops', 'var')
+    par_loops = 1;
+end
 X = pre(X);
-X_train = X(train_slice,:); X_test = X(~train_slice,:);
-ks_train = ks(train_slice); ks_test = ks(~train_slice);
-model = train(X_train, ks_train);
-pred_train = test(model, X_train);
-pred_test = test(model, X_test);
-
-for i = 1:length(err_funcs)
-    err = err_funcs{i};
-    main(i).err_type = func_names{i};
-    main(i).train_err = err(ks_train, pred_train);
-    main(i).test_err = err(ks_test, pred_test);
-    
-    if ~isempty(subset)
-        subset_train = subset(train_slice);
-        subset_test = subset(~train_slice);
-        sub(i).err_type = func_names{i};
-        sub(i).train_err = err(ks_train(subset_train), pred_train(subset_train));
-        sub(i).test_err = err(ks_test(subset_test), pred_test(subset_test));
+parfor par_ix = 1:par_loops
+    train_slice{par_ix} = randperm(length(ks))/length(ks) < train_frac;
+    X_train = X(train_slice{par_ix},:); X_test = X(~train_slice{par_ix},:);
+    ks_train{par_ix} = ks(train_slice{par_ix}); ks_test{par_ix} = ks(~train_slice{par_ix});
+    model = train(X_train, ks_train{par_ix});
+    pred_train{par_ix} = test(model, X_train);
+    pred_test{par_ix} = test(model, X_test);
+end
+for par_ix = 1:par_loops
+    for i = 1:length(err_funcs)
+        err = err_funcs{i};
+        main(i).err_type = func_names{i};
+        main(i).train_err{par_ix} = err(ks_train{par_ix}, pred_train{par_ix});
+        main(i).test_err{par_ix} = err(ks_test{par_ix}, pred_test{par_ix});
+        
+        if ~isempty(subset)
+            subset_train = subset(train_slice{par_ix});
+            subset_test = subset(~train_slice{par_ix});
+            sub(i).err_type = func_names{i};
+            sub(i).train_err{par_ix} = err(ks_train{par_ix}(subset_train), pred_train{par_ix}(subset_train));
+            sub(i).test_err{par_ix} = err(ks_test{par_ix}(subset_test), pred_test{par_ix}(subset_test));
+        end
     end
 end
 end
