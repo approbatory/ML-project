@@ -30,6 +30,7 @@ for ix = 1:length(decoding_results)
     bar(categorical(div_types), mean(d,3));
     title(label);
     ylabel([errdesc ' test']);
+    ylim([0 1.5]);
     legend(algs);
 end
 
@@ -62,6 +63,7 @@ for ix = 1:length(decoding_results)
     bar(categorical(div_types), mean(d,3));
     title(label);
     ylabel([errdesc ' train']);
+    ylim([0 1.5]);
     legend(algs);
 end
 end
