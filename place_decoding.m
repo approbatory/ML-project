@@ -11,6 +11,7 @@ mv_train = @(X_train, ks_train) fitcnb(X_train, ks_train, 'Distribution', 'mvmn'
 mv_test = @(model, X_test) predict(model, X_test);
 
 ecoc_pre = @(X) X;
+ecoc_pre_binarized = @(X) double(X ~= 0);
 t = templateSVM('Standardize',1,'KernelFunction','linear');
 t2 = templateSVM('Standardize',1,'KernelFunction','polynomial', 'PolynomialOrder', 2);
 ecoc_train = @(X_train, ks_train) fitcecoc(X_train, ks_train, 'Learners', t);
@@ -20,8 +21,9 @@ ecoc_test = @(model, X_test) predict(model, X_test);
 mvnb = struct('name', 'Bernoulli NB', 'pre', mv_pre, 'train', mv_train, 'test', mv_test);
 ecoc = struct('name', 'ECOC SVM', 'pre', ecoc_pre, 'train', ecoc_train, 'test', ecoc_test);
 ecoc2 = struct('name', 'ECOC SVM quadratic', 'pre', ecoc_pre, 'train', ecoc_train2, 'test', ecoc_test);
+ecoc_binarized = struct('name', 'ECOC SVM binarized\_input', 'pre', ecoc_pre_binarized, 'train', ecoc_train, 'test', ecoc_test);
 
-algs = [mvnb, shuf_alg(mvnb), ecoc, shuf_alg(ecoc)];%, ecoc2, shuf_alg(ecoc2)];
+algs = [mvnb, shuf_alg(mvnb), ecoc, shuf_alg(ecoc)];%, ecoc_binarized, shuf_alg(ecoc_binarized)];%, ecoc2, shuf_alg(ecoc2)];
 %%
 directory = '../c14m4';
 
@@ -34,7 +36,7 @@ days{2} = 'c14m4d16';
 labels{3} = 'd17, allo south';
 days{3} = 'c14m4d17';
 
-par_loops = 12;
+par_loops = 16;
 
 for ix = 1:length(days)
     disp(labels{ix});
@@ -103,6 +105,7 @@ if ~exist('par_loops', 'var')
     par_loops = 1;
 end
 X = pre(X);
+tic
 parfor par_ix = 1:par_loops
     train_slice{par_ix} = randperm(length(ks))/length(ks) < train_frac;
     X_train = X(train_slice{par_ix},:); X_test = X(~train_slice{par_ix},:);
@@ -111,6 +114,7 @@ parfor par_ix = 1:par_loops
     pred_train{par_ix} = test(model, X_train);
     pred_test{par_ix} = test(model, X_test);
 end
+toc
 for par_ix = 1:par_loops
     for i = 1:length(err_funcs)
         err = err_funcs{i};
