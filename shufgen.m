@@ -1,11 +1,11 @@
-function gen = shufgen(X, ks)
+function gen = shufgen(X, ks, featmask)
 if ~issparse(X)
     error('Can only shuffle sparse arrays');
 end
 ks = ks(:)';
 K_vals = unique(ks);
 [ii,jj,ss] = sp2cell(X);
-gen = @(featmask) cell2sp(cellshuf(ii, ks, K_vals, featmask), jj, ss);
+gen = cell2sp(cellshuf(ii, ks, K_vals, featmask), jj, ss);
 end
 
 function ii = cellshuf(ii, ks, K_vals, featmask)
@@ -25,12 +25,8 @@ end
 end
 
 function [ii,jj,ss] = sp2cell(X)
-[~,N] = size(X);
 [i,j,s] = find(X);
-Ns = zeros(N,1);
-for j_ind = 1:N
-    Ns(j_ind) = sum(j == j_ind);
-end
+Ns = diff([0; find(diff(j)); length(j)]);
 ii = mat2cell(i, Ns);
 jj = mat2cell(j, Ns);
 ss = mat2cell(s, Ns);
