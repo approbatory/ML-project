@@ -98,6 +98,7 @@ for ix = 1:length(days)
         fprintf('\n');
     end
 end
+save multiple_decoding_results.mat decoding_results;
 %%
 function [main, sub] =...
     evaluate_decoder(pre, train, test, X, ks, subset, err_funcs, func_names, train_frac, par_loops)
@@ -132,4 +133,3 @@ for par_ix = 1:par_loops
     end
 end
 end
-
