@@ -1,4 +1,8 @@
 function X = shuffle(X, ks)
+if issparse(X)
+    X = shufgen(X, ks, true(size(ks)));
+    return;
+end
 ks = ks(:)';
 K_vals = unique(ks);
 N = size(X,2);

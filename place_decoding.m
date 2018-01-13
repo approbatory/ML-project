@@ -1,11 +1,11 @@
 clear;
-
+sparsify = true;
 shuf_train = @(tr) @(X,k) tr(shuffle(X,k),k);
 labelshuf_train = @(tr) @(X,k) tr(X, k(randperm(length(k))));
 shuf_alg = @(a) struct('name', [a.name ' shuf'], 'pre', a.pre, 'train', shuf_train(a.train), 'test', a.test);
 labelshuf_alg = @(a) struct('name', [a.name ' labelshuf'], 'pre', a.pre, 'train', labelshuf_train(a.train), 'test', a.test);
 
-mv_pre = @(X) int64(X ~= 0);
+mv_pre = @(X) double(X ~= 0);
 mv_train = @(X_train, ks_train) fitcnb(X_train, ks_train, 'Distribution', 'mvmn',...
     'CategoricalPredictors', 'all');
 mv_test = @(model, X_test) predict(model, X_test);
@@ -14,16 +14,24 @@ ecoc_pre = @(X) X;
 ecoc_pre_binarized = @(X) double(X ~= 0);
 t = templateSVM('Standardize',1,'KernelFunction','linear');
 t2 = templateSVM('Standardize',1,'KernelFunction','polynomial', 'PolynomialOrder', 2);
+tlin = templateLinear('Learner', 'svm',...
+    'Regularization', 'lasso', 'Lambda', 0.002,...
+    'Solver', 'sparsa');
 ecoc_train = @(X_train, ks_train) fitcecoc(X_train, ks_train, 'Learners', t);
 ecoc_train2 = @(X_train, ks_train) fitcecoc(X_train, ks_train, 'Learners', t2);
+ecoc_trainlin = @(X_train, ks_train) fitcecoc(X_train, ks_train, 'Learners', tlin);
 ecoc_test = @(model, X_test) predict(model, X_test);
 
 mvnb = struct('name', 'Bernoulli NB', 'pre', mv_pre, 'train', mv_train, 'test', mv_test);
+mvnb2= struct('name', 'Bernoulli NB2','pre', mv_pre, 'train',@mv_train2,'test',@mv_test2);
 ecoc = struct('name', 'ECOC SVM', 'pre', ecoc_pre, 'train', ecoc_train, 'test', ecoc_test);
 ecoc2 = struct('name', 'ECOC SVM quadratic', 'pre', ecoc_pre, 'train', ecoc_train2, 'test', ecoc_test);
+ecoclin = struct('name', 'ECOC SVM lin', 'pre', ecoc_pre, 'train', ecoc_trainlin, 'test', ecoc_test);
 ecoc_binarized = struct('name', 'ECOC SVM binarized\_input', 'pre', ecoc_pre_binarized, 'train', ecoc_train, 'test', ecoc_test);
+ecoclin_binarized = struct('name', 'ECOC SVM lin binarized\_input', 'pre', ecoc_pre_binarized, 'train', ecoc_trainlin, 'test', ecoc_test);
 
-algs = [mvnb, shuf_alg(mvnb), ecoc, shuf_alg(ecoc)];%, ecoc_binarized, shuf_alg(ecoc_binarized)];%, ecoc2, shuf_alg(ecoc2)];
+%algs = [mvnb, shuf_alg(mvnb), ecoc, shuf_alg(ecoc), ecoc_binarized, shuf_alg(ecoc_binarized), ecoclin, shuf_alg(ecoclin), ecoclin_binarized, shuf_alg(ecoclin_binarized)];%, ];%, ecoc2, shuf_alg(ecoc2)];
+algs = [mvnb2, shuf_alg(mvnb2), ecoclin, shuf_alg(ecoclin)];
 %%
 directory = '../c14m4';
 
@@ -58,6 +66,9 @@ for ix = 1:length(days)
     
     
     X = cell2mat(gen_place_decoding_X(ds));
+    if sparsify
+        X = sparse(X);
+    end
     [ks, D] = bin_space(cell2mat(preprocess_xy(ds)));
     K = size(D,1);
     training_frac = 0.7;
@@ -108,6 +119,7 @@ end
 X = pre(X);
 tic
 parfor par_ix = 1:par_loops
+%for par_ix = 1:par_loops
     train_slice{par_ix} = randperm(length(ks))/length(ks) < train_frac;
     X_train = X(train_slice{par_ix},:); X_test = X(~train_slice{par_ix},:);
     ks_train{par_ix} = ks(train_slice{par_ix}); ks_test{par_ix} = ks(~train_slice{par_ix});
