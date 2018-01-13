@@ -33,10 +33,7 @@ for ix = process_days
     err_func = @(k,p) mean(D(sub2ind(size(D),k,p)));
     K = size(D,1);
     col_muti = cellfun(@(x) muti(ks,x), num2cell(Xb,1));
-    %[~, order] = sort(col_muti);
-    %X_ord = X(:,order);
-    %neu = full(X_ord(:,end));
-    %vis(neu~=0, xy);
+    
     perf = @(a) performance(a, X, ks, err_func, train_frac);
     
     [base_train_err, base_test_err] = perf(alg);
@@ -45,19 +42,56 @@ for ix = process_days
     totshuf_alg = modify_alg(alg, @shuffle, ' totshuf');
     [totshuf_train_err, totshuf_test_err] = perf(totshuf_alg);
     fprintf('Total shuffle:\ttr: %f\tte: %f\n', totshuf_train_err, totshuf_test_err);
-    singleshuf_train_err = zeros(1,N); singleshuf_test_err = zeros(1,N);
-    parfor j = 1:N
-        %featmask = false(1,N);
-        %featmask(j) = true;
-        featmask = randperm(N) <= j;
-        singleshuf_alg = modify_alg(alg, @(X,ks) shufgen(X,ks,featmask), sprintf(' shuf%d',j));
-        [singleshuf_train_err(j), singleshuf_test_err(j)] = perf(singleshuf_alg);
-        fprintf('Done j=%d of %d\n', j, N);
+    
+    info_string = ['This is measuring the degradation of performance unon an'...
+        ' ablative, one by one, shuffle of the neurons',...
+        ' compared with these neurons mutual information with place bins'];
+    timer = tic;
+    num_tries = 100;
+    parfor ind = 1:num_tries
+        [non_shuffled_train(1,ind),non_shuffled_test(1,ind)] = perf(alg);
     end
-    change_in_train_err = singleshuf_train_err - base_train_err; 
-    change_in_test_err = singleshuf_test_err - base_test_err;
+    fprintf('Done non_shuffled, %d times\n', num_tries);
+    fprintf('Doing neurons, %d times each:\n', num_tries);
+    for j = 1:N
+        parfor ind = 1:num_tries
+            [specific_train(j,ind), specific_test(j,ind)] = specific_shuffle(perf, alg, j, N);
+        end
+        fprintf(' %d', j);
+    end
+    fprintf('\n');
+    toc(timer);
+    save info_shuf_ablative.mat specific_test specific_train non_shuffled_test non_shuffled_train col_muti info_string X ks num_tries
 end
 
+% function singleshuf = ablate(perf_func, alg, N)
+% parfor j = 1:N
+%     %featmask = false(1,N);
+%     %featmask(j) = true;
+%     %singleshuf_alg = featshuf_alg(alg, featmask, sprintf(' shuf%d',j));
+%     %[singleshuf_train_err(j), singleshuf_test_err(j)] = perf_func(singleshuf_alg);
+%     singleshuf(j) = specific_shuffle(perf_func, alg, j, N);
+% end
+% %singleshuf.train_err = singleshuf_train_err;
+% %singleshuf.test_err = singleshuf_test_err;
+% end
+
+% function multishuf = multiple_shuffle(perf_func, alg, j, N)
+% featmask = randperm(N) <= j;
+% multishuf_alg = featshuf_alg(alg, featmask, sprintf(' shuffle %d neurons',j));
+% [multishuf.train_err, multishuf.test_err] = perf_func(multishuf_alg);
+% end
+
+function [specshuf_train_err, specshuf_test_err] = specific_shuffle(perf_func, alg, j, N)
+featmask = false(1,N);
+featmask(j) = true;
+specshuf_alg = featshuf_alg(alg, featmask, sprintf(' shuf%d',j));
+[specshuf_train_err, specshuf_test_err] = perf_func(specshuf_alg);
+end
+
+function res = featshuf_alg(alg, featmask, modlabel)
+res = modify_alg(alg, @(X,ks) shufgen(X,ks,featmask), modlabel);
+end
 
 function mod_alg = modify_alg(alg, modder, modlabel)
 mod_alg = struct('name', [alg.name modlabel],...
@@ -65,7 +99,6 @@ mod_alg = struct('name', [alg.name modlabel],...
                  'train', @(X,ks) alg.train(modder(X,ks),ks),...
                  'test', alg.test);
 end
-
 
 function [train_err, test_err] = performance(alg, X, ks, func, train_frac)
 X = alg.pre(X);
@@ -79,7 +112,6 @@ pred_test = alg.test(model, X_test);
 train_err = func(ks_train, pred_train);
 test_err = func(ks_test, pred_test);
 end
-
 
 function vis(neu, xy)
 xy_on = xy(neu,:);
