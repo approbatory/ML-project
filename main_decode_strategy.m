@@ -3,13 +3,13 @@ rng(10);
 
 directory = '../c14m4';
 
-labels{1} = 'd15, ego left';
+%labels{1} = 'd15, ego left';
 days{1} = 'c14m4d15';
 
-labels{2} = 'd16, ego left to allo south';
+%labels{2} = 'd16, ego left to allo south';
 days{2} = 'c14m4d16';
 
-labels{3} = 'd17, allo south';
+%labels{3} = 'd17, allo south';
 days{3} = 'c14m4d17';
 %%
 
@@ -82,6 +82,7 @@ end
 %%
 %figure;
 for i = 1:3
+    poss{i} = bins; %ADDED
     plot(poss{i}, err{i}, '-x');
     hold on;
     %view_err(ds, poss{i}, err{i}, err_map{i}, labels{i}, 'save', 'figs', 'hide');

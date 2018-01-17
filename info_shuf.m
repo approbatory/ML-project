@@ -43,11 +43,24 @@ for ix = process_days
     [totshuf_train_err, totshuf_test_err] = perf(totshuf_alg);
     fprintf('Total shuffle:\ttr: %f\tte: %f\n', totshuf_train_err, totshuf_test_err);
     
-    info_string = ['This is measuring the degradation of performance unon an'...
+    [~,~,combined] = unique(Xb, 'rows');
+    total_muti = muti(combined, ks);
+    
+    ablative_muti = zeros(1,N);
+    parfor j = 1:N
+        [~,~,combo] = unique(shuffle1(Xb,ks,j), 'rows');
+        ablative_muti(j) = muti(combo, ks);
+        disp(j);
+    end
+end
+
+
+function [non_shuffled_train, non_shuffled_test, specific_train, specific_test] = run_ablation(perf, col_muti, X, ks)
+info_string = ['This is measuring the degradation of performance unon an'...
         ' ablative, one by one, shuffle of the neurons',...
         ' compared with these neurons mutual information with place bins'];
     timer = tic;
-    num_tries = 100;
+    num_tries = 128;
     parfor ind = 1:num_tries
         [non_shuffled_train(1,ind),non_shuffled_test(1,ind)] = perf(alg);
     end
@@ -63,6 +76,7 @@ for ix = process_days
     toc(timer);
     save info_shuf_ablative.mat specific_test specific_train non_shuffled_test non_shuffled_train col_muti info_string X ks num_tries
 end
+
 
 % function singleshuf = ablate(perf_func, alg, N)
 % parfor j = 1:N
@@ -91,6 +105,13 @@ end
 
 function res = featshuf_alg(alg, featmask, modlabel)
 res = modify_alg(alg, @(X,ks) shufgen(X,ks,featmask), modlabel);
+end
+
+function res = shuffle1(X,ks,j)
+[~,N] = size(X);
+featmask = false(1,N);
+featmask(j) = true;
+res = shufgen(X,ks,featmask);
 end
 
 function mod_alg = modify_alg(alg, modder, modlabel)
