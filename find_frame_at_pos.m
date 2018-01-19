@@ -1,4 +1,16 @@
 function [frame_of_interest, pos] = find_frame_at_pos(ds, poss)
+pos = preprocess_xy(ds);
+frame_of_interest = zeros(length(ds.trials), length(poss));
+reparam_pos = cellfun(@reparam, pos, 'UniformOutput', false);
+for i = 1:length(ds.trials)
+    r = reparam_pos{i};
+    [~, ix] = min((r - poss).^2);
+    frame_of_interest(i,:) = ix;%TODO CHECK!!!!!!!!!!!!
+end
+end
+
+
+function [frame_of_interest, pos] = find_frame_at_pos_OLD(ds, poss)
 %FIND_FRAME_AT_POS For each position in poss, find frame closest to it in
 %each trial
 %   Return the relavant frames in each trial for each value in poss 'frame_of_interest'
