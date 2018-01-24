@@ -1,6 +1,7 @@
 function [frame_of_interest, pos] = find_frame_at_pos(ds, poss)
 %finds the frame closest to specified poss based on the angle of the turn,
-%only within gate open-close times
+%only within gate open-close times, including open time, excluding close
+%time, i.e. start 1, open 3, close 7, end 10, only use 3 4 5 6
 pos = preprocess_xy(ds);
 frame_of_interest = zeros(length(ds.trials), length(poss));
 reparam_pos = cellfun(@reparam, pos, 'UniformOutput', false);
