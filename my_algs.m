@@ -47,7 +47,7 @@ end
 if all2all
     for i = 1:numel(names)
         for j = 1:numel(settings)
-            algs(i,j) = create(names{i}, settings{j});
+            algs(j,i) = create(names{i}, settings{j});
         end
     end
 else

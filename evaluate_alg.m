@@ -1,18 +1,65 @@
-function [model, train_err, test_err] = evaluate_alg(alg, X, ks, eval_f, train_frac, par_loops)
-if ~exist('par_loops', 'var')
-    par_loops = 1;
-end
-tic
-X = alg.pre(X);
+function [train_err, test_err, varargout] = evaluate_alg(alg, X, ks, varargin)
+p = inputParser;
+
+defaultEvalF = @(k,p) mean(~cellfun(@isequal, k, p));
+checkEvalF = @(f) isa(f,'function_handle');
+
+defaultTrainFrac = 0.7;
+checkTrainFrac = @(x) (x>=0) && (x<=1);
+
+defaultParLoops = 1;
+checkParLoops = @(p) p>=1;
+
+defaultSubset = logical([]);
+checkSubset = @(s) islogical(s) &&...
+    (isempty(s) ||...
+    ( (numel(s) == length(ks)) && isvector(s) ));
+
+p.addRequired('alg', @isstruct);
+p.addRequired('X', @(x) size(x,1)==length(ks));
+p.addRequired('ks', @isvector);
+p.addParameter('eval_f', defaultEvalF, checkEvalF);
+p.addParameter('train_frac', defaultTrainFrac, checkTrainFrac);
+p.addParameter('par_loops', defaultParLoops, checkParLoops);
+p.addParameter('subset', defaultSubset, checkSubset);
+
+p.parse(alg, X, ks, varargin{:});
+alg = p.Results.alg;
+X = p.Results.X;
+ks = p.Results.ks;
+eval_f = p.Results.eval_f;
+train_frac = p.Results.train_frac;
+par_loops = p.Results.par_loops;
+subset = p.Results.subset;
+
+pre = alg.pre; train = alg.train; test = alg.test;
+
+my_tic = tic;
+X = pre(X);
 parfor par_ix = 1:par_loops
     train_slice = randperm(length(ks))/length(ks) < train_frac;
     X_train = X(train_slice,:); X_test = X(~train_slice,:);
     ks_train = ks(train_slice); ks_test = ks(~train_slice);
-    model{par_ix} = train(X_train, ks_train);
-    pred_train = test(model{par_ix}, X_train);
-    pred_test = test(model{par_ix}, X_test);
-    train_err{par_ix} = eval_f(ks_train, pred_train);
-    test_err{par_ix} = eval_f(ks_test, pred_test);
+    model = train(X_train, ks_train);
+    pred_train = test(model, X_train);
+    pred_test = test(model, X_test);
+    train_err(par_ix) = eval_f(ks_train, pred_train);
+    test_err(par_ix) = eval_f(ks_test, pred_test);
+    if ~isempty(subset)
+        subset_train = subset(train_slice);
+        subset_test = subset(~train_slice);
+        sub_train_err(par_ix) = eval_f(ks_train(subset_train), pred_train(subset_train));
+        sub_test_err(par_ix) = eval_f(ks_test(subset_test), pred_test(subset_test));
+    end
 end
-toc
+if ~isempty(subset)
+    varargout{1} = sub_train_err;
+    varargout{2} = sub_test_err;
+    [varargout{3}, varargout{4}] = evaluate_alg(p.Results.alg, p.Results.X(subset,:),...
+        p.Results.ks(subset), 'eval_f', p.Results.eval_f,...
+        'train_frac', p.Results.train_frac, 'par_loops', p.Results.par_loops);
+end
+time_elapsed = toc(my_tic);
+fprintf('%f s:running alg %s, with subset? %d\n',...
+    time_elapsed, alg.name, ~isempty(subset));
 end
