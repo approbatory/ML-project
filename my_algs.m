@@ -30,6 +30,9 @@ ecoclin = struct('name', 'ECOC SVM lin', 'pre', ecoc_pre, 'train', ecoc_trainlin
 ecoc_binarized = struct('name', 'ECOC SVM binarized\_input', 'pre', ecoc_pre_binarized, 'train', ecoc_train, 'test', ecoc_test);
 ecoclin_binarized = struct('name', 'ECOC SVM lin binarized\_input', 'pre', ecoc_pre_binarized, 'train', ecoc_trainlin, 'test', ecoc_test);
 
+if ~exist('settings', 'var')
+    settings = 'original';
+end
 if ~exist('all2all', 'var')
     all2all = true;
 end

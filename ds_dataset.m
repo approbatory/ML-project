@@ -41,7 +41,7 @@ sparsify = p.Results.sparsify;
 
 X = gen_place_decoding_X(ds);
 if strcmp(filling, 'binary')
-    X = cellfun(@(x) x~=0, X, 'UniformOutput', false);
+    X = cellfun(@(x) double(x~=0), X, 'UniformOutput', false);
 elseif strcmp(filling, 'copy')
     X = cellfun(@(x,y) (x~=0).*(y'), X, {ds.trials.traces}',...
         'UniformOutput', false);

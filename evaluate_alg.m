@@ -15,13 +15,16 @@ checkSubset = @(s) islogical(s) &&...
     (isempty(s) ||...
     ( (numel(s) == length(ks)) && isvector(s) ));
 
+defaultXisFunc = false;
+
 p.addRequired('alg', @isstruct);
-p.addRequired('X', @(x) size(x,1)==length(ks));
+p.addRequired('X', @(x) isa(x,'function_handle') || (size(x,1)==length(ks)));
 p.addRequired('ks', @isvector);
 p.addParameter('eval_f', defaultEvalF, checkEvalF);
 p.addParameter('train_frac', defaultTrainFrac, checkTrainFrac);
 p.addParameter('par_loops', defaultParLoops, checkParLoops);
 p.addParameter('subset', defaultSubset, checkSubset);
+p.addParameter('X_is_func', defaultXisFunc, @islogical);
 
 p.parse(alg, X, ks, varargin{:});
 alg = p.Results.alg;
@@ -31,13 +34,22 @@ eval_f = p.Results.eval_f;
 train_frac = p.Results.train_frac;
 par_loops = p.Results.par_loops;
 subset = p.Results.subset;
+X_is_func = p.Results.X_is_func;
 
 pre = alg.pre; train = alg.train; test = alg.test;
 
 my_tic = tic;
-X = pre(X);
+if ~X_is_func
+    X = pre(X);
+else
+    Xf = X;
+end
 if par_loops > 1
+    if ~X_is_func
+        Xf = @() X;
+    end
     parfor par_ix = 1:par_loops
+        X = Xf();
         if isempty(subset)
             [train_err(par_ix), test_err(par_ix)] = ...
                 run_model(train, test, X, ks, eval_f, train_frac, subset);
@@ -47,6 +59,9 @@ if par_loops > 1
         end
     end
 else
+    if X_is_func
+        X = Xf();
+    end
     if isempty(subset)
         [train_err, test_err] = run_model(train, test, X, ks, eval_f, train_frac, subset);
     else
@@ -57,9 +72,15 @@ end
 if ~isempty(subset)
     varargout{1} = sub_train_err;
     varargout{2} = sub_test_err;
-    [varargout{3}, varargout{4}] = evaluate_alg(p.Results.alg, p.Results.X(subset,:),...
+    if X_is_func
+        X_cut = @() subsetted_X(p.Results.X, subset);
+    else
+        X_cut = p.Results.X(subset,:);
+    end
+    [varargout{3}, varargout{4}] = evaluate_alg(p.Results.alg, X_cut,...
         p.Results.ks(subset), 'eval_f', p.Results.eval_f,...
-        'train_frac', p.Results.train_frac, 'par_loops', p.Results.par_loops);
+        'train_frac', p.Results.train_frac, 'par_loops', p.Results.par_loops,...
+        'X_is_func', p.Results.X_is_func);
 end
 time_elapsed = toc(my_tic);
 fprintf('%f s:running alg %s, with subset? %d\n',...
@@ -84,4 +105,9 @@ if ~isempty(subset)
     varargout{1} = sub_train_err;
     varargout{2} = sub_test_err;
 end
+end
+
+function Xs = subsetted_X(Xf, subset)
+Xs = Xf();
+Xs = Xs(subset,:);
 end
