@@ -47,15 +47,23 @@ subplot(2,3,3);
 plotmat('Moving data train error - on spoof', spoof_moving_train_err, algs, dayset);
 
 subplot(2,3,4);
-plotmat('Test error - on spoof', spoof_test_err, algs, dayset);
+plotmat('Test error - on spoof', spoof_test_err, algs, dayset, true);
 subplot(2,3,5);
-plotmat('Test error, on moving - on spoof', spoof_sub_test_err, algs, dayset);
+plotmat('Test error, on moving - on spoof', spoof_sub_test_err, algs, dayset, true);
 subplot(2,3,6);
-plotmat('Moving data test error - on spoof', spoof_moving_test_err, algs, dayset);
+plotmat('Moving data test error - on spoof', spoof_moving_test_err, algs, dayset, true);
 
 %%
-function plotmat(titl, errs, algs, dayset)
-errnbar(cellfun(@mean, errs), cellfun(@(x) std(x)/sqrt(length(x)), errs));
+function plotmat(titl, errs, algs, dayset, self_std)
+if ~exist('self_std', 'var')
+    self_std = false;
+end
+if self_std
+    errb = @(x)std(x);
+else
+    errb = @(x)std(x)/sqrt(length(x));
+end
+errnbar(cellfun(@mean, errs), cellfun(errb, errs));
 set(gca, 'XTickLabel', {dayset.label});
 set(gca, 'XTick', 1:numel(algs));
 xtickangle(5);

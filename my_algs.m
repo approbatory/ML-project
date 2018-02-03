@@ -17,6 +17,11 @@ t2 = templateSVM('Standardize',1,'KernelFunction','polynomial', 'PolynomialOrder
 tlin = templateLinear('Learner', 'svm',...
     'Regularization', 'lasso', 'Lambda', 0.002,...
     'Solver', 'sparsa');
+linsvm_train = @(X_train, ks_train) fitclinear(X_train, ks_train, 'Learner', 'svm',...
+    'Regularization', 'lasso', 'Lambda', 0.02,...
+    'Solver', 'sparsa');
+linsvm_test = @(model, X_test) predict(model, X_test);
+
 ecoc_train = @(X_train, ks_train) fitcecoc(X_train, ks_train, 'Learners', t);
 ecoc_train2 = @(X_train, ks_train) fitcecoc(X_train, ks_train, 'Learners', t2);
 ecoc_trainlin = @(X_train, ks_train) fitcecoc(X_train, ks_train, 'Learners', tlin);
@@ -29,6 +34,8 @@ ecoc2 = struct('name', 'ECOC SVM quadratic', 'pre', ecoc_pre, 'train', ecoc_trai
 ecoclin = struct('name', 'ECOC SVM lin', 'pre', ecoc_pre, 'train', ecoc_trainlin, 'test', ecoc_test);
 ecoc_binarized = struct('name', 'ECOC SVM binarized\_input', 'pre', ecoc_pre_binarized, 'train', ecoc_train, 'test', ecoc_test);
 ecoclin_binarized = struct('name', 'ECOC SVM lin binarized\_input', 'pre', ecoc_pre_binarized, 'train', ecoc_trainlin, 'test', ecoc_test);
+
+linsvm = struct('name', 'lin SVM', 'pre', @(x)x, 'train', linsvm_train, 'test', linsvm_test);
 
 if ~exist('settings', 'var')
     settings = 'original';
@@ -75,6 +82,8 @@ end
                 alg = ecoc_binarized;
             case 'ecoclin_binarized'
                 alg = ecoclin_binarized;
+            case 'linsvm'
+                alg = linsvm;
             otherwise
                 error('requested alg name not available: %s', name);
         end

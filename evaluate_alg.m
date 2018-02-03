@@ -1,7 +1,7 @@
 function [train_err, test_err, varargout] = evaluate_alg(alg, X, ks, varargin)
 p = inputParser;
 
-defaultEvalF = @(k,p) mean(~cellfun(@isequal, k, p));
+defaultEvalF = @(k,p) mean(~cellfun(@isequal, k(:), p(:)));
 checkEvalF = @(f) isa(f,'function_handle');
 
 defaultTrainFrac = 0.7;

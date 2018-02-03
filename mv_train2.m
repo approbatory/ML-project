@@ -10,4 +10,5 @@ for i = 1:length(K_vals)
 end
 model.log_flip_conditional = log(1 - model.log_conditional);
 model.log_conditional = log(model.log_conditional);
+model.K_vals = K_vals;
 end

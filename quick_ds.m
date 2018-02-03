@@ -24,7 +24,12 @@ fclose(fid);
 %    'gate_close', 'trial_end'};
 %disp(XY);
 
-class_file_name = file_pattern('cm01', 'class*.txt');
+if exist('cm01-fix', 'dir')
+    cm_dir = 'cm01-fix';
+else
+    cm_dir = 'cm01';
+end
+class_file_name = file_pattern(cm_dir, 'class*.txt');
 %class_file_name = ls(fullfile('cm01','class*.txt'));
 %if strcmp(class_file_name(end),newline)
 %    class_file_name = class_file_name(1:end-1); %removing trailing newline
@@ -39,7 +44,7 @@ end
 ds.num_cells = length(goodcells);
 
 
-traces_filters_filename = file_pattern('cm01', 'rec*.mat');
+traces_filters_filename = file_pattern(cm_dir, 'rec*.mat');
 %traces_filters_filename = ls(fullfile('cm01','rec*.mat'));
 %if strcmp(traces_filters_filename(end), newline)
 %    traces_filters_filename = traces_filters_filename(1:end-1);
@@ -61,7 +66,7 @@ if ~nocells
     end
 end
 
-events_fname = file_pattern('cm01', 'events*.mat');
+events_fname = file_pattern(cm_dir, 'events*.mat');
 %events_fname = ls(fullfile('cm01','events*.mat'));
 %if strcmp(events_fname(end), newline)
 %    events_fname = events_fname(1:end-1);

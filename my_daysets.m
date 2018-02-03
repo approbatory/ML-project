@@ -1,4 +1,4 @@
-function dayset = my_daysets(name)
+function [dayset, matching] = my_daysets(name)
 switch name
     case 'c14m4'
         directory = '../c14m4';
@@ -11,6 +11,7 @@ switch name
         dayset(3) = struct('directory', directory,...
             'day', 'c14m4d17',...
             'label', 'd17, allo south');
+        matching = find_match(fullfile(directory, 'match.mat'));
         return;
     case 'c11m1'
         directory = '../c11m1';
@@ -23,6 +24,7 @@ switch name
         dayset(3) = struct('directory', directory,...
             'day', 'c11m1d14',...
             'label', 'd14, allo north');
+        matching = find_match(fullfile(directory, 'match12-14_fix.mat'));
         return;
     otherwise
         error('day set %s not found', name);
@@ -30,3 +32,7 @@ end
 end
 
 %TODO: add neuron match indices as another field in dayset
+function matching = find_match(matchfile)
+s = load(matchfile);
+matching = find_full_match(s.match_list);
+end
