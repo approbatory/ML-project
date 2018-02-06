@@ -24,10 +24,10 @@ fclose(fid);
 %    'gate_close', 'trial_end'};
 %disp(XY);
 
-if exist('cm01-fix', 'dir')
-    cm_dir = 'cm01-fix';
-else
+if exist('cm01', 'dir')
     cm_dir = 'cm01';
+else
+    cm_dir = 'cm01-fix';
 end
 class_file_name = file_pattern(cm_dir, 'class*.txt');
 %class_file_name = ls(fullfile('cm01','class*.txt'));

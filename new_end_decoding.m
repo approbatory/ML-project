@@ -1,5 +1,5 @@
-%ds = quick_ds('../c14m4/c14m4d16', 'deprobe', 'nocells'); % for hpc
-ds = quick_ds('../c11m1/c11m1d13', 'deprobe', 'nocells'); % for mpfc
+ds = quick_ds('../c14m4/c14m4d16', 'deprobe', 'nocells'); region = 'HPC'; % for hpc
+%ds = quick_ds('../c11m1/c11m1d13', 'deprobe', 'nocells'); region = 'mPFC';% for mpfc
 
 
 trials_chosen = strcmp({ds.trials.start}, 'west'); % using the changing path
@@ -37,6 +37,6 @@ end
 legend
 xlabel('Fraction of turn completed');
 ylabel('End arm classification error');
-title('End arm prediction at positions along turn');
+title(sprintf('End arm prediction at positions along turn (%s)', region));
 
 %TODO: maybe apply on independent spoofed data?
