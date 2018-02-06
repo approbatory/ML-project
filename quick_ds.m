@@ -14,6 +14,10 @@ end
 
 start_dir = pwd;
 cd(dirname);
+cm_name = 'cm01';
+if ~exist(cm_name, 'dir')
+    cm_name = 'cm01-fix';
+end
 sources = data_sources;
 XY = load(sources.tracking);
 fid = fopen(sources.maze);
@@ -24,12 +28,8 @@ fclose(fid);
 %    'gate_close', 'trial_end'};
 %disp(XY);
 
-if exist('cm01', 'dir')
-    cm_dir = 'cm01';
-else
-    cm_dir = 'cm01-fix';
-end
-class_file_name = file_pattern(cm_dir, 'class*.txt');
+
+class_file_name = file_pattern(cm_name, 'class*.txt');
 %class_file_name = ls(fullfile('cm01','class*.txt'));
 %if strcmp(class_file_name(end),newline)
 %    class_file_name = class_file_name(1:end-1); %removing trailing newline
@@ -44,7 +44,7 @@ end
 ds.num_cells = length(goodcells);
 
 
-traces_filters_filename = file_pattern(cm_dir, 'rec*.mat');
+traces_filters_filename = file_pattern(cm_name, 'rec*.mat');
 %traces_filters_filename = ls(fullfile('cm01','rec*.mat'));
 %if strcmp(traces_filters_filename(end), newline)
 %    traces_filters_filename = traces_filters_filename(1:end-1);
@@ -66,7 +66,7 @@ if ~nocells
     end
 end
 
-events_fname = file_pattern(cm_dir, 'events*.mat');
+events_fname = file_pattern(cm_name, 'events*.mat');
 %events_fname = ls(fullfile('cm01','events*.mat'));
 %if strcmp(events_fname(end), newline)
 %    events_fname = events_fname(1:end-1);
