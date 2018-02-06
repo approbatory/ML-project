@@ -5,7 +5,11 @@ end
 ks = ks(:)';
 K_vals = unique(ks);
 [ii,jj,ss] = sp2cell(X);
-gen = cell2sp(cellshuf(ii, ks, K_vals, featmask), jj, ss);
+[m,n] = size(X);
+if length(featmask) ~= n
+    error('featmask must have as many entries as features: has %d, needs %d', length(featmask), n);
+end
+gen = cell2sp(cellshuf(ii, ks, K_vals, featmask), jj, ss, m, n);
 end
 
 function ii = cellshuf(ii, ks, K_vals, featmask)
@@ -32,9 +36,9 @@ jj = mat2cell(j, Ns);
 ss = mat2cell(s, Ns);
 end
 
-function X = cell2sp(ii,jj,ss)
+function X = cell2sp(ii,jj,ss,m,n)
 i = cell2mat(ii);
 j = cell2mat(jj);
 s = cell2mat(ss);
-X = sparse(i,j,s);
+X = sparse(i,j,s,m,n);
 end

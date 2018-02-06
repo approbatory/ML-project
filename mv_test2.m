@@ -9,4 +9,5 @@ function pred = mv_test2(model, X_test)
 [~, pred] = max(model.log_prior' + sum(model.log_flip_conditional,2) +...
     (model.log_conditional - model.log_flip_conditional)*X_test');
 pred = pred';
+pred = model.K_vals(pred);
 end

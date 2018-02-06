@@ -1,6 +1,6 @@
 function X = shuffle(X, ks)
 if issparse(X)
-    X = shufgen(X, ks, true(size(ks)));
+    X = shufgen(X, ks, true(1,size(X,2)));
     return;
 end
 ks = ks(:)';
