@@ -26,6 +26,13 @@ switch name
             'label', 'd14, allo north');
         matching = find_match(fullfile(directory, 'match12-14_fix.mat'));
         return;
+    case 'openfield'
+        directory = '../open_field';
+        dayset(1) = struct('directory', directory,...
+            'day', 'c11m2d24', 'label', 'open field');
+        dayset(2) = struct('directory', directory,...
+            'day', 'c11m1d25', 'label', 'open field');
+        matching = [];
     otherwise
         error('day set %s not found', name);
 end

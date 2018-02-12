@@ -21,6 +21,8 @@ checkTarget = @(t) (ischar(t) && strcmp(t, 'position bin')) ||...
 
 defaultSparsify = true;
 
+defaultOpenField = false;
+
 p.addRequired('ds', @isstruct);
 p.addParameter('combined', defaultCombined, @islogical);
 p.addParameter('selection', defaultSelection, @checkSelection);
@@ -28,6 +30,7 @@ p.addParameter('filling', defaultFilling, checkFilling);
 p.addParameter('trials', defaultTrials, checkTrials);
 p.addParameter('target', defaultTarget, checkTarget);
 p.addParameter('sparsify', defaultSparsify, @islogical);
+p.addParameter('openfield', defaultOpenField, @islogical);
 
 p.parse(ds, varargin{:});
 
@@ -38,6 +41,7 @@ filling = p.Results.filling;
 trials = p.Results.trials;
 target = p.Results.target;
 sparsify = p.Results.sparsify;
+openfield = p.Results.openfield;
 
 X = gen_place_decoding_X(ds);
 if strcmp(filling, 'binary')
@@ -49,11 +53,21 @@ end
 
 
 if ischar(target) && strcmp(target, 'position bin')
-    [~,D] = bin_space([],[]);
+    if openfield
+        bin_func = @bin_space_open_field;
+    else
+        bin_func = @bin_space;
+    end
+    [~,D] = bin_func([],[]);
     dist_func = @(k,p) D(sub2ind(size(D), k, p));
     mean_dist = @(k,p) mean(dist_func(k,p));
     eval_metric = mean_dist;
-    ks = cellfun(@bin_space, preprocess_xy(ds), 'UniformOutput', false);
+    if openfield
+        XY = {ds.trials.centroids};
+    else
+        XY = preprocess_xy(ds);
+    end
+    ks = cellfun(bin_func, XY, 'UniformOutput', false);
 else
     eval_metric = @(k,p) mean(~cellfun(@isequal, k, p));
     ks = target;
