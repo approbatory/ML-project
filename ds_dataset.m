@@ -59,7 +59,7 @@ if ischar(target) && strcmp(target, 'position bin')
         bin_func = @bin_space;
     end
     [~,D] = bin_func([],[]);
-    dist_func = @(k,p) D(sub2ind(size(D), k, p));
+    dist_func = @(k,p) D(sub2ind(size(D), k(:), p(:))); %accomodate row/col vecs
     mean_dist = @(k,p) mean(dist_func(k,p));
     eval_metric = mean_dist;
     if openfield
