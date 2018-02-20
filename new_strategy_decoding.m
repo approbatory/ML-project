@@ -1,5 +1,5 @@
-%[dayset, matching] = my_daysets('c11m1'); end_arm = 'north'; %mPFC
-[dayset, matching] = my_daysets('c14m4'); end_arm = 'south'; %HPC
+[dayset, matching] = my_daysets('c11m1'); end_arm = 'north'; %mPFC
+%[dayset, matching] = my_daysets('c14m4'); end_arm = 'south'; %HPC
 
 points = 0:0.1:1;
 for i = 1:numel(dayset)
@@ -51,17 +51,27 @@ for i = 1:numel(algs)
         train_errors{i}(:,j) = find_errs(alg.test(model, X_train{j}), ks_train{j});
         test_pred{i}(:,j) = alg.test(model, X_test{j});
         test_errors{i}(:,j) = find_errs(alg.test(model, X_test{j}), ks_test{j});
+        test_on_shuf_pred{i}(:,j) = alg.test(model, shuffle(X_test{j}, ks_test{j}));
+        test_on_shuf_errors{i}(:,j) = find_errs(alg.test(model, shuffle(X_test{j}, ks_test{j})), ks_test{j});
     end
-    subplot(2, numel(algs), i);
-    imagesc(train_pred{i});
+    subplot(3, numel(algs), i);
+    imagesc(train_pred{i}, [0 1]);
     set(gca, 'XTickLabel', {'.1', '.3', '.5', '.7', '.9'});
     h = refline([0 48.5]); h.Color = 'r'; h.LineWidth = 2;
     title(['Train set, ' alg.name]);
     colormap(gray);
-    subplot(2, numel(algs), i+numel(algs));
-    imagesc(test_pred{i});
+    
+    subplot(3, numel(algs), i+numel(algs));
+    imagesc(test_pred{i}, [0 1]);
     set(gca, 'XTickLabel', {'.1', '.3', '.5', '.7', '.9'});
     h = refline([0 24.5]); h.Color = 'r'; h.LineWidth = 2;
     title(['Test set, ' alg.name]);
+    colormap(gray);
+    
+    subplot(3, numel(algs), i+2*numel(algs));
+    imagesc(test_on_shuf_pred{i}, [0 1]);
+    set(gca, 'XTickLabel', {'.1', '.3', '.5', '.7', '.9'});
+    h = refline([0 24.5]); h.Color = 'r'; h.LineWidth = 2;
+    title(['Shuffled test set, ' alg.name]);
     colormap(gray);
 end
