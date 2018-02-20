@@ -15,8 +15,8 @@ figure
 %hold on;
 for i = 1:size(frame_of_interest,1)
     c = pos{i};
-    %plot(c(:,1), c(:,2), 'k.');
-    scatter(c(:,1), c(:,2), 1, bin_space(c));
+    plot(c(:,1), c(:,2), 'k.');
+    %scatter(c(:,1), c(:,2), 1, bin_space(c));
     hold on
     xlim([0 1]);
     ylim([0 1]);

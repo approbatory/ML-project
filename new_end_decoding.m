@@ -1,5 +1,5 @@
-%ds = quick_ds('../c14m4/c14m4d16', 'deprobe', 'nocells'); region = 'HPC'; % for hpc
-ds = quick_ds('../c11m1/c11m1d13', 'deprobe', 'nocells'); region = 'mPFC';% for mpfc
+ds = quick_ds('../c14m4/c14m4d16', 'deprobe', 'nocells'); region = 'HPC'; % for hpc
+%ds = quick_ds('../c11m1/c11m1d13', 'deprobe', 'nocells'); region = 'mPFC';% for mpfc
 
 PARLOOPS = 512;
 
