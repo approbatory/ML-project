@@ -8,7 +8,7 @@ start_dir = pwd;
 cd(dir);
 sources = data_sources;
 %video is unnecessary:
-sources = rmfield(sources, 'behavior');
+%sources = rmfield(sources, 'behavior');
 if exist('cm01-fix', 'dir')
     ds = DaySummary(sources, 'cm01-fix');
 elseif exist('cm01', 'dir')

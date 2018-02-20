@@ -8,7 +8,7 @@ X = (X - min(X))/(max(X) - min(X));
 Y = (Y - min(Y))/(max(Y) - min(Y));
 X(X==1) = 1-eps;
 Y(Y==1) = 1-eps;
-Nx = 7; Ny = 9;
+Nx = 9; Ny = 7;
 Bx = floor(X * Nx);
 By = floor(Y * Ny);
 bins = 1 + Bx + Nx*By;
