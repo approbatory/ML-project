@@ -15,12 +15,12 @@ uses a subset of the trials and assigns one data sample per trial.
 Descriptions of functions will generally follow the following syntax:
 
 
-|function_name|Inputs        |default   |Outputs|
-|:------------|:-------------|:---------|:------|
-|1            |required input|          |output |
-|2            |required input|          |output |
-|`parameter`  | value        | *default*|       |
-|`parameter`  | value        | *default*|       |
+|function_name|Inputs        |Defaults   |Outputs|
+|:------------|:-------------|:----------|:------|
+|1            |required input|           |output |
+|2            |required input|           |output |
+|`parameter`  | value        | *default* |       |
+|`parameter`  | value        | *default* |       |
 
 
 And examples will be given
@@ -46,6 +46,14 @@ Inputs:
 
 Outputs:
 1. a `ds` struct
+
+
+|quick_ds|Inputs|Defaults|Outputs|
+|---|---|---|---|
+|1|day directory||a `ds` struct|
+|`deprobe`|(take out probe trials, no input)|||
+|`nocells`|(do not load cells, no input)|||
+|`cm`| cellmax output directory| *cm01* or *cm01-fix*||
 
 The function `quick_ds` can be used to fetch a day's data from a directory.
  This function mimics the output of the DaySummary constructor but outputs
