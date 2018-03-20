@@ -15,14 +15,12 @@ uses a subset of the trials and assigns one data sample per trial.
 Descriptions of functions will generally follow the following syntax:
 
 
-|function_name|Inputs        |Outputs|
-|-------------|:-------------|:------|
-|1            |required input| output|
-|2            |required input| output|
-|Parameter  | value | default  |
-|-----------|-------|----------|
-|`parameter`| value | *default*|
-|`parameter`| value | *default*|
+|function_name|Inputs        |default   |Outputs|
+|:------------|:-------------|:---------|:------|
+|1            |required input|          |output |
+|2            |required input|          |output |
+|`parameter`  | value        | *default*|       |
+|`parameter`  | value        | *default*|       |
 
 
 And examples will be given
