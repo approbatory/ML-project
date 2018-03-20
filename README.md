@@ -119,6 +119,19 @@ Outputs:
 3. error metric function f(k labels, p prediction)
     (this tends to be more useful for place decoding, where you want a bin distance)
 
+|ds_dataset|Inputs|Defaults|Outputs|
+|---|---|---|---|
+|1|`ds` struct||data matrix: shape M (samples) x N (neurons)|
+|2|||class labels vector: length M|
+|3|||error metric function f(k labels, p prediction) (this tends to be more useful for place decoding, where you want a bin distance)|
+|`combined`|keep trials split in a cell?|*true*||
+|`selection`|0-1 fraction angle along turn to select or 'all'|*'all'*||
+|`filling`|'copy' (trace value if event, 0 if no event) or 'box' ("EVENT AMPLITUDE" if event, 0 if no event) or 'binary' (1 if event, 0 if no event)| *'copy'*||
+|`trials`|boolean mask over trials or 'all'|*'all'*||
+|`target`|the class that each trial belongs to or 'position bin'|*'position bin'*||
+|`sparsify`|return a sparse array?|*true*||
+|`openfield`|is this an openfield dataset?|*false*||
+
 Examples:
 ```matlab
 points = 0:0.1:0.5;
