@@ -13,34 +13,51 @@ uses a subset of the trials and assigns one data sample per trial.
 
 ### Function description syntax
 Descriptions of functions will generally follow the following syntax:
-```matlab
-[ out1, out2, out3, etc., outX,...
-cond_out1 | cond_out2 | etc. | cond_outX ] = ...
-function_name( in1, in2, etc., inX, ...
-'param1', p1 def: d1 | 'param2', p2 def: d2 | ...
-etc. | 'paramX', pX def: dX)
-```
+
+**function_name**
+
+Inputs:
+1. required input
+2. required input
+...
+* `parameter`: value
+    - *default*
+* `parameter`: value
+    - *default*
+...
+
+Outputs:
+1. output
+2. output
+...
+* conditional output (if any)
+
 
 And examples will be given
 ```matlab
-[o1, o2, o3, etc., on, co1, co2] = function_name(ri1, ri2, etc..., rip,...
+[o1, o2, o3, etc., oX, co1, co2] = function_name(ri1, ri2, etc., riX,...
 'parameter1', pi1, 'parameter2', pi2);
 
-[o1, o2, o3, etc., on, co4, co8, etc..., com] = function_name(ri1, ri2, etc..., rip,...
+[o1, o2, o3, etc., oX, co4, co8, etc., com] = function_name(ri1, ri2, etc., riX,...
 'parameter5', pi5);
 ```
 
 
 ## Creating a `ds` struct
 
-The function
-```matlab
-ds struct = quick_ds( day directory,...
- 'deprobe' take out probe trials |...
- 'nocells' do not load cells |...
- 'cm', cellmax output directory def: 'cm01' or 'cm01-fix')
-```
-can be used to fetch a day's data from a directory.
+**quick_ds**
+
+Inputs:
+1. day directory
+* `deprobe` (take out probe trials)
+* `nocells` (do not load cells)
+* `cm`: cellmax output directory
+    - *cm01* or *cm01-fix*
+
+Outputs:
+1. a `ds` struct
+
+The function `quick_ds` can be used to fetch a day's data from a directory.
  This function mimics the output of the DaySummary constructor but outputs
 a struct rather than an object (which has different copying semantics).
 An added benefit of `quick_ds` is that it can take out probe trials automatically
@@ -76,6 +93,33 @@ ds_dataset(ds struct, ...
 'sparsify', return a sparse array? def: true | ...
 'openfield', is this an openfield dataset? def: false)
 ```
+
+**ds_dataset**
+
+Inputs:
+1. `ds` struct
+* `combined`: keep trials split in a cell?
+    - *true*
+* `selection`: 0-1 fraction angle along turn to select or 'all'
+    - *'all'*
+* `filling`: 'copy' (trace value if event, 0 if no event) or 
+'box' ("EVENT AMPLITUDE" if event, 0 if no event) or 
+'binary' (1 if event, 0 if no event)
+    - *'copy'*
+* `trials`: boolean mask over trials or 'all'
+    - *'all'*
+* `target`: the class that each trial belongs to or 'position bin'
+    - *'position bin'*
+* `sparsify`: return a sparse array?
+    - *true*
+* `openfield`: is this an openfield dataset?
+    - *false*
+
+Outputs:
+1. data matrix: shape M (samples) x N (neurons)
+2. class labels vector: length M
+3. error metric function f(k labels, p prediction)
+    (this tends to be more useful for place decoding, where you want a bin distance)
 
 Examples:
 ```matlab
