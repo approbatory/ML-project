@@ -1,4 +1,6 @@
 # Getting started with decoding
+AKA Neural Decoding for Fun and Profit
+AKA Teach Yourself Neural Decoding in Two Hours
 
 ## How to read this manual
 This manual starts with descriptions of the most relevant functions for
@@ -13,7 +15,7 @@ uses a subset of the trials and assigns one data sample per trial.
 Descriptions of functions will generally follow the following syntax:
 ```matlab
 [ out1, out2, out3, etc., outX,...
-cond_out1 | cond_out2 | etc. | cond_outX} ] = ...
+cond_out1 | cond_out2 | etc. | cond_outX ] = ...
 function_name( in1, in2, etc., inX, ...
 'param1', p1 def: d1 | 'param2', p2 def: d2 | ...
 etc. | 'paramX', pX def: dX)
@@ -21,10 +23,10 @@ etc. | 'paramX', pX def: dX)
 
 And examples will be given
 ```matlab
-[o1, o2, o3, etc..., on, co1, co2] = function_name(ri1, ri2, etc..., rip,...
+[o1, o2, o3, etc., on, co1, co2] = function_name(ri1, ri2, etc..., rip,...
 'parameter1', pi1, 'parameter2', pi2);
 
-[o1, o2, o3, etc..., on, co4, co8, etc..., com] = function_name(ri1, ri2, etc..., rip,...
+[o1, o2, o3, etc., on, co4, co8, etc..., com] = function_name(ri1, ri2, etc..., rip,...
 'parameter5', pi5);
 ```
 
@@ -34,8 +36,8 @@ And examples will be given
 The function
 ```matlab
 ds struct = quick_ds( day directory,...
- 'deprobe' take out probe trials? def: false |...
- 'nocells' do not load cells? def: false |...
+ 'deprobe' take out probe trials |...
+ 'nocells' do not load cells |...
  'cm', cellmax output directory def: 'cm01' or 'cm01-fix')
 ```
 can be used to fetch a day's data from a directory.
@@ -65,7 +67,10 @@ use the function
 ds_dataset(ds struct, ...
 'combined', keep trials split in a cell? def: true | ...
 'selection', 0-1 fraction angle along turn to select or 'all' def: 'all' | ...
-'filling', 'copy' (trace value if event, 0 if no event) or 'box' ("EVENT AMPLITUDE" if event, 0 if no event) or 'binary' (1 if event, 0 if no event) def: 'copy' | ...
+'filling', 'copy' (trace value if event, 0 if no event) or ...
+    'box' ("EVENT AMPLITUDE" if event, 0 if no event) or ...
+    'binary' (1 if event, 0 if no event) ... 
+    def: 'copy' | ...
 'trials', boolean mask over trials or 'all' def: 'all' | ...
 'target', the class that each trial belongs to or 'position bin' def: 'position bin' | ...
 'sparsify', return a sparse array? def: true | ...
@@ -89,4 +94,37 @@ for ix = 1:numel(ds)
         error('unequal ks');
     end
 end
+X = cell2mat(X);
+ks = ks{1,1};
 ```
+
+## `alg` structures
+Decoders are encapsulated in structures of the following form:
+```matlab
+alg.name = 'The name of the decoder';
+alg.pre = @(X) some function to preprocess the matrix X;
+alg.train = @(X_tr, ks_tr) a function training on all of X_tr and ks_tr ...
+    and returning a trained model object;
+alg.test = @(model, X_te) a function predicting the output of X_te given ...
+    the trained model (typically this is predict(model, X_te));
+```
+
+A number of precanned `alg` structures are available in `my_algs`:
+
+```matlab
+struct array of algs = my_algs( cell array of alg codenames )
+```
+
+Some examples include:
+```matlab
+algs = my_algs({'linsvm', 'mvnb'});
+
+algs = my_algs({'ecoclin', 'mvnb2'});
+```
+
+* `linsvm` is a linear SVM for binary classification.
+* `mvnb` is multivariate naive Bayes for categorical data,
+used on binarized event detected traces.
+* `mvnb2` is a faster version optimized to run quickly with sparse arrays
+* `ecoclin` is like `linsvm` but uses an all-to-all ensemble to be able
+to perform multiclass classification.
