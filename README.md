@@ -70,7 +70,7 @@ use the function `ds_dataset`.
 |2|||class labels vector: length M|
 |3|||error metric function f(k labels, p prediction) (this tends to be more useful for place decoding, where you want a bin distance)|
 |`combined`|combine trials split in a cell into one matrix?|*true*||
-|`selection`|0-1 fraction angle along turn to select or 'all'|*'all'*||
+|`selection`|0-1 fraction angle along turn to select (scalar only) or 'all'|*'all'*||
 |`filling`|'copy' (trace value if event, 0 if no event) or 'box' ("EVENT AMPLITUDE" if event, 0 if no event) or 'binary' (1 if event, 0 if no event)| *'copy'*||
 |`trials`|boolean mask over trials or 'all'|*'all'*||
 |`target`|the class that each trial belongs to or 'position bin'|*'position bin'*||
@@ -140,8 +140,8 @@ to perform multiclass classification.
 |`eval_f`|evaluation function of the form f(k,p) to compare predictions to ground truth|`@(k,p) mean(~cellfun(@isequal, k(:), p(:)))`||
 |`train_frac`| fraction of the data to train on| 0.7||
 |`par_loops`| how many times to run in parallel with different test/train division|1||
-|`subset`|<not covered>|<not covered>||
-|`X_is_func`|<not covered>|<not covered>||
+|`subset`| not covered | not covered ||
+|`X_is_func`| not covered | not covered ||
 
 To evaluate the performance of a decoder on a dataset (`X`, `ks`), use `evaluate_alg`.
 The function internally cuts the data into a training set and testing set and
