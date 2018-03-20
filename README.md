@@ -1,46 +1,17 @@
-# Getting started with decoding
-AKA Neural Decoding for Fun and Profit
-AKA Teach Yourself Neural Decoding in Two Hours
-
-## How to read this manual
-This manual starts with descriptions of the most relevant functions for
-quickly loading data and extracting arrays which can be used to run various 
-algorithms for decoding. It then explains how to use the decoder evaluation
-functions to produce plots of decoding errors.
-These functions were designed for time-based decoding, such as place decoding,
-which uses each timepoint as a sample, as well as trial-based decoding, which 
-uses a subset of the trials and assigns one data sample per trial.
-
-### Function description syntax
-Descriptions of functions will generally follow the following syntax:
-
-
-|function_name|Inputs        |Defaults   |Outputs|
-|:------------|:-------------|:----------|:------|
-|1            |required input|           |output |
-|2            |required input|           |output |
-|`parameter`  | value        | *default* |       |
-|`parameter`  | value        | *default* |       |
-
-
-And examples will be given
-```matlab
-[o1, o2, o3, etc., oX, co1, co2] = function_name(ri1, ri2, etc., riX,...
-'parameter1', pi1, 'parameter2', pi2);
-
-[o1, o2, o3, etc., oX, co4, co8, etc., com] = function_name(ri1, ri2, etc., riX,...
-'parameter5', pi5);
-```
-
-
+# Decoding Tools
 ## Creating a `ds` struct
 
-|quick_ds|Inputs|Defaults|Outputs|
-|---|---|---|---|
-|1|day directory||a `ds` struct|
-|`deprobe`|(take out probe trials, no input)|||
-|`nocells`|(do not load cells, no input)|||
-|`cm`| cellmax output directory| *cm01* or *cm01-fix*||
+**quick_ds**
+
+Inputs:
+1. day directory (such as `'~/c14m4/c14m4d15'`)
+* Flag `deprobe` (take out probe trials)
+* Flag `nocells` (do not load cells)
+* Parameter `cm`: cellmax output directory
+    - Default: *'cm01'* or *'cm01-fix'*
+
+Outputs:
+1. a `ds` struct
 
 The function `quick_ds` can be used to fetch a day's data from a directory.
  This function mimics the output of the DaySummary constructor but outputs
@@ -64,18 +35,33 @@ To load a dataset for supervised learning, including an `X` matrix containing
 samples along rows and neurons along columns, and a `ks` vector containing labels,
 use the function `ds_dataset`.
 
-|ds_dataset|Inputs|Defaults|Outputs|
-|---|---|---|---|
-|1|`ds` struct||data matrix: shape M (samples) x N (neurons)|
-|2|||class labels vector: length M|
-|3|||error metric function f(k labels, p prediction) (this tends to be more useful for place decoding, where you want a bin distance)|
-|`combined`|combine trials split in a cell into one matrix?|*true*||
-|`selection`|0-1 fraction angle along turn to select (scalar only) or 'all'|*'all'*||
-|`filling`|'copy' (trace value if event, 0 if no event) or 'box' ("EVENT AMPLITUDE" if event, 0 if no event) or 'binary' (1 if event, 0 if no event)| *'copy'*||
-|`trials`|boolean mask over trials or 'all'|*'all'*||
-|`target`|the class that each trial belongs to or 'position bin'|*'position bin'*||
-|`sparsify`|return a sparse array?|*true*||
-|`openfield`|is this an openfield dataset?|*false*||
+**ds_dataset**
+
+Inputs:
+1. `ds` struct, as returned by `quick_ds`
+* Parameter `combined`: keep trials split in a cell?
+    - Default *true*
+* Parameter `selection`: 0-1 fraction angle along turn to select or 'all'
+    - Default *'all'*
+* Parameter `filling`: 'copy' (trace value if event, 0 if no event) or 
+'box' ("EVENT AMPLITUDE" if event, 0 if no event) or 
+'binary' (1 if event, 0 if no event)
+    - Default *'copy'*
+* Parameter `trials`: boolean mask over trials or 'all'
+    - Default *'all'*
+* Parameter `target`: the class that each trial belongs to or 'position bin'
+    - Default *'position bin'*
+* Parameter `sparsify`: return a sparse array?
+    - Default *true*
+* Parameter `openfield`: is this an openfield dataset?
+    - Default *false*
+
+Outputs:
+1. data matrix: shape M (samples) x N (neurons)
+2. class labels vector: length M
+3. error metric function f(k labels, p prediction)
+    (this tends to be more useful for place decoding, where you want a bin distance)
+
 
 Examples:
 ```matlab
@@ -132,16 +118,23 @@ to perform multiclass classification.
 
 ## Evaluating a decoder
 
-|evaluate_alg|Inputs|Defaults|Outputs|
-|----|----|----|----|
-|1|`alg` struct||training errors|
-|2|`X` data matrix||testing errors|
-|3|`ks` class label vector|||
-|`eval_f`|evaluation function of the form f(k,p) to compare predictions to ground truth|`@(k,p) mean(~cellfun(@isequal, k(:), p(:)))`||
-|`train_frac`| fraction of the data to train on| 0.7||
-|`par_loops`| how many times to run in parallel with different test/train division|1||
-|`subset`| not covered | not covered ||
-|`X_is_func`| not covered | not covered ||
+**evaluate_alg**
+
+Inputs:
+1. `alg` struct, as returned by `my_algs`, scalar
+2. `X` data matrix, as returned by `ds_dataset`
+3. `ks` class label vector, as returned by `ds_dataset`
+* Parameter `eval_f`: evaluation function of the form f(k,p) to compare predictions to ground truth
+    - Default: `@(k,p) mean(~cellfun(@isequal, k(:), p(:)))`
+* Parameter `train_frac`: fraction of the data to train on
+    - Default: *0.7*
+* Parameter `par_loops`: how many times to run with different test/train division.
+    **Note that `evaluate_alg` will try to run each division in parallel to save time, using a `parfor` loop**
+    - Default: *1*
+
+Outputs:
+1. training errors (vector of length `par_loops`)
+2. testing errors (vector of length `par_loops`)
 
 To evaluate the performance of a decoder on a dataset (`X`, `ks`), use `evaluate_alg`.
 The function internally cuts the data into a training set and testing set and
