@@ -14,23 +14,14 @@ uses a subset of the trials and assigns one data sample per trial.
 ### Function description syntax
 Descriptions of functions will generally follow the following syntax:
 
-**function_name**
 
-Inputs:
-1. required input
-2. required input
-...
-* `parameter`: value
-    - *default*
-* `parameter`: value
-    - *default*
-...
-
-Outputs:
-1. output
-2. output
-...
-* conditional output (if any)
+|function_name|Inputs        |Outputs|
+|-------------|:-------------|:------|
+|1            |required input| output|
+|2            |required input| output|
+|Parameter  | value | default  |
+|`parameter`| value | *default*|
+|`parameter`| value | *default*|
 
 
 And examples will be given
