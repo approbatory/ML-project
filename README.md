@@ -35,19 +35,6 @@ And examples will be given
 
 ## Creating a `ds` struct
 
-**quick_ds**
-
-Inputs:
-1. day directory
-* `deprobe` (take out probe trials)
-* `nocells` (do not load cells)
-* `cm`: cellmax output directory
-    - *cm01* or *cm01-fix*
-
-Outputs:
-1. a `ds` struct
-
-
 |quick_ds|Inputs|Defaults|Outputs|
 |---|---|---|---|
 |1|day directory||a `ds` struct|
@@ -75,56 +62,14 @@ ds_prl = quick_ds('../cohort14_dual/c14m6/c14m6d10', 'deprobe', 'nocells', 'cm',
 
 To load a dataset for supervised learning, including an `X` matrix containing
 samples along rows and neurons along columns, and a `ks` vector containing labels,
-use the function
-```matlab
-[data matrix: shape M (samples) x N (neurons), class labels vector: length M,...
- error metric function f(k labels,p prediction)] = ...
-ds_dataset(ds struct, ...
-'combined', keep trials split in a cell? def: true | ...
-'selection', 0-1 fraction angle along turn to select or 'all' def: 'all' | ...
-'filling', 'copy' (trace value if event, 0 if no event) or ...
-    'box' ("EVENT AMPLITUDE" if event, 0 if no event) or ...
-    'binary' (1 if event, 0 if no event) ... 
-    def: 'copy' | ...
-'trials', boolean mask over trials or 'all' def: 'all' | ...
-'target', the class that each trial belongs to or 'position bin' def: 'position bin' | ...
-'sparsify', return a sparse array? def: true | ...
-'openfield', is this an openfield dataset? def: false)
-```
-
-**ds_dataset**
-
-Inputs:
-1. `ds` struct
-* `combined`: keep trials split in a cell?
-    - *true*
-* `selection`: 0-1 fraction angle along turn to select or 'all'
-    - *'all'*
-* `filling`: 'copy' (trace value if event, 0 if no event) or 
-'box' ("EVENT AMPLITUDE" if event, 0 if no event) or 
-'binary' (1 if event, 0 if no event)
-    - *'copy'*
-* `trials`: boolean mask over trials or 'all'
-    - *'all'*
-* `target`: the class that each trial belongs to or 'position bin'
-    - *'position bin'*
-* `sparsify`: return a sparse array?
-    - *true*
-* `openfield`: is this an openfield dataset?
-    - *false*
-
-Outputs:
-1. data matrix: shape M (samples) x N (neurons)
-2. class labels vector: length M
-3. error metric function f(k labels, p prediction)
-    (this tends to be more useful for place decoding, where you want a bin distance)
+use the function `ds_dataset`.
 
 |ds_dataset|Inputs|Defaults|Outputs|
 |---|---|---|---|
 |1|`ds` struct||data matrix: shape M (samples) x N (neurons)|
 |2|||class labels vector: length M|
 |3|||error metric function f(k labels, p prediction) (this tends to be more useful for place decoding, where you want a bin distance)|
-|`combined`|keep trials split in a cell?|*true*||
+|`combined`|combine trials split in a cell into one matrix?|*true*||
 |`selection`|0-1 fraction angle along turn to select or 'all'|*'all'*||
 |`filling`|'copy' (trace value if event, 0 if no event) or 'box' ("EVENT AMPLITUDE" if event, 0 if no event) or 'binary' (1 if event, 0 if no event)| *'copy'*||
 |`trials`|boolean mask over trials or 'all'|*'all'*||
@@ -175,6 +120,7 @@ Some examples include:
 algs = my_algs({'linsvm', 'mvnb'});
 
 algs = my_algs({'ecoclin', 'mvnb2'});
+alg = alg(1); %will be an ecoclin alg
 ```
 
 * `linsvm` is a linear SVM for binary classification.
@@ -183,3 +129,29 @@ used on binarized event detected traces.
 * `mvnb2` is a faster version optimized to run quickly with sparse arrays
 * `ecoclin` is like `linsvm` but uses an all-to-all ensemble to be able
 to perform multiclass classification.
+
+## Evaluating a decoder
+
+|evaluate_alg|Inputs|Defaults|Outputs|
+|----|----|----|----|
+|1|`alg` struct||training errors|
+|2|`X` data matrix||testing errors|
+|3|`ks` class label vector|||
+|`eval_f`|evaluation function of the form f(k,p) to compare predictions to ground truth|`@(k,p) mean(~cellfun(@isequal, k(:), p(:)))`||
+|`train_frac`| fraction of the data to train on| 0.7||
+|`par_loops`| how many times to run in parallel with different test/train division|1||
+|`subset`|<not covered>|<not covered>||
+|`X_is_func`|<not covered>|<not covered>||
+
+To evaluate the performance of a decoder on a dataset (`X`, `ks`), use `evaluate_alg`.
+The function internally cuts the data into a training set and testing set and
+evaluates decoding errors in parallel as many times as described in the parameter `par_loops`.
+
+Examples:
+```matlab
+for i = 1:numel(algs)
+    alg = algs(i);
+    [tr{i,j}, te{i,j}] = evaluate_alg(alg, X, strcmp(ks, 'north'),...
+        'eval_f', @(k,p) mean(k(:)~=p(:)), 'par_loops', 512);
+end
+```
