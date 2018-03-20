@@ -148,3 +148,60 @@ for i = 1:numel(algs)
         'eval_f', @(k,p) mean(k(:)~=p(:)), 'par_loops', 512);
 end
 ```
+
+## Finding relevant neurons
+
+The following example shows how to search for neurons coding for a
+specific variable, using the example of end decoding.
+
+This entire section's code can be found in `model_inspection_example.m`.
+
+First, load the `ds` objects:
+```matlab
+ds_hpc = quick_ds('../cohort14_dual/c14m6/c14m6d10', 'deprobe', 'nocells', 'cm', 'hpc_cm01_fix');
+ds_prl = quick_ds('../cohort14_dual/c14m6/c14m6d10', 'deprobe', 'nocells', 'cm', 'prl_cm01_fix');
+```
+This loads HPC and PrL data from a dual-site imaging session.
+Next pick the decoder, and optionally a level of regularization.
+If no value is specified, a default value will be used (0.02 for `'linsvm'`).
+```matlab
+alg = my_algs('linsvm', 0.1); %0.1 for L1 regularization
+```
+At this stage the data matrix can be loaded, choosing to use neural activity
+from point 0.3 along the turn, from the PrL data.
+Only trials starting in west are used (changing path), and `'box'` filling
+is selected.
+```matlab
+[X, ks] = ds_dataset(ds_prl,...
+    'selection', 0.3,...
+    'filling', 'box',...
+    'trials', strcmp({ds_prl.trials.start}, 'west'),...
+    'target', {ds_prl.trials.end});
+```
+Train the decoder on the entire dataset. If you want to see the performance
+metrics of the decoder then reduce `'train_frac'` to 0.7.
+In order to inspect the learned weights, pass in the flags `'retain_models'`
+to return the weights, and `'retain_fitinfo'` to keep information about whether
+the decoder converged.
+```matlab
+[train_error_prl, test_error_prl, model, fitinf] =...
+    evaluate_alg(alg,...
+    X, strcmp(ks, 'north'),...
+    'retain_models', true,...
+    'retain_fitinfo', true,...
+    'train_frac', 1);
+```
+Finally, collect all the nonzero weights from the decoder:
+```matlab
+[~, order] = sort(-abs(model.Beta));
+order = order(1:nnz(model.Beta));
+see = @(n) histogram2(X(:, n), strcmp(ks, 'north')', 10);
+```
+Use the function `see` to view a particular PrL neuron's distributions of activity
+for north trials (denoted 1) and south trials (denoted 0). The vector `order`
+contains the indices of the neurons for which the weights were nonzero, in 
+descending order of absolute value of their weights.
+```matlab
+see(order(2))
+```
+![alt text]["Viewing PrL neuron 196"]

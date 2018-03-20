@@ -1,4 +1,9 @@
-function algs = my_algs(names, settings, all2all)
+function algs = my_algs(names, settings, all2all, Lambda)
+if (nargin == 2) && isnumeric(settings)
+    Lambda = settings;
+    settings = 'original';
+end
+
 %declarations
 shuf_train = @(tr) @(X,k) tr(shuffle(X,k),k);
 labelshuf_train = @(tr) @(X,k) tr(X, k(randperm(length(k))));
@@ -14,11 +19,22 @@ ecoc_pre = @(X) X;
 ecoc_pre_binarized = @(X) double(X ~= 0);
 t = templateSVM('Standardize',1,'KernelFunction','linear');
 t2 = templateSVM('Standardize',1,'KernelFunction','polynomial', 'PolynomialOrder', 2);
+if ~exist('Lambda', 'var')
+    L = 0.002;
+else
+    L = Lambda;
+end
 tlin = templateLinear('Learner', 'svm',...
-    'Regularization', 'lasso', 'Lambda', 0.002,...
+    'Regularization', 'lasso', 'Lambda', L,...
     'Solver', 'sparsa');
+
+if ~exist('Lambda', 'var')
+    L = 0.02;
+else
+    L = Lambda;
+end
 linsvm_train = @(X_train, ks_train) fitclinear(X_train, ks_train, 'Learner', 'svm',...
-    'Regularization', 'lasso', 'Lambda', 0.02,...
+    'Regularization', 'lasso', 'Lambda', L,...
     'Solver', 'sparsa');
 linsvm_test = @(model, X_test) predict(model, X_test);
 
