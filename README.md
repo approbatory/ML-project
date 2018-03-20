@@ -20,6 +20,7 @@ Descriptions of functions will generally follow the following syntax:
 |1            |required input| output|
 |2            |required input| output|
 |Parameter  | value | default  |
+|-----------|-------|----------|
 |`parameter`| value | *default*|
 |`parameter`| value | *default*|
 
