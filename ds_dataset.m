@@ -6,7 +6,7 @@ defaultCombined = true;
 defaultSelection = 'all';
 
 defaultFilling = 'copy';
-validFilling = {'copy', 'box', 'binary'};
+validFilling = {'copy', 'box', 'binary', 'traces', 'copy_zeroed'};
 checkFilling = @(x) any(validatestring(x, validFilling));
 
 %Trial selection parameters:
@@ -49,6 +49,10 @@ if strcmp(filling, 'binary')
 elseif strcmp(filling, 'copy')
     X = cellfun(@(x,y) (x~=0).*(y'), X, {ds.trials.traces}',...
         'UniformOutput', false);
+elseif strcmp(filling, 'copy_zeroed')
+    X = gen_place_decoding_X(ds, true);
+elseif strcmp(filling, 'traces')
+    X = cellfun(@(x)x', {ds.trials.traces}', 'UniformOutput', false);
 end
 
 

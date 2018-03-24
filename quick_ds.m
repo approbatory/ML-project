@@ -47,9 +47,9 @@ elseif exist('hpc_cm01_fix', 'dir') && exist('prl_cm01_fix', 'dir')
     ds.num_cells = [size(trials_hpc(1).traces,1), size(trials_prl(1).traces,1)];
     ds.trials = [trials_hpc, trials_prl]; %%%%TODO CHECK!!!!
 else
-    cm_name = 'cm01';
+    cm_name = 'cm01-fix';
     if ~exist(cm_name, 'dir')
-        cm_name = 'cm01-fix'; %add extra cases if that one does not exist, maybe call quick_ds again with different extra parameter representing the cellmax directories, then return multiple ds objects, or merge the ds objects into 1. TODO@!@@@@@!@!@
+        cm_name = 'cm01';
     end
     [traces, events] = load_cm(cm_name, nocells);
     ds.trials = get_trials(ds, traces, events, S, XY);
@@ -96,8 +96,14 @@ end
 res = fullfile(S.folder, S.name);
 end
 
+function exists_one = was_found(d, pat)
+S = dir(fullfile(d,pat));
+exists_one = numel(S) == 1;
+end
 
 function [traces, events, varargout] = load_cm(cm_name, nocells)
+filtering = was_found(cm_name, 'class*.txt');
+if filtering
 class_file_name = file_pattern(cm_name, 'class*.txt');
 lines = strsplit(fileread(class_file_name), '\n');
 goodcells = [];
@@ -107,10 +113,16 @@ for l=lines
     end
 end
 num_cells = length(goodcells);
+end
 traces_filters_filename = file_pattern(cm_name, 'rec*.mat');
 s = load(traces_filters_filename, 'traces');
 traces = s.traces;
+if filtering
 traces = traces(:,goodcells);
+else
+    num_cells = size(traces,2);
+    goodcells = true(1,num_cells);
+end
 if ~nocells
     s = load(traces_filters_filename, 'filters');
     filters = s.filters;

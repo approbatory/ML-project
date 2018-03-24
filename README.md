@@ -204,4 +204,4 @@ descending order of absolute value of their weights.
 ```matlab
 see(order(2))
 ```
-![alt text](https://raw.githubusercontent.com/approbatory/ML-project/master/example_figs/hist_example.png "Viewing PrL neuron 196")
+![double histogram for neuron](https://raw.githubusercontent.com/approbatory/ML-project/master/example_figs/hist_example.png "Viewing PrL neuron 196")
