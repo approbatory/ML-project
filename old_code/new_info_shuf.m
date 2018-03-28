@@ -14,7 +14,7 @@ for ix = 1:numel(dayset)
         fprintf('Cell %d of %d\n', n, ds.num_cells);
         shuf_mask = rand_order <= n;
         mod_alg = alg;
-        mod_alg.train = @(X,ks) alg.train(shufgen(X,ks,shuf_mask),ks);
+        mod_alg.train = @(X,ks) alg.train(shuffle(X,ks,'subset',shuf_mask),ks);
         [tr{ix,n}, te{ix,n}] = evaluate_alg(mod_alg, X, ks, 'eval_f', errf, 'par_loops', PARLOOPS);
         report('Partials', te{ix,n});
     end

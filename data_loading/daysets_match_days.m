@@ -1,4 +1,5 @@
-function daysets = daysets_match_days(daysets)
+function matched_cells = daysets_match_days(daysets)
+matched_cells = cell(1,numel(daysets));
 for m_ix = 1:numel(daysets)
     direc = daysets{m_ix}(1).directory;
     match_file_location = fullfile(direc,'match-fix.txt');
@@ -18,23 +19,25 @@ for m_ix = 1:numel(daysets)
         error('cell matching does not match number of days.');
     end
     for d_ix = 1:numel(daysets{m_ix})
-        daysets{m_ix}(d_ix).res.matched_cells = matched_indices(:,d_ix);
+        %daysets{m_ix}(d_ix).res.matched_cells = matched_indices(:,d_ix);
+        matched_cells{m_ix}(:,d_ix) = matched_indices(:,d_ix);
     end
 end
-end
 
-function ds = to_daysum(directory, name)
-start_dir = pwd;
-cd(directory);
-cd(name);
-ds = DaySummary(data_sources, 'cm01-fix');
-cd(start_dir);
-end
+    function ds = to_daysum(directory, name)
+        start_dir = pwd;
+        cd(directory);
+        cd(name);
+        ds = DaySummary(data_sources, 'cm01-fix');
+        cd(start_dir);
+    end
 
-function res = file_pattern(d, pat)
-S = dir(fullfile(d,pat));
-if numel(S) ~= 1
-    error('There must be exactly one file matching the pattern: %s/%s', d, pat);
-end
-res = fullfile(S.folder, S.name);
+
+    function res = file_pattern(d, pat)
+        S = dir(fullfile(d,pat));
+        if numel(S) ~= 1
+            error('There must be exactly one file matching the pattern: %s/%s', d, pat);
+        end
+        res = fullfile(S.folder, S.name);
+    end
 end

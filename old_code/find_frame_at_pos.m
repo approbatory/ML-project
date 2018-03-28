@@ -11,6 +11,14 @@ for i = 1:length(ds.trials)
     [~, ix] = min((r - poss).^2);
     frame_of_interest(i,:) = int32(ix) + s - 1;%TODO CHECK!!!!!!!!!!!!
 end
+
+    function r = reparam(r)
+        r = 0.5-abs(0.5-r);
+        r = atan2(r(:,2), r(:,1))/(pi/2);
+        if r(end) < r(1)
+            r = 1 - r;
+        end
+    end
 end
 
 
@@ -23,11 +31,11 @@ pos = preprocess_xy(ds);
 start_labels = {ds.trials.start};
 frame_of_interest = zeros(length(ds.trials), length(poss));
 for i = 1:length(ds.trials)
-%     distance_to_center = sqrt(sum( (pos{i}-[0.5, 0.5]).^2, 2));
-%     [M, I] = min(distance_to_center);
-%     path_distace = [M - distance_to_center(1:(I-1)); distance_to_center(I:end) - M ];
-%     tr_pos = (path_distace - min(path_distace))/(max(path_distace) - min(path_distace));
-
+    %     distance_to_center = sqrt(sum( (pos{i}-[0.5, 0.5]).^2, 2));
+    %     [M, I] = min(distance_to_center);
+    %     path_distace = [M - distance_to_center(1:(I-1)); distance_to_center(I:end) - M ];
+    %     tr_pos = (path_distace - min(path_distace))/(max(path_distace) - min(path_distace));
+    
     xs = pos{i}(:,1);
     ys = pos{i}(:,2);
     sl = start_labels{i};

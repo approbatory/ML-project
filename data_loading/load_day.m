@@ -2,7 +2,7 @@ function [ds, X, ks, errf] = load_day(d, varargin)
 p = inputParser;
 
 p.addRequired('d', @isstruct);
-p.addParameter('ds', {}, @iscell);
+p.addParameter('ds', {'deprobe', 'nocells'}, @iscell);
 p.addParameter('data', {}, @iscell);
 p.parse(d, varargin{:});
 d = p.Results.d;
