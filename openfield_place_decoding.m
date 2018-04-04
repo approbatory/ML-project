@@ -1,8 +1,8 @@
-PARLOOPS =  64;
+PARLOOPS =  4;%64;
 
 
 algs = my_algs({'mvnb2', 'ecoclin'}, {'original', 'shuf'});
-dayset = my_daysets('openfield');
+dayset = auto_dayset('open_field'); dayset = dayset{1};
 for ix = 1:numel(dayset)
     disp(dayset(ix).label);
     [ds, X, ks, errf] = load_day(dayset(ix),...

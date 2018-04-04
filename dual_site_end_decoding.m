@@ -32,7 +32,7 @@ fils(1).label = 'binary';
 fils(2).label = 'box';
 fils(3).label = 'copy';
 
-for i = 1:3
+for i = 1:numel(fils)
     [tr_place_fil(i,:), te_place_fil(i,:), s_tr_place_fil(i,:), s_te_place_fil(i,:), m_tr_place_fil(i,:), m_te_place_fil(i,:)] = place_dec([ds_hpc, ds_prl], algs, fils(i).label);
 end
 %%

@@ -14,9 +14,10 @@ daysets = cell(1,numel(names));
 for ix = 1:numel(names)
     name = names{ix};
     directory = fullfile(p.Results.directory, name);
-    S_files = dir(fullfile(directory,'c*m*d*'));
+    S_files = dir(directory);
+    S_files = S_files(arrayfun(@(s) (s.name(1) ~= '.') && (s.name(1) ~= '_') && s.isdir, S_files));%dir(fullfile(directory,'c*m*d*'));
     if isempty(S_files)
-        error('No c*m*d* data found under %s', directory);
+        error('No day data found under %s', directory);
     end
     for d_ix = 1:numel(S_files)
         s = S_files(d_ix);

@@ -31,7 +31,7 @@ for m_ix =  1:numel(daysets)
             [X, ks] = ds_dataset(ds, 'selection', point,...
                 'filling', p.Results.filling, 'trials', strcmp({ds.trials.start}, daysets{m_ix}(d_ix).changing),...
                 'target', {ds.trials.end});
-            if nargin == 2
+            if ~isempty(matched_cells)
                 if size(matched_cells{m_ix},2) ~= numel(daysets{m_ix})%~isfield(daysets{m_ix}(d_ix).res, 'matched_cells')
                     error('Malformed matched cells. %s', daysets{m_ix}(d_ix).day);
                 end

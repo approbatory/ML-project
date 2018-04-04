@@ -1,5 +1,5 @@
 function errnbar(y,e, overlay)
-overlay =  exist('overlay', 'var');
+overlay = exist('overlay', 'var');
 if isvector(y) || isvector(e)
     y = y(:);
     e = e(:);
