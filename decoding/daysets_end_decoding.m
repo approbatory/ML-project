@@ -46,4 +46,5 @@ for m_ix =  1:numel(daysets)
 end
 output.was_matched = ~isempty(matched_cells);
 output.res = res;
+output.filling = p.Results.filling;
 end

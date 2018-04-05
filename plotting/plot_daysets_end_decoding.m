@@ -4,17 +4,21 @@ p.addRequired('daysets', @iscell);
 p.addRequired('res', @isstruct);
 %p.addParameter('matching', false, @islogical);
 p.addParameter('save_to', '', @ischar);
+p.addParameter('suppress', false, @islogical);
 p.parse(daysets, res, varargin{:});
 
 matching = res.was_matched;
+filling = res.filling;
 res = res.res;
 
+if p.Results.suppress
+    set(0,'DefaultFigureVisible','off');
+end
 
-figure;
 colors = 'xbxgxrx';
 circle_begin = 0.4374;
 for m_ix = 1:numel(daysets)
-    figure(m_ix);
+    figure;
     %loop over days
     for d_ix = 1:numel(daysets{m_ix})
         %loop over points
@@ -36,9 +40,9 @@ for m_ix = 1:numel(daysets)
     end
     legend;
     if matching
-        title('End decoder error on matching cells');
+        title(['End decoder error on matching cells (on ' filling ')'], 'Interpreter', 'none');
     else
-        title('End decoder error on all available cells');
+        title(['End decoder error on all available cells (on ' filling ')'], 'Interpreter', 'none');
     end
     xlabel('fraction of turn completed');
     ylabel('Linear SVM decoding error');
@@ -46,7 +50,18 @@ for m_ix = 1:numel(daysets)
     line([circle_begin circle_begin], ylim, 'Color', 'k',...
         'DisplayName', 'entering center');
     if ~isempty(p.Results.save_to)
-        print(fullfile(p.Results.save_to, daysets{m_ix}(1).day(1:5)), '-dpng');
+        if ~exist(p.Results.save_to, 'dir')
+            mkdir(p.Results.save_to);
+        end
+        if matching
+            fname = sprintf('%s_%s_matched', daysets{m_ix}(1).day(1:5), filling);
+        else
+            fname = sprintf('%s_%s_unmatched', daysets{m_ix}(1).day(1:5), filling);
+        end
+        print(fullfile(p.Results.save_to, fname), '-dpng');
     end
+end
+if p.Results.suppress
+    set(0,'DefaultFigureVisible','on');
 end
 end
