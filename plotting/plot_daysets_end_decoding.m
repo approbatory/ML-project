@@ -9,6 +9,7 @@ p.parse(daysets, res, varargin{:});
 
 matching = res.was_matched;
 filling = res.filling;
+mode = res.mode;
 res = res.res;
 
 if p.Results.suppress
@@ -40,9 +41,9 @@ for m_ix = 1:numel(daysets)
     end
     legend;
     if matching
-        title(['End decoder error on matching cells (on ' filling ')'], 'Interpreter', 'none');
+        title([mode ' decoder error on matching cells (on ' filling ')'], 'Interpreter', 'none');
     else
-        title(['End decoder error on all available cells (on ' filling ')'], 'Interpreter', 'none');
+        title([mode ' decoder error on all available cells (on ' filling ')'], 'Interpreter', 'none');
     end
     xlabel('fraction of turn completed');
     ylabel('Linear SVM decoding error');
@@ -54,9 +55,9 @@ for m_ix = 1:numel(daysets)
             mkdir(p.Results.save_to);
         end
         if matching
-            fname = sprintf('%s_%s_matched', daysets{m_ix}(1).day(1:5), filling);
+            fname = sprintf('%s_%s_%s_matched', daysets{m_ix}(1).day(1:5), mode, filling);
         else
-            fname = sprintf('%s_%s_unmatched', daysets{m_ix}(1).day(1:5), filling);
+            fname = sprintf('%s_%s_%s_unmatched', daysets{m_ix}(1).day(1:5), mode, filling);
         end
         print(fullfile(p.Results.save_to, fname), '-dpng');
     end

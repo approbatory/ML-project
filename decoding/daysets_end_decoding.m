@@ -6,6 +6,7 @@ p.addParameter('alg', my_algs('linsvm', 0.1), @isstruct);
 p.addParameter('points', 0:0.1:1, @(x) isnumeric(x) && isvector(x) && (min(x) >= 0) && (max(x) <= 1));
 p.addParameter('filling', 'copy_zeroed', @ischar);
 p.addParameter('par_loops', 64, @(x) isscalar(x) && isnumeric(x));
+p.addParameter('mode', 'End', @(x) any(validatestring(x, {'End', 'Error'})));
 p.parse(daysets, varargin{:});
 
 
@@ -28,23 +29,50 @@ for m_ix =  1:numel(daysets)
         ds = quick_ds(fullfile(daysets{m_ix}(d_ix).directory, daysets{m_ix}(d_ix).day), 'deprobe', 'nocells');
         for j = 1:numel(points)
             point = points(j);
-            [X, ks] = ds_dataset(ds, 'selection', point,...
-                'filling', p.Results.filling, 'trials', strcmp({ds.trials.start}, daysets{m_ix}(d_ix).changing),...
-                'target', {ds.trials.end});
-            if ~isempty(matched_cells)
-                if size(matched_cells{m_ix},2) ~= numel(daysets{m_ix})%~isfield(daysets{m_ix}(d_ix).res, 'matched_cells')
-                    error('Malformed matched cells. %s', daysets{m_ix}(d_ix).day);
+            if strcmp(p.Results.mode, 'End')
+                [X, ks] = ds_dataset(ds, 'selection', point,...
+                    'filling', p.Results.filling, 'trials', strcmp({ds.trials.start}, daysets{m_ix}(d_ix).changing),...
+                    'target', {ds.trials.end});
+                if ~isempty(matched_cells)
+                    if size(matched_cells{m_ix},2) ~= numel(daysets{m_ix})
+                        error('Malformed matched cells. %s', daysets{m_ix}(d_ix).day);
+                    end
+                    X = X(:, matched_cells{m_ix}(:, d_ix));
                 end
-                %X = X(:,daysets{m_ix}(d_ix).res.matched_cells); %only use matched cells
-                X = X(:, matched_cells{m_ix}(:, d_ix));
+                res{m_ix}(d_ix).baseline_err = min(mean(strcmp(ks, 'north')), mean(strcmp(ks, 'south')));
+                [res{m_ix}(d_ix).train_err(j,:), res{m_ix}(d_ix).test_err(j,:)] = evaluate_alg(alg,...
+                    X, strcmp(ks, 'north'), 'par_loops', PAR_LOOPS);
+            elseif strcmp(p.Results.mode, 'Error')
+                initial_strategy = daysets{m_ix}(d_ix).short(1);
+                switch initial_strategy
+                    case 'N'
+                        end_filter = strcmp({ds.trials.end}, 'north');
+                    case 'S'
+                        end_filter = strcmp({ds.trials.end}, 'south');
+                    case 'R'
+                        end_filter = strcmp({ds.trials.turn}, 'right');
+                    case 'L'
+                        end_filter = strcmp({ds.trials.turn}, 'left');
+                end
+                [X, ks] = ds_dataset(ds, 'selection', point,...
+                    'filling', p.Results.filling, 'trials', strcmp({ds.trials.start}, daysets{m_ix}(d_ix).changing) & end_filter,...
+                    'target', {ds.trials.correct});
+                if ~isempty(matched_cells)
+                    if size(matched_cells{m_ix},2) ~= numel(daysets{m_ix})
+                        error('Malformed matched cells. %s', daysets{m_ix}(d_ix).day);
+                    end
+                    X = X(:, matched_cells{m_ix}(:, d_ix));
+                end
+                ks = cell2mat(ks);
+                res{m_ix}(d_ix).baseline_err = min(mean(ks), mean(~ks));
+                [res{m_ix}(d_ix).train_err(j,:), res{m_ix}(d_ix).test_err(j,:)] = evaluate_alg(alg,...
+                    X, ks, 'par_loops', PAR_LOOPS);
             end
-            res{m_ix}(d_ix).baseline_err = min(mean(strcmp(ks, 'north')), mean(strcmp(ks, 'south')));
-            [res{m_ix}(d_ix).train_err(j,:), res{m_ix}(d_ix).test_err(j,:)] = evaluate_alg(alg,...
-                X, strcmp(ks, 'north'), 'par_loops', PAR_LOOPS);
         end
     end
 end
 output.was_matched = ~isempty(matched_cells);
 output.res = res;
 output.filling = p.Results.filling;
+output.mode = p.Results.mode;
 end
