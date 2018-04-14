@@ -1,9 +1,10 @@
 L = 16; N = 1000;
 points = linspace(0,L,1000);
-means = L*rand(1,N);
+means = L*rand(1,N)/2;
+means2 = L*rand(1,N)/2 + L/2;
 stds = ones(1,N);
-base_lambda = 0.03;
-Lambdas = @(point) base_lambda .* exp(-(point - means).^2./(2*stds)); %(position, neuron)
+base_lambda = 0.1;
+Lambdas = @(point) base_lambda .* (exp(-(point - means).^2./(2*stds)) + exp(-(point - means2).^2./(2*stds))); %(position, neuron)
 
 
 times = 1:100000; speed = 0.01;
