@@ -1,13 +1,14 @@
 PARLOOPS =  4;%64;
 
 
-algs = my_algs({'mvnb2', 'ecoclin'}, {'original', 'shuf'});
-dayset = auto_dayset('open_field'); dayset = dayset{1};
+%algs = my_algs({'mvnb2', 'ecoclin'}, {'original', 'shuf'}, true, 0);
+algs = my_algs({'gnb', 'ecoclin'}, {'original', 'shuf'}, true, 0);
+dayset = auto_dayset('open_field'); dayset = dayset{1}([10 12]);
 for ix = 1:numel(dayset)
     disp(dayset(ix).label);
     [ds, X, ks, errf] = load_day(dayset(ix),...
         'ds', {'nocells'},...
-        'data', {'filling', 'binary', 'openfield', true});
+        'data', {'filling', 'traces', 'openfield', true, 'sparsify', false});
     %spoof_samp_gen = indep_spoof(X, ks); %maybe change back, want to see
     %if indep_spoof is somehow a flawed approach
     spoof_samp_gen = @() shuffle(X,ks);
@@ -21,7 +22,7 @@ for ix = 1:numel(dayset)
     end
 end
 
-%%
+
 figure;
 subplot(1,2,1);
 plotmat('error', train_err, test_err, algs, dayset, 3);

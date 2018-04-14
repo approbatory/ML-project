@@ -19,6 +19,8 @@ end
 colors = 'xbxgxrx';
 circle_begin = 0.4374;
 for m_ix = 1:numel(daysets)
+    
+    %if strcmp(mode, 'End')
     figure;
     %loop over days
     for d_ix = 1:numel(daysets{m_ix})
@@ -50,6 +52,27 @@ for m_ix = 1:numel(daysets)
     ylim([0 0.5]);
     line([circle_begin circle_begin], ylim, 'Color', 'k',...
         'DisplayName', 'entering center');
+%     elseif strcmp(mode, 'Error')
+%     figure;
+%     num_days = numel(daysets{m_ix});
+%     switch_day = 0;
+%     for d_ix = 1:num_days
+%         if isempty(daysets{m_ix}(d_ix).changing)
+%             continue;
+%         else
+%             switch_day = switch_day + 1;
+%         end
+%         subplot(3,1,switch_day);
+%         res_ = res{m_ix}(d_ix);
+%         points = res_.points;
+%         test_errmap = cell2mat(res_.test_err);
+%         imagesc(points, 1:size(test_errmap,1), test_errmap);
+%         colormap('gray');
+%         title(['Error decoding map (on ' filling ')']);
+%     end
+%     end
+%     
+    
     if ~isempty(p.Results.save_to)
         if ~exist(p.Results.save_to, 'dir')
             mkdir(p.Results.save_to);

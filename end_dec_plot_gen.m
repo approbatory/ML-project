@@ -37,3 +37,9 @@ for i = 1:numel(fillings)
     plot_daysets_end_decoding(cohort11, res_cohort11_unmatched{i},...
         'save_to', ['graphs/end_decoding/cohort11/' fillings{i} '/unmatched'], 'suppress', true);
 end
+
+%%
+filling = 'traces';
+res_cohort11_unmatched = daysets_end_decoding(cohort11, ...
+    'filling', filling, 'mode', 'Error', 'par_loops', 1);
+plot_daysets_end_decoding(cohort11, res_cohort11_unmatched);

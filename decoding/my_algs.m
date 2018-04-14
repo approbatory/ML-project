@@ -15,6 +15,10 @@ mv_train = @(X_train, ks_train) fitcnb(X_train, ks_train, 'Distribution', 'mvmn'
     'CategoricalPredictors', 'all');
 mv_test = @(model, X_test) predict(model, X_test);
 
+gnb_pre = @(X)X;
+gnb_train = @(X,ks) fitcnb(X,ks);
+gnb_test = @predict;
+
 ecoc_pre = @(X) X;
 ecoc_pre_binarized = @(X) double(X ~= 0);
 t = templateSVM('Standardize',1,'KernelFunction','linear');
@@ -43,6 +47,11 @@ ecoc_train2 = @(X_train, ks_train) fitcecoc(X_train, ks_train, 'Learners', t2);
 ecoc_trainlin = @(X_train, ks_train) fitcecoc(X_train, ks_train, 'Learners', tlin);
 ecoc_test = @(model, X_test) predict(model, X_test);
 
+package_fun = @(name, trainer) struct('name', name, 'pre', @(X)X, 'train', trainer, 'test', @predict);
+
+gnb = struct('name', 'Gaussian NB', 'pre', gnb_pre, 'train', gnb_train, 'test', gnb_test);
+lda = package_fun('LDA', @(X,ks) fitcdiscr(X,ks,'DiscrimType', 'linear'));
+qda = package_fun('QDA', @(X,ks) fitcdiscr(X,ks,'DiscrimType', 'quadratic'));
 mvnb = struct('name', 'Bernoulli NB', 'pre', mv_pre, 'train', mv_train, 'test', mv_test);
 mvnb2= struct('name', 'Bernoulli NB2','pre', mv_pre, 'train',@mv_train2,'test',@mv_test2);
 ecoc = struct('name', 'ECOC SVM', 'pre', ecoc_pre, 'train', ecoc_train, 'test', ecoc_test);
@@ -84,6 +93,12 @@ end
 
     function alg = create(name, setting)
         switch name
+            case 'gnb'
+                alg = gnb;
+            case 'lda'
+                alg = lda;
+            case 'qda'
+                alg = qda;
             case 'mvnb'
                 alg = mvnb;
             case 'mvnb2'
