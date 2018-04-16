@@ -6,8 +6,8 @@ means = L*rand(1,N);
 means2 = L*rand(1,N);
 stds = ones(1,N);
 base_lambda = 0.1;
-Lambdas = @(point) base_lambda .* (exp(-(point - means).^2./(2*stds)) + exp(-(point - means2).^2./(2*stds))); %(position, neuron)
-
+%Lambdas = @(point) base_lambda .* (exp(-(point - means).^2./(2*stds)) + exp(-(point - means2).^2./(2*stds))); %(position, neuron)
+Lambdas = @(point) base_lambda .* (exp(-(point - means).^2./(2*stds)) + exp(-(point - means).^2./(2*stds))); %(position, neuron)
 
 times = 1:100000; speed = 0.01;
 trajectory = L*sin(speed*times).^2;
@@ -36,7 +36,7 @@ figure;
 dayset(1).label = '16 bins';
 dayset(2).label = 'L/R';
 
-plotmat('error', train_err, test_err, algs, dayset, 5);
+plotmat('Effect of bin size (1 random place field)', train_err, test_err, algs, dayset, 5);
 
 
 %%

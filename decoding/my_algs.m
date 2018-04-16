@@ -7,8 +7,8 @@ end
 %declarations
 shuf_train = @(tr) @(X,k) tr(shuffle(X,k),k);
 labelshuf_train = @(tr) @(X,k) tr(X, k(randperm(length(k))));
-shuf_alg = @(a) struct('name', [a.name ' shuf'], 'pre', a.pre, 'train', shuf_train(a.train), 'test', a.test);
-labelshuf_alg = @(a) struct('name', [a.name ' labelshuf'], 'pre', a.pre, 'train', labelshuf_train(a.train), 'test', a.test);
+shuf_alg = @(a) struct('name', [a.name ' (shuf)'], 'pre', a.pre, 'train', shuf_train(a.train), 'test', a.test);
+labelshuf_alg = @(a) struct('name', [a.name ' (labelshuf)'], 'pre', a.pre, 'train', labelshuf_train(a.train), 'test', a.test);
 
 mv_pre = @(X) double(X ~= 0);
 mv_train = @(X_train, ks_train) fitcnb(X_train, ks_train, 'Distribution', 'mvmn',...
@@ -53,10 +53,10 @@ gnb = struct('name', 'Gaussian NB', 'pre', gnb_pre, 'train', gnb_train, 'test', 
 lda = package_fun('LDA', @(X,ks) fitcdiscr(X,ks,'DiscrimType', 'linear'));
 qda = package_fun('QDA', @(X,ks) fitcdiscr(X,ks,'DiscrimType', 'quadratic'));
 mvnb = struct('name', 'Bernoulli NB', 'pre', mv_pre, 'train', mv_train, 'test', mv_test);
-mvnb2= struct('name', 'Bernoulli NB2','pre', mv_pre, 'train',@mv_train2,'test',@mv_test2);
+mvnb2= struct('name', 'Bernoulli NB','pre', mv_pre, 'train',@mv_train2,'test',@mv_test2);
 ecoc = struct('name', 'ECOC SVM', 'pre', ecoc_pre, 'train', ecoc_train, 'test', ecoc_test);
 ecoc2 = struct('name', 'ECOC SVM quadratic', 'pre', ecoc_pre, 'train', ecoc_train2, 'test', ecoc_test);
-ecoclin = struct('name', 'ECOC SVM lin', 'pre', ecoc_pre, 'train', ecoc_trainlin, 'test', ecoc_test);
+ecoclin = struct('name', 'ECOC SVM', 'pre', ecoc_pre, 'train', ecoc_trainlin, 'test', ecoc_test);
 ecoc_binarized = struct('name', 'ECOC SVM binarized\_input', 'pre', ecoc_pre_binarized, 'train', ecoc_train, 'test', ecoc_test);
 ecoclin_binarized = struct('name', 'ECOC SVM lin binarized\_input', 'pre', ecoc_pre_binarized, 'train', ecoc_trainlin, 'test', ecoc_test);
 
