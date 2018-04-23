@@ -11,6 +11,7 @@ Lambdas = @(point) base_lambda .* (exp(-(point - means).^2./(2*stds)) + exp(-(po
 
 times = 1:100000; speed = 0.01;
 trajectory = L*sin(speed*times).^2;
+%%
 rates = Lambdas(trajectory');
 
 X = double(sparse(poissrnd(rates) > 0));
@@ -77,13 +78,16 @@ err_rate = mean(self_prob < diff_prob);
 perf(words, ks_words);
 %%
 N = 500;
-W = 2520;
-K = W;
+%W = 2520;
+W = 256;
+K = 2;
+K2 = 8;
 sparsity = 0.01;
 F = floor(N*sparsity);
 words = sparse(scode(N,F,W));
 ks_words = mod(1:W,K);
-perf(words, ks_words);
+ks_words2 = mod(1:W,K2);
+perf(words, ks_words, ks_words2, true, 'K=2', 'K=8');
 %%
 M = 10000;%M = 10000;
 ks = randi(2,1,M) - 1;
@@ -151,22 +155,43 @@ for i = 1:w
 end
 end
 
-function perf(X,ks)
+function perf(X,ks, ks2, tr_only, l1, l2)
 errf = @(k,p) mean(k(:)~=p(:));
+if exist('tr_only', 'var') && tr_only
+    tr_frac = 1;
+else
+    tr_frac = 0.7;
+end
 algs = my_algs({'mvnb2', 'ecoclin'}, {'original', 'shuf'}, true, 0);
 PARLOOPS = 4;
 train_err = cell(2,numel(algs)); test_err = cell(2,numel(algs));
 for i = 1:numel(algs)
     [train_err{1,i}, test_err{1,i}] = evaluate_alg(algs(i),...
         X, ks, 'eval_f', errf,...
-        'train_frac', 0.7, 'par_loops', PARLOOPS);
+        'train_frac', tr_frac, 'par_loops', PARLOOPS);
+    if exist('ks2', 'var')
+        [train_err{2,i}, test_err{2,i}] = evaluate_alg(algs(i),...
+        X, ks2, 'eval_f', errf,...
+        'train_frac', tr_frac, 'par_loops', PARLOOPS);
+    end
 end
-train_err(2,:) = train_err(1,:);
-test_err(2,:) = test_err(1,:);
-
+if ~exist('ks2', 'var')
+    train_err(2,:) = train_err(1,:);
+    test_err(2,:) = test_err(1,:);
+end
 figure;
-dayset(1).label = 'sim';
-dayset(2).label = 'sim2';
+if exist('l1', 'var') && exist('l2', 'var')
+    dayset(1).label = l1;
+    dayset(2).label = l2;
+else
+    dayset(1).label = 'sim';
+    dayset(2).label = 'sim2';
+end
+
+if exist('tr_only', 'var') && tr_only
+    plotmat('error', train_err, train_err, algs, dayset, 1-1/length(unique(ks2)));
+    return;
+end
 plotmat('error', train_err, test_err, algs, dayset, 1-1/length(unique(ks)));
 end
 
