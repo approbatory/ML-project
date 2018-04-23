@@ -61,13 +61,13 @@ Outputs:
 2. class labels vector: length M
 3. error metric function f(k labels, p prediction)
     (this tends to be more useful for place decoding, where you want a bin distance)
-
+4. The frame numbers within each trial that were used to build the rows of X (only when numeric 'selection' is used).
 
 Examples:
 ```matlab
 points = 0:0.1:0.5;
 trials_chosen = strcmp({ds.trials.start}, 'west');
-[X_, ks_, em_] = ds_dataset(ds, 'selection', points(j), 'filling', 'binary',...
+[X_, ks_, em_, frames] = ds_dataset(ds, 'selection', points(j), 'filling', 'binary',...
         'trials', trials_chosen, 'target', {ds.trials.end});
 
 
