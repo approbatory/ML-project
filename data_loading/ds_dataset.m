@@ -122,6 +122,9 @@ end
 if islogical(trials)
     X = X(trials);
     ks = ks(trials);
+    if isnumeric(selection)
+        varargout{1} = varargout{1}(:) .* trials(:);
+    end
 end
 
 if combined

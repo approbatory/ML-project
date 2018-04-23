@@ -61,7 +61,9 @@ Outputs:
 2. class labels vector: length M
 3. error metric function f(k labels, p prediction)
     (this tends to be more useful for place decoding, where you want a bin distance)
-4. The frame numbers within each trial that were used to build the rows of X (only when numeric 'selection' is used).
+4. (only when numeric 'selection' is used): `ds.num_trials` length vector.
+ The frame numbers within each trial that were used to build the rows of X.
+ 0 if that trial was not used.
 
 Examples:
 ```matlab
