@@ -5,7 +5,8 @@ points = linspace(0,L,1000);
 means = L*rand(1,N);
 means2 = L*rand(1,N);
 stds = ones(1,N);
-base_lambda = 0.1;
+%base_lambda = 0.1; %this was the case for the two place field case
+base_lamda = 0.01;
 %Lambdas = @(point) base_lambda .* (exp(-(point - means).^2./(2*stds)) + exp(-(point - means2).^2./(2*stds))); %(position, neuron)
 Lambdas = @(point) base_lambda .* (exp(-(point - means).^2./(2*stds)) + exp(-(point - means).^2./(2*stds))); %(position, neuron)
 
@@ -38,7 +39,7 @@ dayset(2).label = 'L/R';
 
 plotmat('Effect of bin size (1 random place field)', train_err, test_err, algs, dayset, 5);
 
-
+return;
 %%
 bin_scheme = [
     1 0 1 0 % 0 0 0 0
