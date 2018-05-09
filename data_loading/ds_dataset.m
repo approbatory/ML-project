@@ -1,4 +1,4 @@
-function [X, ks, eval_metric] = ds_dataset(ds, varargin)
+function [X, ks, eval_metric, varargout] = ds_dataset(ds, varargin)
 p = inputParser;
 
 defaultCombined = true;
@@ -92,7 +92,8 @@ if ischar(target) && strcmp(target, 'position bin')
     end
     ks = cellfun(bin_func, XY, 'UniformOutput', false);
 else
-    eval_metric = @(k,p) mean(~cellfun(@isequal, k, p));
+    %eval_metric = @(k,p) mean(~cellfun(@isequal, k, p));
+    eval_metric = @(k,p) mean(k(:)~=p(:));
     ks = target;
 end
 
@@ -105,6 +106,7 @@ if isnumeric(selection)
         ks = cellfun(@(x,i) x(i), ks, num2cell(frame_of_interest),...
             'UniformOutput', false);
     end
+    varargout{1} = frame_of_interest;
 elseif strcmp(selection, 'moving')
     starts = ds.trial_indices(:,2) - ds.trial_indices(:,1) + 1;
     ends = ds.trial_indices(:,3) - ds.trial_indices(:,1);
@@ -120,6 +122,9 @@ end
 if islogical(trials)
     X = X(trials);
     ks = ks(trials);
+    if isnumeric(selection)
+        varargout{1} = varargout{1}(:) .* trials(:);
+    end
 end
 
 if combined
