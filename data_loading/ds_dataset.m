@@ -98,7 +98,7 @@ end
 
 
 if isnumeric(selection)
-    [frame_of_interest, ~] = find_frame_at_pos(ds, selection);
+    frame_of_interest = compute_pos_frames(ds, selection);
     X = cellfun(@(x,i) x(i,:), X, num2cell(frame_of_interest),...
         'UniformOutput', false);
     if ischar(target) && strcmp(target, 'position bin')
@@ -134,28 +134,7 @@ elseif sparsify
     X = cellfun(@sparse, X, 'UniformOutput', false);
 end
 
-    function [frame_of_interest, pos] = find_frame_at_pos(ds, poss)
-        %finds the frame closest to specified poss based on the angle of the turn,
-        %only within gate open-close times, including open time, excluding close
-        %time, i.e. start 1, open 3, close 7, end 10, only use 3 4 5 6
-        pos = preprocess_xy(ds);
-        frame_of_interest = zeros(length(ds.trials), length(poss));
-        reparam_pos = cellfun(@reparam, pos, 'UniformOutput', false);
-        for i = 1:length(ds.trials)
-            c = ds.trial_indices(i,:); s = c(2) - c(1) + 1; e = c(3) - c(1);
-            r = reparam_pos{i}(s:e,:);
-            [~, ix] = min((r - poss).^2);
-            frame_of_interest(i,:) = int32(ix) + s - 1;%TODO CHECK!!!!!!!!!!!!
-        end
-        
-        function r = reparam(r)
-            r = 0.5-abs(0.5-r);
-            r = atan2(r(:,2), r(:,1))/(pi/2);
-            if r(end) < r(1)
-                r = 1 - r;
-            end
-        end
-    end
+
 
     function X = gen_place_decoding_X(ds, copy_zeroed)
         if nargin == 1
