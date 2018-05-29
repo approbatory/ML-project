@@ -24,7 +24,7 @@ ecoc_pre_binarized = @(X) double(X ~= 0);
 t = templateSVM('Standardize',1,'KernelFunction','linear');
 t2 = templateSVM('Standardize',1,'KernelFunction','polynomial', 'PolynomialOrder', 2);
 if ~exist('Lambda', 'var')
-    L = 0.002;
+    L = 0;
 else
     L = Lambda;
 end
@@ -32,11 +32,11 @@ tlin = templateLinear('Learner', 'svm',...
     'Regularization', 'lasso', 'Lambda', L,...
     'Solver', 'sparsa');
 
-if ~exist('Lambda', 'var')
-    L = 0.02;
-else
-    L = Lambda;
-end
+%if ~exist('Lambda', 'var')
+%    L = 0.02;
+%else
+%    L = Lambda;
+%end
 linsvm_train = @(X_train, ks_train) fitclinear(X_train, ks_train, 'Learner', 'svm',...
     'Regularization', 'lasso', 'Lambda', L,...
     'Solver', 'sparsa');
@@ -45,7 +45,10 @@ linsvm_test = @(model, X_test) predict(model, X_test);
 ecoc_train = @(X_train, ks_train) fitcecoc(X_train, ks_train, 'Learners', t);
 ecoc_train2 = @(X_train, ks_train) fitcecoc(X_train, ks_train, 'Learners', t2);
 ecoc_trainlin = @(X_train, ks_train) fitcecoc(X_train, ks_train, 'Learners', tlin);
+ecoc_trainlin_onevsall = @(X_train, ks_train) fitcecoc(X_train, ks_train, 'Coding', 'onevsall', 'Learners', tlin);
 ecoc_test = @(model, X_test) predict(model, X_test);
+
+
 
 package_fun = @(name, trainer) struct('name', name, 'pre', @(X)X, 'train', trainer, 'test', @predict);
 
@@ -57,6 +60,7 @@ mvnb2= struct('name', 'Bernoulli NB','pre', mv_pre, 'train',@mv_train2,'test',@m
 ecoc = struct('name', 'ECOC SVM', 'pre', ecoc_pre, 'train', ecoc_train, 'test', ecoc_test);
 ecoc2 = struct('name', 'ECOC SVM quadratic', 'pre', ecoc_pre, 'train', ecoc_train2, 'test', ecoc_test);
 ecoclin = struct('name', 'ECOC SVM', 'pre', ecoc_pre, 'train', ecoc_trainlin, 'test', ecoc_test);
+ecoclin_onevsall = struct('name', 'ECOC SVM (1 vs. all)', 'pre', ecoc_pre, 'train', ecoc_trainlin_onevsall, 'test', ecoc_test);
 ecoc_binarized = struct('name', 'ECOC SVM binarized\_input', 'pre', ecoc_pre_binarized, 'train', ecoc_train, 'test', ecoc_test);
 ecoclin_binarized = struct('name', 'ECOC SVM lin binarized\_input', 'pre', ecoc_pre_binarized, 'train', ecoc_trainlin, 'test', ecoc_test);
 
@@ -109,6 +113,8 @@ end
                 alg = ecoc2;
             case 'ecoclin'
                 alg = ecoclin;
+            case 'ecoclin_onevsall'
+                alg = ecoclin_onevsall;
             case 'ecoc_binarized'
                 alg = ecoc_binarized;
             case 'ecoclin_binarized'

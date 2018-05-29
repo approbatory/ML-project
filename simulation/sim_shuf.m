@@ -6,7 +6,7 @@ means = L*rand(1,N);
 means2 = L*rand(1,N);
 stds = ones(1,N);
 %base_lambda = 0.1; %this was the case for the two place field case
-base_lamda = 0.01;
+base_lambda = 0.01;
 %Lambdas = @(point) base_lambda .* (exp(-(point - means).^2./(2*stds)) + exp(-(point - means2).^2./(2*stds))); %(position, neuron)
 Lambdas = @(point) base_lambda .* (exp(-(point - means).^2./(2*stds)) + exp(-(point - means).^2./(2*stds))); %(position, neuron)
 

@@ -136,7 +136,8 @@ end
 
 function [train_err, test_err, varargout] = run_model(train, test, X, ks, eval_f, train_frac, subset, retain_fitinfo)
 varargout = {};
-train_slice = randperm(length(ks))/length(ks) <= train_frac;
+%train_slice = randperm(length(ks))/length(ks) <= train_frac;
+train_slice = fair_split(ks, train_frac);
 X_train = X(train_slice,:); X_test = X(~train_slice,:);
 ks_train = ks(train_slice); ks_test = ks(~train_slice);
 if retain_fitinfo

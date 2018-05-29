@@ -1,6 +1,7 @@
 function eval_over = subset_moving(ds)
 if ds.num_trials == 1
-    eval_over(1:ds.full_num_frames) = true;
+    %eval_over(1:ds.full_num_frames) = true;%%TODO put velocity estimates
+    eval_over = open_field_subset_moving(ds);
     return;
 end
 
