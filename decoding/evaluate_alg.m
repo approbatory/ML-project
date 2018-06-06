@@ -28,6 +28,7 @@ p.addParameter('subset', defaultSubset, checkSubset);
 p.addParameter('X_is_func', defaultXisFunc, @islogical);
 p.addParameter('retain_models', false, @islogical);
 p.addParameter('retain_fitinfo', false, @islogical);
+p.addParameter('verbose', true, @islogical);
 
 p.parse(alg, X, ks, varargin{:});
 alg = p.Results.alg;
@@ -40,6 +41,7 @@ subset = p.Results.subset;
 X_is_func = p.Results.X_is_func;
 retain_models = p.Results.retain_models;
 retain_fitinfo = p.Results.retain_fitinfo;
+verbose = p.Results.verbose;
 
 if isa(alg, 'function_handle')
     alg_struct.train = alg;
@@ -129,8 +131,10 @@ else
     end
 end
 time_elapsed = toc(my_tic);
-fprintf('%f s:running alg %s, with subset? %d\n',...
-    time_elapsed, alg_name, ~isempty(subset));
+if verbose
+    fprintf('%f s:running alg %s, with subset? %d\n',...
+        time_elapsed, alg_name, ~isempty(subset));
+end
 end
 
 

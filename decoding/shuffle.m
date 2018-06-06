@@ -37,6 +37,9 @@ K_vals = unique(ks);
 if length(featmask) ~= n
     error('featmask must have as many entries as features: has %d, needs %d', length(featmask), n);
 end
+if length(ii) ~= n
+    error('ii must have length n=%d', n);
+end
 gen = cell2sp(cellshuf(ii, ks, K_vals, featmask), jj, ss, m, n);
 end
 

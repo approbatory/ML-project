@@ -21,10 +21,18 @@ for ix = 1:numel(names)
     end
     for d_ix = 1:numel(S_files)
         s = S_files(d_ix);
+        meta_S = dir(fullfile(s.folder, s.name, 'meta'));
+        if isempty(meta_S)
+            meta = 'unknown';
+        else
+            fid_ = fopen(fullfile(meta_S.folder, meta_S.name));
+            meta = fscanf(fid_, '%s');
+            fclose(fid_);
+        end
         [label, short] = ds_autolabel(s.folder, s.name);
         daysets{ix}(d_ix) = struct('directory', s.folder,...
             'day', s.name, 'label', label, 'short', short,...
-            'changing', get_changing(short));
+            'changing', get_changing(short), 'meta', meta);
     end
 end
 

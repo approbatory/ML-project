@@ -8,7 +8,7 @@ stds = ones(1,N);
 %base_lambda = 0.1; %this was the case for the two place field case
 base_lambda = 0.01;
 %Lambdas = @(point) base_lambda .* (exp(-(point - means).^2./(2*stds)) + exp(-(point - means2).^2./(2*stds))); %(position, neuron)
-Lambdas = @(point) base_lambda .* (exp(-(point - means).^2./(2*stds)) + exp(-(point - means).^2./(2*stds))); %(position, neuron)
+Lambdas = @(point) base_lambda .* (exp(-(point - means).^2./(2*stds.^2)) + exp(-(point - means).^2./(2*stds.^2))); %(position, neuron)
 
 times = 1:100000; speed = 0.01;
 trajectory = L*sin(speed*times).^2;
