@@ -70,7 +70,7 @@ title('comparison of decoders, binsize');
 
 %% Sweeping over number of bins and size of place fields
 %Using a function for all of the above:
-for n_bins = 1:16
+for n_bins = 16:16
     fprintf('b%d|f=', n_bins);
     for n_fields = 1:16
         %res{n_bins, n_fields} = conserved_spike_sim(n_bins, n_fields);
