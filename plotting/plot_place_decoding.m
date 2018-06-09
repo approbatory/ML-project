@@ -19,3 +19,6 @@ for i = 1:numel(res)
     subplot(3,2,6);
     plotmat('moving: error - on spoof', res{i}.spoof_moving_train_err, res{i}.spoof_moving_test_err, res{i}.algs, res{i}.dayset, err_ceil);
 end
+
+%%
+berr(

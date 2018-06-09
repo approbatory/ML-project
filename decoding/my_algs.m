@@ -7,7 +7,7 @@ end
 %declarations
 shuf_train = @(tr) @(X,k) tr(shuffle(X,k),k);
 labelshuf_train = @(tr) @(X,k) tr(X, k(randperm(length(k))));
-shuf_alg = @(a) struct('name', [a.name ' (shuf)'], 'pre', a.pre, 'train', shuf_train(a.train), 'test', a.test);
+shuf_alg = @(a) struct('name', [a.name ' (shuffled)'], 'pre', a.pre, 'train', shuf_train(a.train), 'test', a.test);
 labelshuf_alg = @(a) struct('name', [a.name ' (labelshuf)'], 'pre', a.pre, 'train', labelshuf_train(a.train), 'test', a.test);
 
 mv_pre = @(X) double(X ~= 0);
@@ -59,8 +59,8 @@ mvnb = struct('name', 'Bernoulli NB', 'pre', mv_pre, 'train', mv_train, 'test', 
 mvnb2= struct('name', 'Bernoulli NB','pre', mv_pre, 'train',@mv_train2,'test',@mv_test2);
 ecoc = struct('name', 'ECOC SVM', 'pre', ecoc_pre, 'train', ecoc_train, 'test', ecoc_test);
 ecoc2 = struct('name', 'ECOC SVM quadratic', 'pre', ecoc_pre, 'train', ecoc_train2, 'test', ecoc_test);
-ecoclin = struct('name', 'ECOC SVM', 'pre', ecoc_pre, 'train', ecoc_trainlin, 'test', ecoc_test);
-ecoclin_onevsall = struct('name', 'ECOC SVM (1 vs. all)', 'pre', ecoc_pre, 'train', ecoc_trainlin_onevsall, 'test', ecoc_test);
+ecoclin = struct('name', 'pairwise ECOC SVM', 'pre', ecoc_pre, 'train', ecoc_trainlin, 'test', ecoc_test);
+ecoclin_onevsall = struct('name', '1 vs. others ECOC SVM', 'pre', ecoc_pre, 'train', ecoc_trainlin_onevsall, 'test', ecoc_test);
 ecoc_binarized = struct('name', 'ECOC SVM binarized\_input', 'pre', ecoc_pre_binarized, 'train', ecoc_train, 'test', ecoc_test);
 ecoclin_binarized = struct('name', 'ECOC SVM lin binarized\_input', 'pre', ecoc_pre_binarized, 'train', ecoc_trainlin, 'test', ecoc_test);
 
