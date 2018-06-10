@@ -6,12 +6,12 @@ ds = quick_ds('../open_field/om3-0327', 'nocells');
 
 fillings = {'binary', 'box', 'copy_zeroed', 'copy', 'traces'};
 
-algs = my_algs({'ecoclin'}, {'original', 'shuf'}, true, 0);
+algs = my_algs({'ecoclin_onevsall'}, {'original', 'shuf'}, true, 0);
 
 
 for ix = 1:numel(fillings)
     [X, ks, errf] = ds_dataset(ds, 'filling', fillings{ix},...
-        'openfield', true, 'sparsify', false);
+        'openfield', true, 'sparsify', ~strcmp(fillings{ix}, 'traces'));
     for i = 1:numel(algs)
         [train_err{ix,i}, test_err{ix,i}] = evaluate_alg(algs(i),...
             X, ks, 'eval_f', errf, 'train_frac', 0.7, 'par_loops', PL);
