@@ -7,8 +7,8 @@ end
 %declarations
 shuf_train = @(tr) @(X,k) tr(shuffle(X,k),k);
 labelshuf_train = @(tr) @(X,k) tr(X, k(randperm(length(k))));
-shuf_alg = @(a) struct('name', [a.name ' (shuffled)'], 'pre', a.pre, 'train', shuf_train(a.train), 'test', a.test);
-labelshuf_alg = @(a) struct('name', [a.name ' (labelshuf)'], 'pre', a.pre, 'train', labelshuf_train(a.train), 'test', a.test);
+shuf_alg = @(a) struct('name', [a.name ' (shuffled)'], 'pre', a.pre, 'train', shuf_train(a.train), 'test', a.test, 'short', [a.short ' shuf']);
+labelshuf_alg = @(a) struct('name', [a.name ' (labelshuf)'], 'pre', a.pre, 'train', labelshuf_train(a.train), 'test', a.test, 'short', [a.short ' lshuf']);
 
 mv_pre = @(X) double(X ~= 0);
 mv_train = @(X_train, ks_train) fitcnb(X_train, ks_train, 'Distribution', 'mvmn',...
@@ -50,21 +50,23 @@ ecoc_test = @(model, X_test) predict(model, X_test);
 
 
 
-package_fun = @(name, trainer) struct('name', name, 'pre', @(X)X, 'train', trainer, 'test', @predict);
+package_fun = @(name, trainer) struct('name', name, 'pre', @(X)X, 'train', trainer, 'test', @predict, 'short', name);
 
-gnb = struct('name', 'Gaussian NB', 'pre', gnb_pre, 'train', gnb_train, 'test', gnb_test);
+gnb = struct('name', 'Gaussian NB', 'pre', gnb_pre, 'train', gnb_train, 'test', gnb_test, 'short', 'GNB');
+dlda = package_fun('DLDA', @(X,ks) fitcdiscr(X,ks,'DiscrimType', 'diaglinear'));
 lda = package_fun('LDA', @(X,ks) fitcdiscr(X,ks,'DiscrimType', 'linear'));
 qda = package_fun('QDA', @(X,ks) fitcdiscr(X,ks,'DiscrimType', 'quadratic'));
-mvnb = struct('name', 'Bernoulli NB', 'pre', mv_pre, 'train', mv_train, 'test', mv_test);
-mvnb2= struct('name', 'Bernoulli NB','pre', mv_pre, 'train',@mv_train2,'test',@mv_test2);
-ecoc = struct('name', 'ECOC SVM', 'pre', ecoc_pre, 'train', ecoc_train, 'test', ecoc_test);
-ecoc2 = struct('name', 'ECOC SVM quadratic', 'pre', ecoc_pre, 'train', ecoc_train2, 'test', ecoc_test);
-ecoclin = struct('name', 'pairwise ECOC SVM', 'pre', ecoc_pre, 'train', ecoc_trainlin, 'test', ecoc_test);
-ecoclin_onevsall = struct('name', '1 vs. others ECOC SVM', 'pre', ecoc_pre, 'train', ecoc_trainlin_onevsall, 'test', ecoc_test);
-ecoc_binarized = struct('name', 'ECOC SVM binarized\_input', 'pre', ecoc_pre_binarized, 'train', ecoc_train, 'test', ecoc_test);
-ecoclin_binarized = struct('name', 'ECOC SVM lin binarized\_input', 'pre', ecoc_pre_binarized, 'train', ecoc_trainlin, 'test', ecoc_test);
+dqda = package_fun('DQDA', @(X,ks) fitcdiscr(X,ks,'DiscrimType', 'diagquadratic'));
+mvnb = struct('name', 'Bernoulli NB', 'pre', mv_pre, 'train', mv_train, 'test', mv_test, 'short', 'BNB');
+mvnb2= struct('name', 'Bernoulli NB','pre', mv_pre, 'train',@mv_train2,'test',@mv_test2, 'short', 'BNB');
+ecoc = struct('name', 'ECOC SVM', 'pre', ecoc_pre, 'train', ecoc_train, 'test', ecoc_test, 'short', 'pSVM');
+ecoc2 = struct('name', 'ECOC SVM quadratic', 'pre', ecoc_pre, 'train', ecoc_train2, 'test', ecoc_test, 'short', 'QSVM');
+ecoclin = struct('name', 'pairwise ECOC SVM', 'pre', ecoc_pre, 'train', ecoc_trainlin, 'test', ecoc_test, 'short', 'pSVM');
+ecoclin_onevsall = struct('name', '1 vs. others ECOC SVM', 'pre', ecoc_pre, 'train', ecoc_trainlin_onevsall, 'test', ecoc_test, 'short', '1SVM');
+ecoc_binarized = struct('name', 'ECOC SVM binarized\_input', 'pre', ecoc_pre_binarized, 'train', ecoc_train, 'test', ecoc_test, 'short', 'bin pSVM');
+ecoclin_binarized = struct('name', 'ECOC SVM lin binarized\_input', 'pre', ecoc_pre_binarized, 'train', ecoc_trainlin, 'test', ecoc_test, 'short', 'bin pSVM');
 
-linsvm = struct('name', 'lin SVM', 'pre', @(x)x, 'train', linsvm_train, 'test', linsvm_test);
+linsvm = struct('name', 'lin SVM', 'pre', @(x)x, 'train', linsvm_train, 'test', linsvm_test, 'short', 'SVM');
 
 if ~exist('settings', 'var')
     settings = 'original';
@@ -99,10 +101,14 @@ end
         switch name
             case 'gnb'
                 alg = gnb;
+            case 'dlda'
+                alg = dlda;
             case 'lda'
                 alg = lda;
             case 'qda'
                 alg = qda;
+            case 'dqda'
+                alg = dqda;
             case 'mvnb'
                 alg = mvnb;
             case 'mvnb2'

@@ -6,7 +6,8 @@ p.addParameter('subset', true(1,size(X,2)), @(x) islogical(x) && isvector(x)...
     && (length(x) == size(X,2)));
 p.parse(X,ks,varargin{:});
 
-if issparse(X)
+%if issparse(X)
+if false
     X = shufgen(X, ks, p.Results.subset);
     return;
 end
