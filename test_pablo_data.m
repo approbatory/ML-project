@@ -42,3 +42,18 @@ xlabel('Linear track sessions (mouse 2028)');
 ylabel('RMS error (cm)');
 title('Place decoding error using traces (nonlocal split), trained/tested on shuffle');
 ylim([0 25]);
+
+%%
+algs = my_algs('ecoclin', {'shuf', 'original'})';
+my_ix = 6;
+num_bins = [2 4 8 12 16 20 32 64];
+for nb_ix = 1:numel(num_bins)
+    y = E_T{my_ix}.tracesEvents.position;
+    X = E_T{my_ix}.tracesEvents.rawTraces;
+    for i = 1:numel(algs)
+        [bins_tr_err{nb_ix,i}, bins_te_err{nb_ix,i},~] = evala(algs(i),...
+            X, y, @(y) gen_place_bins(y,num_bins(nb_ix),120),...
+            'split', 'nonlocal', 'repeats', 16, 'verbose', true);
+        fprintf('Done bins=%d i=%d, te=%.2f +- %.2fcm\n', num_bins(nb_ix), i, mean(bins_te_err{nb_ix,i}), std(bins_te_err{nb_ix,i})/sqrt(length(bins_te_err{nb_ix,i})));
+    end
+end
