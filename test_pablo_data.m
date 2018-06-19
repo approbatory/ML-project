@@ -10,7 +10,7 @@
 %%
 %algs = my_algs({'gnb','lda'});
 algs = [my_algs({'gnb', 'lda'}),my_algs('ecoclin', {'shuf', 'original'})'];
-up_to = 3;%numel(E_T);
+up_to = numel(E_T);
 for ix = 1:up_to
     y = E_T{ix}.tracesEvents.position; %(T, 2)
     if max(max(y)) > 1e3
