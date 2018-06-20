@@ -46,8 +46,8 @@ ylim([0 25]);
 %%
 algs = my_algs('ecoclin', {'shuf', 'original'})';
 my_ix = 6;
-num_bins = [2 4 8 12 16 20 32 64];
-for nb_ix = 1:numel(num_bins)
+num_bins = [2 4 8 12 16 20 32 50];
+for nb_ix = 8:numel(num_bins)
     y = E_T{my_ix}.tracesEvents.position;
     X = E_T{my_ix}.tracesEvents.rawTraces;
     for i = 1:numel(algs)
@@ -57,3 +57,10 @@ for nb_ix = 1:numel(num_bins)
         fprintf('Done bins=%d i=%d, te=%.2f +- %.2fcm\n', num_bins(nb_ix), i, mean(bins_te_err{nb_ix,i}), std(bins_te_err{nb_ix,i})/sqrt(length(bins_te_err{nb_ix,i})));
     end
 end
+
+%%
+erb = @(x) std(x)/sqrt(length(x));
+figure;
+errorbar(num_bins, cellfun(@mean, bins_te_err(:,2)), cellfun(erb, bins_te_err(:,2)));
+hold on;
+errorbar(num_bins, cellfun(@mean, bins_te_err(:,1)), cellfun(erb, bins_te_err(:,1)));

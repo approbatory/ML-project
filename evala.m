@@ -79,7 +79,9 @@ end
 
 time_elapsed = toc(my_tic);
 if verbose
-    fprintf('%f s: evala.m running %s\n', time_elapsed, alg_name);
+    fprintf('%f s: evala.m running %s\t', time_elapsed, alg_name);
+    erb = @(x) std(x)/sqrt(length(x));
+    fprintf('tr %.2f +- %.2f | te %.2f +- %.2f\n', mean(meas_train), erb(meas_train), mean(meas_test), erb(meas_test));
 end
 
 end
