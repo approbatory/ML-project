@@ -25,18 +25,18 @@ for ix = 1:numel(my_dayset)
 end
 
 %%
-up_to = numel(my_dayset);
+%up_to = numel(my_dayset);
 figure;
-berr(1:up_to, te_err(1:up_to,:), tr_err(1:up_to,:), {algs.short});
+berr({my_dayset.meta}, te_err(1:up_to,:), tr_err(1:up_to,:), {algs.short});
 xlabel('Open field sessions');
 ylabel('RMS error (cm)');
 title('Place decoding error using traces (nonlocal split)');
 ylim([0 25]);
 figure;
-berr(1:up_to, te_err_sh(1:up_to,:), tr_err_sh(1:up_to,:), {algs.short});
+berr({my_dayset.meta}, te_err_sh(1:up_to,:), tr_err_sh(1:up_to,:), {algs.short});
 xlabel('Open field sessions');
 ylabel('RMS error (cm)');
-title('Place decoding error using traces (nonlocal split), trained/tested on shuffle');
+title('Place decoding error, trained/tested on shuffle');
 ylim([0 25]);
 
 %%
