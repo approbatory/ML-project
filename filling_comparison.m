@@ -113,8 +113,8 @@ end
 % ylab = 'RMS error (cm)';
 % bsep({'Place Decoders'' Performance on Traces, with bin interpolation'}, meas_test_interp, meas_train_interp, Inf, {{algs.short}}, ylab);
 
-
+%%
 figure;
 ylab = 'RMS error (cm)';
 bsep({'Place Decoders'' Performance on Traces', 'Place Decoders'' Performance on Traces, with bin interpolation'},...
-    [meas_test;meas_test_interp], [meas_train;meas_train_interp], 8, {{algs.short},{algs.short}}, ylab);
+    [meas_test;meas_test_interp], [meas_train;meas_train_interp], 30, {{algs.short},{algs.short}}, ylab);
