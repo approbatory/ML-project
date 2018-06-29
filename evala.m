@@ -12,6 +12,7 @@ p.addParameter('use_par', false, @islogical);
 p.addParameter('X_is_func', false, @islogical);
 p.addParameter('verbose', false, @islogical);
 p.addParameter('shufboth', false, @islogical);
+p.addParameter('errfunc', 'RMS', @(x) strcmp(x,'RMS')||strcmp(x,'mean_dist'));
 p.parse(alg, X, y, binner, varargin{:});
 alg = p.Results.alg;
 X = p.Results.X;
@@ -25,7 +26,7 @@ use_par = p.Results.use_par;
 X_is_func = p.Results.X_is_func;
 verbose = p.Results.verbose;
 shufboth = p.Results.shufboth;
-
+errfunc = p.Results.errfunc;
 
 %%ALG CONSTRUCTION
 if isa(alg, 'function_handle')
@@ -62,17 +63,17 @@ X = pre(X);
 if use_par
     parfor i = 1:repeats
         if X_is_func
-            [meas_train(i), meas_test(i), model{i}] = oneloop(X(), train_frac, split, train, test, ks, centers, scXY, interp, shufboth);
+            [meas_train(i), meas_test(i), model{i}] = oneloop(X(), train_frac, split, train, test, ks, centers, scXY, interp, shufboth, errfunc);
         else
-            [meas_train(i), meas_test(i), model{i}] = oneloop(X, train_frac, split, train, test, ks, centers, scXY, interp, shufboth);
+            [meas_train(i), meas_test(i), model{i}] = oneloop(X, train_frac, split, train, test, ks, centers, scXY, interp, shufboth, errfunc);
         end
     end
 else
     for i = 1:repeats
         if X_is_func
-            [meas_train(i), meas_test(i), model{i}] = oneloop(X(), train_frac, split, train, test, ks, centers, scXY, interp, shufboth);
+            [meas_train(i), meas_test(i), model{i}] = oneloop(X(), train_frac, split, train, test, ks, centers, scXY, interp, shufboth, errfunc);
         else
-            [meas_train(i), meas_test(i), model{i}] = oneloop(X, train_frac, split, train, test, ks, centers, scXY, interp, shufboth);
+            [meas_train(i), meas_test(i), model{i}] = oneloop(X, train_frac, split, train, test, ks, centers, scXY, interp, shufboth, errfunc);
         end
     end
 end
@@ -86,7 +87,7 @@ end
 
 end
 
-function [meas_train, meas_test, model] = oneloop(X, train_frac, split, train, test, ks, centers, scXY, interp, shufboth)
+function [meas_train, meas_test, model] = oneloop(X, train_frac, split, train, test, ks, centers, scXY, interp, shufboth, errfunc)
 %choose a train/test split
 if strcmp(split, 'fair')
     train_slice = fair_split(ks, train_frac);
@@ -112,7 +113,11 @@ pred_train = test(model, X_train);
 pred_test = test(model, X_test);
 
 %error function
-errf = @(xy, p) sqrt(mean(sum((xy - centers(p(:),:)).^2,2)));
+if strcmp(errfunc, 'RMS')
+    errf = @(xy, p) sqrt(mean(sum((xy - centers(p(:),:)).^2,2)));
+elseif strcmp(errfunc, 'mean_dist')
+    errf = @(xy, p) mean(sqrt(sum((xy - centers(p(:),:)).^2,2)));
+end
 
 %error metrics
 if interp
