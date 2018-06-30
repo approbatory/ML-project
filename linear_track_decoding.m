@@ -118,7 +118,7 @@ ylabel('mean error (cm)');
 title('Place decoding from traces (forward)');
 set(gca, 'XTickLabel', res.dims_meaning{4});
 set(gca, 'XTick', 1:res.size(4));
-ylim([0 35]);
+ylim([0 15]);
 
 subplot(2,1,2);
 errnbar(squeeze(mean_errs(1,1,:,:,2,1)).', squeeze(errb_errs(1,1,:,:,1)).');
@@ -130,7 +130,7 @@ ylabel('mean error (cm)');
 title('Place decoding from traces (backward)');
 set(gca, 'XTickLabel', res.dims_meaning{4});
 set(gca, 'XTick', 1:res.size(4));
-ylim([0 35]);
+ylim([0 15]);
 
 suptitle('Linear track place decoding, separately for forward/backward passes');
 %% DIAGNOSTIC: DIRECTION SELECTION
