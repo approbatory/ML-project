@@ -1,8 +1,10 @@
-function [signif_filt, cell_muti, cutoff, prob, shuf_cell_muti] = signif_space_inf(ds, ks, N)
+function [signif_filt, cell_muti, cutoff, prob, shuf_cell_muti] = signif_space_inf(ds, ks, N, given_binary)
 K = max(ks);
 TAB = tabulate(ks);
 counts_y = TAB(:,2);
-Xb = ds_dataset(ds, 'openfield', true, 'filling', 'binary');
+%Xb = ds_dataset(ds, 'openfield', true, 'filling', 'binary');
+%Xb = one_time_events(ds.trials.traces);
+Xb = given_binary;
 cell_muti = -ones(1,ds.num_cells);
 for ci = 1:ds.num_cells
     cell_muti(ci) = muti_bin(Xb(:,ci), ks, K, counts_y);
@@ -13,7 +15,7 @@ end
 shuf_cell_muti = -ones(N,ds.num_cells);
 for i = 1:N
     for ci = 1:ds.num_cells
-        events_start_shuffled = es_shuf(ds, ci);
+        events_start_shuffled = shuf_x(Xb(:,ci));%es_shuf(ds, ci);
         shuf_cell_muti(i,ci) = muti_bin(events_start_shuffled, ks, K, counts_y);
     end
     %fprintf('i = %d ',i);
@@ -35,13 +37,13 @@ end
 % function ks_s = shuf_ks(ks)
 % ks_s = ks(randperm(length(ks)));
 % end
-% 
-% function x_s = shuf_x(x)
-% evs = sum(x);
-% tot = length(x);
-% x_s = sparse(tot,1);
-% x_s(randperm(tot,evs)) = 1;
-% end
+
+function x_s = shuf_x(x)
+evs = sum(x);
+tot = length(x);
+x_s = sparse(tot,1);
+x_s(randperm(tot,evs)) = 1;
+end
 
 function es_s = es_shuf(ds, ci)
 events = ds.trials.events{ci};

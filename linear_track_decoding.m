@@ -133,6 +133,33 @@ set(gca, 'XTick', 1:res.size(4));
 ylim([0 15]);
 
 suptitle('Linear track place decoding, separately for forward/backward passes');
+%% shuf plot
+figure;
+subplot(2,1,1);
+errnbar(squeeze(mean_errs(1,1,:,:,1,2)).', squeeze(errb_errs(1,1,:,:,2)).');
+hold on;
+errnbar(squeeze(mean_errs(1,2,:,:,1,2)).', squeeze(errb_errs(1,2,:,:,2)).', true);
+legend(algs.short);
+xlabel('Linear track sessions (mouse 2028)');
+ylabel('mean error (cm)');
+title('Place decoding from traces, pre-shuffled data (forward)');
+set(gca, 'XTickLabel', res.dims_meaning{4});
+set(gca, 'XTick', 1:res.size(4));
+ylim([0 15]);
+
+subplot(2,1,2);
+errnbar(squeeze(mean_errs(1,1,:,:,2,2)).', squeeze(errb_errs(1,1,:,:,2)).');
+hold on;
+errnbar(squeeze(mean_errs(1,2,:,:,2,2)).', squeeze(errb_errs(1,2,:,:,2)).', true);
+legend(algs.short);
+xlabel('Linear track sessions (mouse 2028)');
+ylabel('mean error (cm)');
+title('Place decoding from traces, pre-shuffled data (backward)');
+set(gca, 'XTickLabel', res.dims_meaning{4});
+set(gca, 'XTick', 1:res.size(4));
+ylim([0 15]);
+
+suptitle('Linear track place decoding, separately for forward/backward passes, on pre-shuffled data');
 %% DIAGNOSTIC: DIRECTION SELECTION
 seldec = @select_directions;
 ix = 18;
@@ -152,27 +179,8 @@ ylabel('X coordinate');
 legend coordinate forward backward
 
 %%
-function [fw, bw] = select_directions(XY)
-if isstruct(XY)
-    XY = XY.trials.centroids;
-end
-vthresh = 15 / 20; %~3cm/s
-track_coord = XY(:,1);
-velocity = diff(track_coord);
-smooth_velocity = medfilt1(velocity, 21);
-is_forward = smooth_velocity > vthresh;
-is_backward = smooth_velocity < -vthresh;
+%seldec = @select_directions;
 
-track_range = range(track_coord);
-track_min = min(track_coord);
-track_max = max(track_coord);
-bottom_tenth = track_min + track_range/10;
-top_tenth = track_max - track_range/10;
-
-in_between = (track_coord > bottom_tenth) & (track_coord < top_tenth);
-fw = [false; is_forward] & in_between;
-bw = [false; is_backward] & in_between;
-end
 
 %% OLD FUNC
 % function [fw, bw] = select_directions(XY)
