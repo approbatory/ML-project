@@ -99,14 +99,17 @@ else
 end
 
 %split the data
+if shufboth
+    X = shuffle(X, ks);
+end
 X_train = X(train_slice,:); X_test = X(~train_slice,:);
 ks_train = ks(train_slice); ks_test = ks(~train_slice);
 scXY_train = scXY(train_slice,:); scXY_test = scXY(~train_slice,:);
 %train the model
-if shufboth
-    X_train = shuffle(X_train, ks_train);
-    X_test = shuffle(X_test, ks_test);
-end
+%if shufboth
+%    X_train = shuffle(X_train, ks_train);
+%    X_test = shuffle(X_test, ks_test);
+%end
 model = train(X_train, ks_train);
 %predict
 pred_train = test(model, X_train);
