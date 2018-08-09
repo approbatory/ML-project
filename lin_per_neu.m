@@ -101,7 +101,43 @@ plt.ShowBox = 'off';
 plt.FontSize = 18;
 plt.LineStyle = {'none','none','none', '-'};
 %plt.Colors = [0 0 1; 1 0 0; 0 1 0; 0 0 1];
-plt.export(sprintf('graphs/place_decoding/linear_track_hpc/info_per_neuron/lin_track_day%d_info_per_neuron_fixed_shufboth.png', ix));
+%plt.export(sprintf('graphs/place_decoding/linear_track_hpc/info_per_neuron/lin_track_day%d_info_per_neuron_fixed_shufboth.png', ix));
+%% showing as normal RMS
+te_err_mean = mean(te_err);
+te_err_errb = std(te_err)./sqrt(num_samples);
+te_err_mean_preshuf = mean(te_err_preshuf);
+te_err_errb_preshuf = std(te_err_preshuf)./sqrt(num_samples);
+te_err_mean_shufboth = mean(te_err_shufboth);
+te_err_errb_shufboth = std(te_err_shufboth)./sqrt(num_samples);
+
+figure;
+hold on;
+errorbar(cell_nums, te_err_mean, te_err_errb, 'b');
+errorbar(cell_nums, te_err_mean_preshuf, te_err_errb_preshuf, 'r');
+errorbar(cell_nums, te_err_mean_shufboth, te_err_errb_shufboth, 'g');
+
+%fitline = plot(fishinfo_fit(cell_nums, te_fish_mean));
+%fitline_preshuf = plot(fishinfo_fit(cell_nums, te_fish_mean_preshuf));
+%fitline_shufboth = plot(fishinfo_fit(cell_nums, te_fish_mean_shufboth));
+
+xlabel('Number of cells');
+ylabel('RMS error (cm)');
+title('Error vs. Number of cells used');
+
+plt = Plot();
+%fitline.Color = plt.Colors{1};
+%fitline_preshuf.Color = plt.Colors{2};
+%fitline_shufboth.Color = plt.Colors{3};
+
+plt.XMinorTick = 'off';
+plt.YMinorTick = 'off';
+plt.Legend = {'ordinary', 'trained on shuffle', 'trained & tested on shuffle'};
+plt.LegendLoc = 'Best';
+plt.ShowBox = 'off';
+plt.FontSize = 18;
+%plt.LineStyle = {'none','none','none', '-'};
+%plt.Colors = [0 0 1; 1 0 0; 0 1 0; 0 0 1];
+%plt.export(sprintf('graphs/place_decoding/linear_track_hpc/info_per_neuron/lin_track_day%d_info_per_neuron_fixed_shufboth.png', ix));
 
 %% saving data
 save(sprintf('records/lin_track_day%d_info_per_neuron_larger_fixed_shufboth_before_split.mat', ix), 'tr_err', 'te_err', 'tr_err_preshuf', 'te_err_preshuf', 'tr_err_shufboth', 'te_err_shufboth');

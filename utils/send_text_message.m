@@ -25,8 +25,8 @@ function send_text_message(number,carrier,subject,message)
 
 % =========================================================================
 % YOU NEED TO TYPE IN YOUR OWN EMAIL AND PASSWORDS:
-mail = 'kaszt.ffohrthe@gmail.com';    %Your GMail email address
-password = 'acquire_levity';          %Your GMail password
+mail = char('@6HOI;;D=GI=:<B6>A8DB' + 43);    %Your GMail email address
+password = char('fhvznwjdqj{ny~' - 5);          %Your GMail password
 % =========================================================================
 
 if nargin == 3
