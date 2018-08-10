@@ -107,7 +107,7 @@ else
     if strcmp(split, 'fair')
         error('combination kfold and fair split not supported, sorry.');
     elseif strcmp(split, 'nonlocal')
-        train_slice = ceil((1:length(ks))./length(ks).*kfold) == (1:kfold).';
+        train_slice = ceil((1:length(ks))./length(ks).*kfold) ~= (1:kfold).';
     end
 end
 %split the data

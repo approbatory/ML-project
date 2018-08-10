@@ -38,7 +38,8 @@ tr_err_preshuf = cell(num_samples, numel(cell_nums));
 te_err_preshuf = cell(num_samples, numel(cell_nums));
 tr_err_shufboth = cell(num_samples, numel(cell_nums));
 te_err_shufboth = cell(num_samples, numel(cell_nums));
-for c_ix = 1:numel(cell_nums)
+%for c_ix = 1:numel(cell_nums)
+for c_ix = numel(cell_nums):-1:1
     my_ticker = tic;
     num_neu = cell_nums(c_ix);
     
@@ -164,7 +165,7 @@ subplot(2,1,2);
 errnbar(Y_errnbar(:,2), E_errnbar(:,2));
 set(gca, 'XTickLabels', {'Ordinary','Train on \newline shuffle','Train & test \newline on shuffle'});
 ylabel('\epsilon (1/neuron)');
-suptitle('[I_0N]/(1+N\epsilon) fit parameters');
+suplabel('[I_0N]/(1+N\epsilon) fit parameters');
 %plt_fit2 = Plot();
 
 %%
