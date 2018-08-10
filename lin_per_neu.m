@@ -15,8 +15,8 @@ ds = my_ds(ix);
 
 alg = my_algs('ecoclin');
 alg_preshuf = my_algs('ecoclin', 'shuf');
-num_samples = 64*8;
-midLen = 0.8*120;
+num_samples = 2;%16;%64
+midLen = 120 * 10/12;
 num_bins = 20;
 
 
@@ -29,36 +29,40 @@ my_y = my_y(sel_fw,:);
 
 my_binner = @(y) gen_place_bins(y, num_bins, midLen);
 
-delta_neu = 5;%10;
+delta_neu = 10;
 tot_cells = ds.num_cells;
 cell_nums = 1:delta_neu:tot_cells;
-tr_err = zeros(num_samples, numel(cell_nums));
-te_err = zeros(num_samples, numel(cell_nums));
-tr_err_preshuf = zeros(num_samples, numel(cell_nums));
-te_err_preshuf = zeros(num_samples, numel(cell_nums));
-tr_err_shufboth = zeros(num_samples, numel(cell_nums));
-te_err_shufboth = zeros(num_samples, numel(cell_nums));
+tr_err = cell(num_samples, numel(cell_nums));
+te_err = cell(num_samples, numel(cell_nums));
+tr_err_preshuf = cell(num_samples, numel(cell_nums));
+te_err_preshuf = cell(num_samples, numel(cell_nums));
+tr_err_shufboth = cell(num_samples, numel(cell_nums));
+te_err_shufboth = cell(num_samples, numel(cell_nums));
 for c_ix = 1:numel(cell_nums)
     my_ticker = tic;
     num_neu = cell_nums(c_ix);
     
+    %for rep_ix = 1:num_samples
     parfor rep_ix = 1:num_samples
         cell_subset_X = my_X(:,randperm(tot_cells)<=num_neu);
-        [tr_err(rep_ix,c_ix), te_err(rep_ix,c_ix)] = evala(alg, cell_subset_X, my_y, my_binner,...
-            'split', 'nonlocal', 'verbose', false, 'errfunc', 'RMS');
-        [tr_err_preshuf(rep_ix,c_ix), te_err_preshuf(rep_ix,c_ix)] = evala(alg_preshuf, cell_subset_X, my_y, my_binner,...
-            'split', 'nonlocal', 'verbose', false, 'errfunc', 'RMS');
-        [tr_err_shufboth(rep_ix,c_ix), te_err_shufboth(rep_ix,c_ix)] = evala(alg, cell_subset_X, my_y, my_binner,...
-            'split', 'nonlocal', 'verbose', false, 'errfunc', 'RMS', 'shufboth', true);
+        [tr_err{rep_ix,c_ix}, te_err{rep_ix,c_ix}] = evala(alg, cell_subset_X, my_y, my_binner,...
+            'split', 'nonlocal', 'verbose', false, 'errfunc', 'RMS', 'kfold', 10, 'error_type', 'binwise');
+        [tr_err_preshuf{rep_ix,c_ix}, te_err_preshuf{rep_ix,c_ix}] = evala(alg_preshuf, cell_subset_X, my_y, my_binner,...
+            'split', 'nonlocal', 'verbose', false, 'errfunc', 'RMS', 'kfold', 10, 'error_type', 'binwise');
+        [tr_err_shufboth{rep_ix,c_ix}, te_err_shufboth{rep_ix,c_ix}] = evala(alg, cell_subset_X, my_y, my_binner,...
+            'split', 'nonlocal', 'verbose', false, 'errfunc', 'RMS', 'shufboth', true, 'kfold', 10, 'error_type', 'binwise');
         fprintf('%d ', rep_ix);
     end
+    
     fprintf('\n');
     toc(my_ticker);
-    fprintf('For %d cells: %.2f +- %.2f RMS\t ORIGINAL\n', num_neu, mean(te_err(:,c_ix)), std(te_err(:,c_ix))/sqrt(num_samples));
-    fprintf('For %d cells: %.2f +- %.2f RMS\t PRESHUF\n', num_neu, mean(te_err_preshuf(:,c_ix)), std(te_err_preshuf(:,c_ix))/sqrt(num_samples));
-    fprintf('For %d cells: %.2f +- %.2f RMS\t SHUFBOTH\n', num_neu, mean(te_err_shufboth(:,c_ix)), std(te_err_shufboth(:,c_ix))/sqrt(num_samples));
+    fprintf('For %d cells: %.2f +- %.2f RMS\t ORIGINAL\n', num_neu, mean(cell2mat(te_err(:,c_ix))), std(cell2mat(te_err(:,c_ix)))/sqrt(num_samples));
+    fprintf('For %d cells: %.2f +- %.2f RMS\t PRESHUF\n', num_neu, mean(cell2mat(te_err_preshuf(:,c_ix))), std(cell2mat(te_err_preshuf(:,c_ix)))/sqrt(num_samples));
+    fprintf('For %d cells: %.2f +- %.2f RMS\t SHUFBOTH\n', num_neu, mean(cell2mat(te_err_shufboth(:,c_ix))), std(cell2mat(te_err_shufboth(:,c_ix)))/sqrt(num_samples));
 end
-
+tr_err = cell2mat(tr_err); te_err = cell2mat(te_err);
+tr_err_preshuf = cell2mat(tr_err_preshuf); te_err_preshuf = cell2mat(te_err_preshuf);
+tr_err_shufboth = cell2mat(tr_err_shufboth); te_err_shufboth = cell2mat(te_err_shufboth);
 %% Transform to Fisher information
 
 te_fish = 1./(te_err.^2);
@@ -190,4 +194,4 @@ plt_diff.YMinorTick = 'off';
 plt_diff.ShowBox = 'off';
 
 %% messaging
-mailme('Job done', sprintf('The job of lin_per_neu.m for day index %d has finished', ix));
+%mailme('Job done', sprintf('The job of lin_per_neu.m for day index %d has finished', ix));
