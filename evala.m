@@ -157,4 +157,7 @@ for i_fold = 1:size(train_slice,1)
         end
     end
 end
+%averaging the results from the K folds <--- may not want to do this...
+meas_train = mean(meas_train);
+meas_test = mean(meas_test);
 end

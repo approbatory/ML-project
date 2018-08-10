@@ -15,14 +15,14 @@ ds = my_ds(ix);
 
 alg = my_algs('ecoclin');
 alg_preshuf = my_algs('ecoclin', 'shuf');
-num_samples = 2;%16;%64
+num_samples = 4;%16;%64
 midLen = 120 * 10/12;
 num_bins = 20;
 
 
 my_X = ds.trials.traces.';
 my_y = ds.trials.centroids;
-[sel_fw, sel_bw] = select_directions(my_y);
+[sel_fw, sel_bw] = select_directions(my_y, true); %using old_method
 %just take forwards
 my_X = my_X(sel_fw,:);
 my_y = my_y(sel_fw,:);
@@ -47,11 +47,11 @@ for c_ix = numel(cell_nums):-1:1
     parfor rep_ix = 1:num_samples
         cell_subset_X = my_X(:,randperm(tot_cells)<=num_neu);
         [tr_err{rep_ix,c_ix}, te_err{rep_ix,c_ix}] = evala(alg, cell_subset_X, my_y, my_binner,...
-            'split', 'nonlocal', 'verbose', false, 'errfunc', 'RMS', 'kfold', 10, 'error_type', 'binwise');
+            'split', 'nonlocal', 'verbose', false, 'errfunc', 'mean_dist', 'kfold', 10, 'error_type', 'binwise', 'train_frac', 0.9);
         [tr_err_preshuf{rep_ix,c_ix}, te_err_preshuf{rep_ix,c_ix}] = evala(alg_preshuf, cell_subset_X, my_y, my_binner,...
-            'split', 'nonlocal', 'verbose', false, 'errfunc', 'RMS', 'kfold', 10, 'error_type', 'binwise');
+            'split', 'nonlocal', 'verbose', false, 'errfunc', 'mean_dist', 'kfold', 10, 'error_type', 'binwise', 'train_frac', 0.9);
         [tr_err_shufboth{rep_ix,c_ix}, te_err_shufboth{rep_ix,c_ix}] = evala(alg, cell_subset_X, my_y, my_binner,...
-            'split', 'nonlocal', 'verbose', false, 'errfunc', 'RMS', 'shufboth', true, 'kfold', 10, 'error_type', 'binwise');
+            'split', 'nonlocal', 'verbose', false, 'errfunc', 'mean_dist', 'shufboth', true, 'kfold', 10, 'error_type', 'binwise', 'train_frac', 0.9);
         fprintf('%d ', rep_ix);
     end
     
@@ -64,6 +64,13 @@ end
 tr_err = cell2mat(tr_err); te_err = cell2mat(te_err);
 tr_err_preshuf = cell2mat(tr_err_preshuf); te_err_preshuf = cell2mat(te_err_preshuf);
 tr_err_shufboth = cell2mat(tr_err_shufboth); te_err_shufboth = cell2mat(te_err_shufboth);
+
+
+%% saving data
+save(sprintf('records/lin_track_day%d_%s.mat', ix, timestring), 'tr_err', 'te_err', 'tr_err_preshuf', 'te_err_preshuf', 'tr_err_shufboth', 'te_err_shufboth');
+%% messaging
+mailme('Re: Job done', sprintf('The job of lin_per_neu.m for day index %d has finished', ix));
+return;
 %% Transform to Fisher information
 
 te_fish = 1./(te_err.^2);
@@ -144,8 +151,6 @@ plt.FontSize = 18;
 %plt.Colors = [0 0 1; 1 0 0; 0 1 0; 0 0 1];
 %plt.export(sprintf('graphs/place_decoding/linear_track_hpc/info_per_neuron/lin_track_day%d_info_per_neuron_fixed_shufboth.png', ix));
 
-%% saving data
-save(sprintf('records/lin_track_day%d_info_per_neuron_larger_fixed_shufboth_before_split.mat', ix), 'tr_err', 'te_err', 'tr_err_preshuf', 'te_err_preshuf', 'tr_err_shufboth', 'te_err_shufboth');
 
 %% fit params shown
 ordinary_fit = fishinfo_fit(cell_nums, te_fish_mean);
@@ -194,5 +199,3 @@ plt_diff.XMinorTick = 'off';
 plt_diff.YMinorTick = 'off';
 plt_diff.ShowBox = 'off';
 
-%% messaging
-%mailme('Job done', sprintf('The job of lin_per_neu.m for day index %d has finished', ix));
