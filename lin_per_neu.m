@@ -15,14 +15,14 @@ ds = my_ds(ix);
 
 alg = my_algs('ecoclin');
 alg_preshuf = my_algs('ecoclin', 'shuf');
-num_samples = 4;%16;%64
+num_samples = 20;%16;%64
 midLen = 120 * 10/12;
 num_bins = 20;
 
 
 my_X = ds.trials.traces.';
 my_y = ds.trials.centroids;
-[sel_fw, sel_bw] = select_directions(my_y, true); %using old_method
+[sel_fw, sel_bw] = select_directions(my_y, false); %not using old_method
 %just take forwards
 my_X = my_X(sel_fw,:);
 my_y = my_y(sel_fw,:);
@@ -32,6 +32,9 @@ my_binner = @(y) gen_place_bins(y, num_bins, midLen);
 delta_neu = 10;
 tot_cells = ds.num_cells;
 cell_nums = 1:delta_neu:tot_cells;
+if cell_nums(end) ~= tot_cells
+    cell_nums = [cell_nums tot_cells];
+end
 tr_err = cell(num_samples, numel(cell_nums));
 te_err = cell(num_samples, numel(cell_nums));
 tr_err_preshuf = cell(num_samples, numel(cell_nums));
@@ -57,9 +60,9 @@ for c_ix = numel(cell_nums):-1:1
     
     fprintf('\n');
     toc(my_ticker);
-    fprintf('For %d cells: %.2f +- %.2f RMS\t ORIGINAL\n', num_neu, mean(cell2mat(te_err(:,c_ix))), std(cell2mat(te_err(:,c_ix)))/sqrt(num_samples));
-    fprintf('For %d cells: %.2f +- %.2f RMS\t PRESHUF\n', num_neu, mean(cell2mat(te_err_preshuf(:,c_ix))), std(cell2mat(te_err_preshuf(:,c_ix)))/sqrt(num_samples));
-    fprintf('For %d cells: %.2f +- %.2f RMS\t SHUFBOTH\n', num_neu, mean(cell2mat(te_err_shufboth(:,c_ix))), std(cell2mat(te_err_shufboth(:,c_ix)))/sqrt(num_samples));
+    fprintf('For %d cells: %.2f +- %.2f mean err\t ORIGINAL\n', num_neu, mean(cell2mat(te_err(:,c_ix))), std(cell2mat(te_err(:,c_ix)))/sqrt(num_samples));
+    fprintf('For %d cells: %.2f +- %.2f mean err\t PRESHUF\n', num_neu, mean(cell2mat(te_err_preshuf(:,c_ix))), std(cell2mat(te_err_preshuf(:,c_ix)))/sqrt(num_samples));
+    fprintf('For %d cells: %.2f +- %.2f mean err\t SHUFBOTH\n', num_neu, mean(cell2mat(te_err_shufboth(:,c_ix))), std(cell2mat(te_err_shufboth(:,c_ix)))/sqrt(num_samples));
 end
 tr_err = cell2mat(tr_err); te_err = cell2mat(te_err);
 tr_err_preshuf = cell2mat(tr_err_preshuf); te_err_preshuf = cell2mat(te_err_preshuf);
@@ -69,8 +72,8 @@ tr_err_shufboth = cell2mat(tr_err_shufboth); te_err_shufboth = cell2mat(te_err_s
 %% saving data
 save(sprintf('records/lin_track_day%d_%s.mat', ix, timestring), 'tr_err', 'te_err', 'tr_err_preshuf', 'te_err_preshuf', 'tr_err_shufboth', 'te_err_shufboth');
 %% messaging
-mailme('Re: Job done', sprintf('The job of lin_per_neu.m for day index %d has finished', ix));
-return;
+mailme('Re: Job done', sprintf('The job of lin_per_neu.m for day index %d has finished (not old_method)', ix));
+%return;
 %% Transform to Fisher information
 
 te_fish = 1./(te_err.^2);
@@ -114,7 +117,7 @@ plt.FontSize = 18;
 plt.LineStyle = {'none','none','none', '-'};
 %plt.Colors = [0 0 1; 1 0 0; 0 1 0; 0 0 1];
 %plt.export(sprintf('graphs/place_decoding/linear_track_hpc/info_per_neuron/lin_track_day%d_info_per_neuron_fixed_shufboth.png', ix));
-%% showing as normal RMS
+%% showing as normal mean error
 te_err_mean = mean(te_err);
 te_err_errb = std(te_err)./sqrt(num_samples);
 te_err_mean_preshuf = mean(te_err_preshuf);
@@ -133,7 +136,7 @@ errorbar(cell_nums, te_err_mean_shufboth, te_err_errb_shufboth, 'g');
 %fitline_shufboth = plot(fishinfo_fit(cell_nums, te_fish_mean_shufboth));
 
 xlabel('Number of cells');
-ylabel('RMS error (cm)');
+ylabel('Mean error (cm)');
 title('Error vs. Number of cells used');
 
 plt = Plot();
