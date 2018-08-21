@@ -1,5 +1,5 @@
 %% script parameters
-visualize = false; %use to make intermediate plots
+visualize = true; %use to make intermediate plots
 
 %% loading file
 
@@ -119,7 +119,7 @@ for c_ix = numel(neuron_nums):-1:1
         fprintf('%d ', rep_ix);
     end
     toc(sub_ticker);
-    fprintf('\n %d cells done (ix=%d), err=%.2f +- %.2f cm\n', number_of_neurons, c_ix, mean(mean(cat(1,res(c_ix, :).mean_err),2)), std(mean(cat(1,res(c_ix, :).mean_err),2))./sqrt(num_samples));
+    fprintf('\n %d cells done (ix=%d), err=%.2f +- %.2f cm || err_shuf=%.2f +- %.2f cm\n', number_of_neurons, c_ix, mean(mean(cat(1,res(c_ix, :).mean_err),2)), std(mean(cat(1,res(c_ix, :).mean_err),2))./sqrt(num_samples), mean(mean(cat(1,res_shuf(c_ix, :).mean_err),2)), std(mean(cat(1,res_shuf(c_ix, :).mean_err),2))./sqrt(num_samples));
 end
 toc(tot_ticker);
 %% plotting
@@ -145,6 +145,9 @@ if visualize
 end
 
 %% saving
+if ~exist('records', 'dir')
+    mkdir('records');
+end
 save(sprintf('records/lin_track_2024_0317_%s.mat', timestring), 'res', 'res_shuf');
 %% decoding function
 function res = decoding_reporter(X, ks, centers)
