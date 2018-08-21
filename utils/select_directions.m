@@ -1,7 +1,10 @@
-function [fw, bw] = select_directions(XY, old_method)
-if nargin == 1
-    old_method = false;
-end
+function [fw, bw] = select_directions(XY, varargin)
+p = inputParser;
+p.addRequired('XY', @(x) isnumeric(x) && size(x,2) == 2);
+p.addParameter('old_method', false, @islogical);
+p.parse(XY, varargin{:});
+XY = p.Results.XY;
+old_method = p.Results.old_method;
 if isstruct(XY)
     XY = XY.trials.centroids;
 end
@@ -28,7 +31,6 @@ else
     track_coord = XY(:,1);
     velocity = [0; diff(track_coord)];
     %smooth_velocity = medfilt1(velocity, 21);
-    
     track_range = range(track_coord);
     track_min = min(track_coord);
     track_max = max(track_coord);
@@ -39,10 +41,13 @@ else
     trial_start = find(diff(in_between) == 1);
     trial_end = find(diff(in_between) == -1);
     
+    if trial_end(1) <= trial_start(1)
+        trial_end = trial_end(2:end);
+    end
     
     fw = false(length(track_coord), 1);
     bw = false(length(track_coord), 1);
-    for tr_i = 1:length(trial_start)
+    for tr_i = 1:min(length(trial_start),length(trial_end))
         trial_vel = velocity(trial_start(tr_i):trial_end(tr_i));
         
         if all(trial_vel > vthresh)
