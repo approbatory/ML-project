@@ -98,9 +98,12 @@ end
 
 delta_neurons = 10;
 total_neurons = size(my_X,2);
-neuron_nums = 0:delta_neurons:total_neurons;
+neuron_nums = delta_neurons:delta_neurons:total_neurons;
 if neuron_nums(end) ~= total_neurons
     neuron_nums = [neuron_nums total_neurons];
+end
+if delta_neurons > 1
+    neuron_nums = [1 neuron_nums];
 end
 
 num_samples = 20; %how many times to run each number of neurons
