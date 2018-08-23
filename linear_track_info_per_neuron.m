@@ -1,5 +1,5 @@
 %% script parameters
-visualize = true; %use to make intermediate plots
+visualize = false; %use to make intermediate plots
 
 %% loading file
 
@@ -106,12 +106,17 @@ if delta_neurons > 1
     neuron_nums = [1 neuron_nums];
 end
 
-num_samples = 20; %how many times to run each number of neurons
+num_samples = 1;%20; %how many times to run each number of neurons
 tot_ticker = tic;
-for c_ix = numel(neuron_nums):-1:1
+%for c_ix = numel(neuron_nums):-1:1
+%res_size = [numel(neuron_nums) num_samples];
+%empty_field = cell(res_size);
+%res = struct('MSE',empty_field,'mean_err',empty_field,'MSE_train',empty_field,'mean_err_train',empty_field,'num_cells',empty_field);
+%res_shuf = res;
+parfor c_ix = 1:numel(neuron_nums)
     number_of_neurons = neuron_nums(c_ix);
     sub_ticker = tic;
-    parfor rep_ix = 1:num_samples
+    for rep_ix = 1:num_samples
         cell_subset_X = my_X(:, randperm(total_neurons) <= number_of_neurons);
         cell_subset_X_shuf = shuffle(cell_subset_X, my_ks);
         res(c_ix, rep_ix) = decoding_reporter(cell_subset_X, my_ks, my_centers);
@@ -119,7 +124,7 @@ for c_ix = numel(neuron_nums):-1:1
         fprintf('%d ', rep_ix);
     end
     toc(sub_ticker);
-    fprintf('\n %d cells done (ix=%d), err=%.2f +- %.2f cm || err_shuf=%.2f +- %.2f cm\n', number_of_neurons, c_ix, mean(mean(cat(1,res(c_ix, :).mean_err),2)), std(mean(cat(1,res(c_ix, :).mean_err),2))./sqrt(num_samples), mean(mean(cat(1,res_shuf(c_ix, :).mean_err),2)), std(mean(cat(1,res_shuf(c_ix, :).mean_err),2))./sqrt(num_samples));
+    %fprintf('\n %d cells done (ix=%d), err=%.2f +- %.2f cm || err_shuf=%.2f +- %.2f cm\n', number_of_neurons, c_ix, mean(mean(cat(1,res(c_ix, :).mean_err),2)), std(mean(cat(1,res(c_ix, :).mean_err),2))./sqrt(num_samples), mean(mean(cat(1,res_shuf(c_ix, :).mean_err),2)), std(mean(cat(1,res_shuf(c_ix, :).mean_err),2))./sqrt(num_samples));
 end
 toc(tot_ticker);
 %% plotting
@@ -160,18 +165,25 @@ train_slices = ceil((1:length(ks))./length(ks).*k_fold) ~= (1:k_fold).';
 MSE = @(k,p) mean(sum((centers(k,:)-centers(p,:)).^2,2));
 mean_err = @(k,p) mean(sum(abs(centers(k,:)-centers(p,:)),2));
 
+res.num_cells = size(X,2);
+res.ks = zeros(size(ks));
+res.pred = zeros(size(ks));
+
 for i_fold = 1:size(train_slices,1)
     train_slice = train_slices(i_fold,:);
-    X_train = X(train_slice,:); X_test = X(~train_slice,:);
-    ks_train = ks(train_slice); ks_test = ks(~train_slice);
+    test_slice = ~train_slice;
+    X_train = X(train_slice,:); X_test = X(test_slice,:);
+    ks_train = ks(train_slice); ks_test = ks(test_slice);
     model = alg.train(X_train, ks_train);
     pred_train = alg.test(model, X_train);
     pred_test = alg.test(model, X_test);
     res.MSE(i_fold) = MSE(ks_test, pred_test);
     res.mean_err(i_fold) = mean_err(ks_test, pred_test);
+    res.ks(test_slice) = ks_test;
+    res.pred(test_slice) = pred_test;
     
     res.MSE_train(i_fold) = MSE(ks_train, pred_train);
     res.mean_err_train(i_fold) = mean_err(ks_train, pred_train);
 end
-res.num_cells = size(X,2);
+
 end

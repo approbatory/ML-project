@@ -1,5 +1,5 @@
-record_pattern = 'records/lin_track_2024_0317_*.mat';
-using = 'last'; %or 'all'
+record_pattern = 'records_sherlock/lin_track_2024_0317_*.mat';
+using = 'all';%'last'; %or 'all'
 
 %search for all files matching the pattern
 S_dir = dir(record_pattern);
@@ -101,7 +101,9 @@ subplot(2,1,2);
 errnbar(Y_errnbar(:,2), E_errnbar(:,2));
 set(gca, 'XTickLabels', {'Unshuffled','Shuffled'});
 ylabel('\epsilon (1/neuron)');
-suplabel('[I_0N]/(1+N\epsilon) fit parameters');
+
+subplot(2,1,1);
+title('[I_0N]/(1+N\epsilon) fit parameters');
 %plt_fit2 = Plot();
 
 
