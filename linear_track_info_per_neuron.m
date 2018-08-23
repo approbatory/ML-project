@@ -109,10 +109,10 @@ end
 num_samples = 1;%20; %how many times to run each number of neurons
 tot_ticker = tic;
 %for c_ix = numel(neuron_nums):-1:1
-%res_size = [numel(neuron_nums) num_samples];
-%empty_field = cell(res_size);
-%res = struct('MSE',empty_field,'mean_err',empty_field,'MSE_train',empty_field,'mean_err_train',empty_field,'num_cells',empty_field);
-%res_shuf = res;
+res_size = [numel(neuron_nums) num_samples];
+empty_field = cell(res_size);
+res = struct('MSE',empty_field,'mean_err',empty_field,'MSE_train',empty_field,'mean_err_train',empty_field,'num_cells',empty_field, 'ks', empty_field, 'pred', empty_field);
+res_shuf = res;
 parfor c_ix = 1:numel(neuron_nums)
     number_of_neurons = neuron_nums(c_ix);
     sub_ticker = tic;
@@ -121,7 +121,7 @@ parfor c_ix = 1:numel(neuron_nums)
         cell_subset_X_shuf = shuffle(cell_subset_X, my_ks);
         res(c_ix, rep_ix) = decoding_reporter(cell_subset_X, my_ks, my_centers);
         res_shuf(c_ix, rep_ix) = decoding_reporter(cell_subset_X_shuf, my_ks, my_centers);
-        fprintf('%d ', rep_ix);
+        fprintf('%d cells :- %d ', number_of_neurons, rep_ix);
     end
     toc(sub_ticker);
     %fprintf('\n %d cells done (ix=%d), err=%.2f +- %.2f cm || err_shuf=%.2f +- %.2f cm\n', number_of_neurons, c_ix, mean(mean(cat(1,res(c_ix, :).mean_err),2)), std(mean(cat(1,res(c_ix, :).mean_err),2))./sqrt(num_samples), mean(mean(cat(1,res_shuf(c_ix, :).mean_err),2)), std(mean(cat(1,res_shuf(c_ix, :).mean_err),2))./sqrt(num_samples));
