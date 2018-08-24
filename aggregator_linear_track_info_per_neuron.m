@@ -1,4 +1,4 @@
-record_pattern = 'records_sherlock/lin_track_2024_0317_*.mat';
+record_pattern = 'records_sherlock_315/lin_track_2024_0315_*.mat';
 using = 'all';%'last'; %or 'all'
 
 %search for all files matching the pattern
