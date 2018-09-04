@@ -1,5 +1,6 @@
-record_pattern = 'records_sherlock_315/Mouse-2024-20150315_090450-linear-track-TracesAndEvents.mat_decoding_*.mat';
-using = 'all';%'last'; %or 'all'
+%record_pattern = 'records_sherlock_315/Mouse-2024-20150315_090450-linear-track-TracesAndEvents.mat_decoding_*.mat';
+record_pattern = 'records/lin_track_2024_0317_*.mat';
+using = 'last'; %or 'all'
 
 %search for all files matching the pattern
 S_dir = dir(record_pattern);

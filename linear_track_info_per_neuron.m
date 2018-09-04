@@ -1,5 +1,5 @@
 %% script parameters
-visualize = false; %use to make intermediate plots
+visualize = true; %use to make intermediate plots
 
 %% loading file
 
@@ -13,17 +13,18 @@ data_struct = load(path_to_data);
 tracesEvents = data_struct.tracesEvents;
 
 %% constructing dataset
-full_X = tracesEvents.rawTraces;
+full_X = tracesEvents.rawProb;%tracesEvents.rawTraces;
 full_y = tracesEvents.position;
 
-[forward_mask, backward_mask] = select_directions(full_y);
+[forward_mask, backward_mask, cm_per_pix] = select_directions(full_y);
 %take forward trials
 my_X = full_X(forward_mask,:);
 my_y = full_y(forward_mask,:);
 
 %% divide into bins
-fullLen = 120; %120 cm
-midLen = fullLen * 10/12; %100 cm
+
+fullLen = 118;
+midLen = range(my_y(:,1)) .* cm_per_pix; %cm
 num_bins = 20;
 my_binner = @(y) gen_place_bins(y, num_bins, midLen);
 [my_ks, my_centers] = my_binner(my_y);
@@ -43,8 +44,9 @@ if visualize
     title('Forward trials'' neural traces');
     
     subplot(2,2,3);
-    renorm_y = @(y,L) (y-min(y))./range(y).*L;
-    coord_to_plot = renorm_y(full_y(:,1), fullLen);
+    y_min = min(full_y(:,1)); range_y = range(full_y(:,1));
+    renorm_y = @(y) (y-y_min)./range_y.*fullLen;
+    coord_to_plot = renorm_y(full_y(:,1));
     plot(coord_to_plot);
     hold on;
     partial_y = coord_to_plot;
@@ -55,7 +57,7 @@ if visualize
     ylabel('Track coordinate (cm)');
     title('Full track coordinate');
     subplot(2,2,4);
-    coord_to_plot = renorm_y(my_y(:,1), midLen);
+    coord_to_plot = renorm_y(my_y(:,1));
     plot(coord_to_plot, '-k');
     hold on;
     plot(coord_to_plot, '.b');
@@ -63,7 +65,7 @@ if visualize
     partial_bins_y(mod(my_ks,2) == 0) = nan;
     plot(partial_bins_y, '.r');
     for b_n = 1:20
-        refline(0,b_n*5);
+        refline(0,b_n*midLen./num_bins);
     end
     for f_n = 1:10
         line([f_n f_n].*length(coord_to_plot)./10, ylim);
@@ -113,7 +115,8 @@ res_size = [numel(neuron_nums) num_samples];
 empty_field = cell(res_size);
 res = struct('MSE',empty_field,'mean_err',empty_field,'MSE_train',empty_field,'mean_err_train',empty_field,'num_cells',empty_field, 'ks', empty_field, 'pred', empty_field);
 res_shuf = res;
-parfor c_ix = 1:numel(neuron_nums)
+%parfor c_ix = 1:numel(neuron_nums)
+for c_ix = numel(neuron_nums):-1:1
     number_of_neurons = neuron_nums(c_ix);
     sub_ticker = tic;
     for rep_ix = 1:num_samples
@@ -124,7 +127,7 @@ parfor c_ix = 1:numel(neuron_nums)
         fprintf('%d cells :- %d ', number_of_neurons, rep_ix);
     end
     toc(sub_ticker);
-    %fprintf('\n %d cells done (ix=%d), err=%.2f +- %.2f cm || err_shuf=%.2f +- %.2f cm\n', number_of_neurons, c_ix, mean(mean(cat(1,res(c_ix, :).mean_err),2)), std(mean(cat(1,res(c_ix, :).mean_err),2))./sqrt(num_samples), mean(mean(cat(1,res_shuf(c_ix, :).mean_err),2)), std(mean(cat(1,res_shuf(c_ix, :).mean_err),2))./sqrt(num_samples));
+    fprintf('\n %d cells done (ix=%d), err=%.2f +- %.2f cm || err_shuf=%.2f +- %.2f cm\n', number_of_neurons, c_ix, mean(mean(cat(1,res(c_ix, :).mean_err),2)), std(mean(cat(1,res(c_ix, :).mean_err),2))./sqrt(num_samples), mean(mean(cat(1,res_shuf(c_ix, :).mean_err),2)), std(mean(cat(1,res_shuf(c_ix, :).mean_err),2))./sqrt(num_samples));
 end
 toc(tot_ticker);
 %% plotting
