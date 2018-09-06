@@ -60,7 +60,7 @@ Bx = floor(X * Nx);
 if size(XY,2) == 2
     By = floor(Y ./ y_frac_range * Ny);
 
-    if islinear
+    if islinear && false
         Direc = (diff(X) > 0) + 1;
         Direc = [2; Direc];
         ks = sub2ind([2, Nx, Ny], Direc, Bx+1, By+1);

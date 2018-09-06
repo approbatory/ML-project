@@ -36,9 +36,12 @@ classdef SVMTrack < handle
     end
     
     methods
-        function obj = SVMTrack(source_string, n_samples)
+        function obj = SVMTrack(source_string, d_neurons, n_samples)
             if ~exist('n_samples', 'var')
                 n_samples = 20;
+            end
+            if ~exist('d_neurons', 'var')
+                d_neurons = 14;
             end
             obj.source = source_string;
             obj.status = 'fresh';
@@ -56,14 +59,14 @@ classdef SVMTrack < handle
             
             obj.num_bins = 20;
             [obj.fw_ks, obj.fw_centers] = gen_place_bins(obj.fw_y,...
-                obj.num_bins, range(obj.fw_y(:,1)).*obj.cm_per_pix);
+                obj.num_bins, range(obj.fw_y(:,1)).*obj.cm_per_pix, true);
             [obj.bw_ks, obj.bw_centers] = gen_place_bins(obj.bw_y,...
-                obj.num_bins, range(obj.bw_y(:,1)).*obj.cm_per_pix);
+                obj.num_bins, range(obj.bw_y(:,1)).*obj.cm_per_pix, true);
             
             
             
             obj.total_neurons = size(obj.full_X,2);
-            obj.delta_neurons = 20;
+            obj.delta_neurons = d_neurons;
             obj.neuron_nums = obj.delta_neurons:obj.delta_neurons:obj.total_neurons;
             if obj.neuron_nums(end) ~= obj.total_neurons
                 obj.neuron_nums = [obj.neuron_nums obj.total_neurons];
@@ -77,7 +80,8 @@ classdef SVMTrack < handle
             ef = cell(res_size);
             res = struct('MSE',ef, 'mean_err',ef,...
                 'MSE_train',ef, 'mean_err_train',ef,...
-                'num_cells',ef, 'ks',ef, 'pred',ef);
+                'num_cells',ef, 'ks',ef, 'pred',ef,...
+                'mean_margin',ef, 'mean_tanh_margin',ef, 'dprime2',ef);
             obj.fw_res = res;
             obj.bw_res = res;
             obj.fw_res_shuf = res;
@@ -150,29 +154,47 @@ classdef SVMTrack < handle
             [fi_m, fi_e, ~] = SVMTrack.fetch_from_rec(obj.fw_res, 'fisher_info');
             [fi_sh_m, fi_sh_e, ~] = SVMTrack.fetch_from_rec(obj.fw_res_shuf, 'fisher_info');
             
+            [bme_m, bme_e, ~] = SVMTrack.fetch_from_rec(obj.bw_res, 'mean_err');
+            [bme_sh_m, bme_sh_e, ~] = SVMTrack.fetch_from_rec(obj.bw_res_shuf, 'mean_err');
+            
+            [bmse_m, bmse_e, ~] = SVMTrack.fetch_from_rec(obj.bw_res, 'MSE');
+            [bmse_sh_m, bmse_sh_e, ~] = SVMTrack.fetch_from_rec(obj.bw_res_shuf, 'MSE');
+            
+            [bfi_m, bfi_e, ~] = SVMTrack.fetch_from_rec(obj.bw_res, 'fisher_info');
+            [bfi_sh_m, bfi_sh_e, ~] = SVMTrack.fetch_from_rec(obj.bw_res_shuf, 'fisher_info');
+            
             figure;
-            errorbar(n_cells, me_m, me_e);
             hold on;
+            errorbar(n_cells, me_m, me_e);
             errorbar(n_cells_sh, me_sh_m, me_sh_e);
-            legend unshuffled shuffled
+            errorbar(n_cells, bme_m, bme_e);
+            errorbar(n_cells_sh, bme_sh_m, bme_sh_e);
+            
+            legend 'unshuffled forward' 'shuffled forward' 'unshuffled backward' 'shuffled backward'
             xlabel('Number of cells');
             ylabel('Mean error (cm)');
             title('Mean decoding error vs. Number of cells used');
             
             figure;
-            errorbar(n_cells, mse_m, mse_e);
             hold on;
+            errorbar(n_cells, mse_m, mse_e);
             errorbar(n_cells_sh, mse_sh_m, mse_sh_e);
-            legend unshuffled shuffled
+            errorbar(n_cells, bmse_m, bmse_e);
+            errorbar(n_cells_sh, bmse_sh_m, bmse_sh_e);
+            
+            legend 'unshuffled forward' 'shuffled forward' 'unshuffled backward' 'shuffled backward'
             xlabel('Number of cells');
             ylabel('Mean squared error (cm^2)');
             title('Mean squared decoding error vs. Number of cells used');
             
             figure;
-            errorbar(n_cells, fi_m, fi_e);
             hold on;
+            errorbar(n_cells, fi_m, fi_e);
             errorbar(n_cells_sh, fi_sh_m, fi_sh_e);
-            legend unshuffled shuffled
+            errorbar(n_cells, bfi_m, bfi_e);
+            errorbar(n_cells_sh, bfi_sh_m, bfi_sh_e);
+            
+            legend 'unshuffled forward' 'shuffled forward' 'unshuffled backward' 'shuffled backward'
             xlabel('Number of cells');
             ylabel('Fisher information (cm^{-2})');
             title('Fisher information vs. Number of cells used');
@@ -181,10 +203,29 @@ classdef SVMTrack < handle
             hold on;
             plot(mean([obj.fw_res(end,:).ks],2), 'r');
             plot(mean([obj.fw_res(end,:).pred],2), 'b');
-            title('Bin predictions and errors');
+            title('Bin predictions and errors - forward');
             legend correct predicted
             xlabel frames
             ylabel 'place bins'
+            
+            figure;
+            hold on;
+            plot(mean([obj.bw_res(end,:).ks],2), 'r');
+            plot(mean([obj.bw_res(end,:).pred],2), 'b');
+            title('Bin predictions and errors - backward');
+            legend correct predicted
+            xlabel frames
+            ylabel 'place bins'
+        end
+        
+        function [H, p, comparing] = convergence_test(obj, recstr)
+            assert(strcmp(obj.status, 'decoded'), 'run decode first');
+            getter = @(rec, prop) arrayfun(@(x)mean(x.(prop)), rec);
+            fw_me = getter(obj.(recstr), 'mean_err');
+            for i = 1:size(fw_me,1)-2
+                [H(i), p(i)] = ttest(fw_me(i,:), fw_me(i+1,:), 'Tail', 'right');
+                comparing(i) = obj.neuron_nums(i);
+            end
         end
     end
     
@@ -209,6 +250,7 @@ classdef SVMTrack < handle
                 X_train = X(train_slice,:); X_test = X(test_slice,:);
                 ks_train = ks(train_slice); ks_test = ks(test_slice);
                 model = alg.train(X_train, ks_train);
+                [res.mean_margin(:,:,i_fold), res.mean_tanh_margin(:,:,i_fold), res.dprime2(:,:,i_fold)] = SVMTrack.various_dprime(model, X_test, ks_test);
                 pred_train = alg.test(model, X_train);
                 pred_test = alg.test(model, X_test);
                 res.MSE(i_fold) = MSE(ks_test, pred_test);
@@ -220,6 +262,33 @@ classdef SVMTrack < handle
                 res.mean_err_train(i_fold) = mean_err(ks_train, pred_train);
             end
             
+        end
+        
+        function [mean_margin, mean_tanh_margin, dprime2] = various_dprime(model, X, ks)
+            mean_margin = zeros(length(model.ClassNames));
+            mean_tanh_margin = zeros(length(model.ClassNames));
+            dprime2 = zeros(length(model.ClassNames));
+            for i = 1:length(model.BinaryLearners)
+                learner = model.BinaryLearners{i};
+                class_pos = find(model.CodingMatrix(:,i) == 1);
+                class_neg = find(model.CodingMatrix(:,i) == -1);
+                filt = (ks == class_pos) | (ks == class_neg);
+                X_cut = X(filt,:);
+                ks_cut = zeros(size(ks));
+                ks_cut(ks == class_pos) = 1;
+                ks_cut(ks == class_neg) = -1;
+                ks_cut = ks_cut(filt);
+                m = learner.margin(X_cut, ks_cut);
+                mean_margin(class_pos, class_neg) = mean(m);
+                mean_tanh_margin(class_pos, class_neg) = mean(tanh(m));
+                scores_pos = X(ks == class_pos,:) * learner.Beta + learner.Bias;
+                scores_neg = X(ks == class_neg,:) * learner.Beta + learner.Bias;
+                m_p = mean(scores_pos); m_n = mean(scores_neg);
+                v_p = var(scores_pos); v_n = var(scores_neg);
+                dm = m_p - m_n;
+                v = (v_p + v_n)/2;
+                dprime2(class_pos, class_neg) = dm.^2./v;
+            end
         end
         
         function [means, errbs, n_cells] = fetch_from_rec(rec, out_type, trainset)
