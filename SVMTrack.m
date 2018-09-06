@@ -222,8 +222,13 @@ classdef SVMTrack < handle
             assert(strcmp(obj.status, 'decoded'), 'run decode first');
             getter = @(rec, prop) arrayfun(@(x)mean(x.(prop)), rec);
             fw_me = getter(obj.(recstr), 'mean_err');
-            for i = 1:size(fw_me,1)-2
-                [H(i), p(i)] = ttest(fw_me(i,:), fw_me(i+1,:), 'Tail', 'right');
+            for i = 1:size(fw_me,1)-1
+                if i+1 == size(fw_me,1)
+                    other = fw_me(i+1,1);
+                else
+                    other = fw_me(i+1,:);
+                end
+                [H(i), p(i)] = ttest(fw_me(i,:), other);%, 'Tail', 'right');
                 comparing(i) = obj.neuron_nums(i);
             end
         end
@@ -359,8 +364,9 @@ classdef SVMTrack < handle
             else
                 my_save = load_path;
             end
+            d_neurons = my_save.fr(3,1).num_cells - my_save.fr(2,1).num_cells;
             n_samp = size(my_save.fr,2);
-            obj = SVMTrack(my_save.os, n_samp);
+            obj = SVMTrack(my_save.os, d_neurons, n_samp);
             obj.fw_res = my_save.fr;
             obj.bw_res = my_save.br;
             obj.fw_res_shuf = my_save.frs;
@@ -373,6 +379,9 @@ classdef SVMTrack < handle
                 location = 'records';
             end
             S = dir(fullfile(location, 'SVMTrack_*.mat'));
+            if numel(S) == 0
+                error('no .mat files found under specified directory %s', location);
+            end
             for i = 1:numel(S)
                 L{i} = load(fullfile(S(i).folder, S(i).name));
             end
