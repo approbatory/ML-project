@@ -216,18 +216,156 @@ classdef SVMTrack < handle
             legend correct predicted
             xlabel frames
             ylabel 'place bins'
+            
+            figure;
+            subplot(2,2,1);
+            hold on;
+            [H_f, p_f, c_f] = obj.convergence_test('fw_res');
+            [H_b, p_b, c_b] = obj.convergence_test('bw_res');
+            plot(c_f, p_f, 'o');
+            plot(c_b, p_b, 'o');
+            refline(0, 0.05);
+            legend 'unshuffled forward' 'unshuffled backward';
+            title 'Paired t-test p-values - unshuffled';
+            xlabel 'Number of cells';
+            ylabel 'p-value';
+            
+            subplot(2,2,2);
+            imagesc([1 2], c_f, [H_f; H_b].', [0 1]);
+            colorbar;
+            ylabel 'Number of cells';
+            xlabel 'forward - backward';
+            title 'H0 rejection';
+            
+            subplot(2,2,3);
+            hold on;
+            [H_fs, p_fs, c_fs] = obj.convergence_test('fw_res_shuf');
+            [H_bs, p_bs, c_bs] = obj.convergence_test('bw_res_shuf');
+            plot(c_fs, p_fs, 'o');
+            plot(c_bs, p_bs, 'o');
+            refline(0, 0.05);
+            legend 'shuffled forward' 'shuffled backward';
+            title 'Paired t-test p-values - shuffled';
+            xlabel 'Number of cells';
+            ylabel 'p-value';
+            
+            subplot(2,2,4);
+            imagesc([1 2], c_fs, [H_fs; H_bs].', [0 1]);
+            colorbar;
+            ylabel 'Number of cells';
+            xlabel 'forward - backward';
+            title 'H0 rejection';
+            
+            
+            figure;
+            subplot(2,2,1);
+            hold on;
+            [H_f, p_f, c_f] = obj.convergence_test('fw_res', true);
+            [H_b, p_b, c_b] = obj.convergence_test('bw_res', true);
+            plot(c_f, p_f, 'o');
+            plot(c_b, p_b, 'o');
+            refline(0, 0.05);
+            legend 'unshuffled forward' 'unshuffled backward';
+            title 'Paired with all cells,\newline t-test p-values - unshuffled';
+            xlabel 'Number of cells';
+            ylabel 'p-value';
+            
+            subplot(2,2,2);
+            imagesc([1 2], c_f, [H_f; H_b].', [0 1]);
+            colorbar;
+            ylabel 'Number of cells';
+            xlabel 'forward - backward';
+            title 'H0 rejection';
+            
+            subplot(2,2,3);
+            hold on;
+            [H_fs, p_fs, c_fs] = obj.convergence_test('fw_res_shuf', true);
+            [H_bs, p_bs, c_bs] = obj.convergence_test('bw_res_shuf', true);
+            plot(c_fs, p_fs, 'o');
+            plot(c_bs, p_bs, 'o');
+            refline(0, 0.05);
+            legend 'shuffled forward' 'shuffled backward';
+            title 'Paired with all cells,\newline t-test p-values - shuffled';
+            xlabel 'Number of cells';
+            ylabel 'p-value';
+            
+            subplot(2,2,4);
+            imagesc([1 2], c_fs, [H_fs; H_bs].', [0 1]);
+            colorbar;
+            ylabel 'Number of cells';
+            xlabel 'forward - backward';
+            title 'H0 rejection';
+            
+            figure;
+            getter = @(propt, rec) arrayfun(@(x)mean(x.(propt),3), obj.(rec), 'UniformOutput', false);
+            props = {'mean_margin', 'mean_tanh_margin', 'dprime2'};
+            for propi = 1:numel(props)
+                prop = props{propi};
+                my_prop = getter(prop, 'fw_res');
+                my_prop_shuf = getter(prop, 'fw_res_shuf');
+                prop = replace(prop, '_', ' ');
+                full_prop = mean(cat(3, my_prop{end,:}),3);
+                full_prop_shuf = mean(cat(3, my_prop_shuf{end,:}),3);
+                subplot(numel(props),2,sub2ind([2 3], 1, propi));
+                imagesc(1:20,1:20, full_prop, [0 max([full_prop(:);full_prop_shuf(:)])]);
+                axis equal tight
+                colorbar;
+                xlabel bin
+                ylabel bin
+                title([prop ' - unshuffled']);
+                subplot(numel(props),2,sub2ind([2 3], 2, propi));
+                imagesc(1:20,1:20, full_prop_shuf, [0 max([full_prop(:);full_prop_shuf(:)])]);
+                axis equal tight
+                colorbar;
+                xlabel bin
+                ylabel bin
+                title([prop ' - shuffled']);
+            end
+            
+            figure;
+            hold on;
+            mean_tanh_margin = getter('mean_tanh_margin', 'fw_res');
+            mean_tanh_margin_shuf = getter('mean_tanh_margin', 'fw_res_shuf');
+            full_mean_tanh_margin = mean(cat(3, mean_tanh_margin{end,:}),3);
+            full_mean_tanh_margin_shuf = mean(cat(3, mean_tanh_margin_shuf{end,:}),3);
+            dist_func = cell(1,obj.num_bins-1);
+            dist_func_shuf = cell(1,obj.num_bins-1);
+            for b = 1:obj.num_bins
+                for b2 = b+1:obj.num_bins
+                    dist_func{b2-b} = [dist_func{b2-b}, full_mean_tanh_margin(b,b2)];
+                    dist_func_shuf{b2-b} = [dist_func_shuf{b2-b}, full_mean_tanh_margin_shuf(b,b2)];
+                end
+            end
+            errb = @(x) std(x)./sqrt(numel(x));
+            mean_dist_func = cellfun(@mean, dist_func);
+            errb_dist_func = cellfun(errb, dist_func);
+            mean_dist_func_shuf = cellfun(@mean, dist_func_shuf);
+            errb_dist_func_shuf = cellfun(errb, dist_func_shuf);
+            errorbar(1:obj.num_bins-1, mean_dist_func, errb_dist_func);
+            errorbar(1:obj.num_bins-1, mean_dist_func_shuf, errb_dist_func_shuf);
+            legend unshuffled shuffled Location best
+            xlabel 'bin distance'
+            ylabel 'mean tanh(margin)'
+            title 'tanh(margin) by bin distance'
         end
         
-        function [H, p, comparing] = convergence_test(obj, recstr)
+        function [H, p, comparing] = convergence_test(obj, recstr, to_end)
+            if ~exist('to_end', 'var')
+                to_end = false;
+            end
             assert(strcmp(obj.status, 'decoded'), 'run decode first');
             getter = @(rec, prop) arrayfun(@(x)mean(x.(prop)), rec);
             fw_me = getter(obj.(recstr), 'mean_err');
             for i = 1:size(fw_me,1)-1
-                if i+1 == size(fw_me,1)
-                    other = fw_me(i+1,1);
+                if ~to_end
+                    other = fw_me(i+1,:);    
                 else
-                    other = fw_me(i+1,:);
+                    other = fw_me(end,:);
                 end
+                if std(other) < 1e-10
+                    other = other(1);
+                end
+                
                 [H(i), p(i)] = ttest(fw_me(i,:), other);%, 'Tail', 'right');
                 comparing(i) = obj.neuron_nums(i);
             end
