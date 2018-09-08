@@ -232,9 +232,10 @@ classdef SVMTrack < handle
             
             subplot(2,2,2);
             imagesc([1 2], c_f, [H_f; H_b].', [0 1]);
+            set(gca, 'XTick', []);
             colorbar;
             ylabel 'Number of cells';
-            xlabel 'forward - backward';
+            xlabel 'forward   backward';
             title 'H0 rejection';
             
             subplot(2,2,3);
@@ -251,9 +252,10 @@ classdef SVMTrack < handle
             
             subplot(2,2,4);
             imagesc([1 2], c_fs, [H_fs; H_bs].', [0 1]);
+            set(gca, 'XTick', []);
             colorbar;
             ylabel 'Number of cells';
-            xlabel 'forward - backward';
+            xlabel 'forward   backward';
             title 'H0 rejection';
             
             
@@ -272,9 +274,10 @@ classdef SVMTrack < handle
             
             subplot(2,2,2);
             imagesc([1 2], c_f, [H_f; H_b].', [0 1]);
+            set(gca, 'XTick', []);
             colorbar;
             ylabel 'Number of cells';
-            xlabel 'forward - backward';
+            xlabel 'forward   backward';
             title 'H0 rejection';
             
             subplot(2,2,3);
@@ -291,9 +294,10 @@ classdef SVMTrack < handle
             
             subplot(2,2,4);
             imagesc([1 2], c_fs, [H_fs; H_bs].', [0 1]);
+            set(gca, 'XTick', []);
             colorbar;
             ylabel 'Number of cells';
-            xlabel 'forward - backward';
+            xlabel 'forward   backward';
             title 'H0 rejection';
             
             figure;
