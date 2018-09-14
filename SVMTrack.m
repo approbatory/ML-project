@@ -374,12 +374,96 @@ classdef SVMTrack < handle
                 comparing(i) = obj.neuron_nums(i);
             end
         end
+        
+        function [mean_probs_correct, dist_func] = posterior_SVM_CV(obj, shuf, k)
+            if ~exist('k', 'var')
+                k = 10;
+            end
+            
+            if shuf
+                cfw_X = shuffle(obj.fw_X, obj.fw_ks);
+            else
+                cfw_X = obj.fw_X;
+            end
+            
+            
+            mean_probs_correct = -ones(k, obj.num_bins, obj.num_bins);
+            dist_func = cell(k, obj.num_bins-1);
+            for f_i = 1:k
+                [tr_X, te_X, tr_ks, te_ks] = kfold_selector(k, f_i, cfw_X, obj.fw_ks);
+                
+                for b_ix1 = 1:obj.num_bins-1
+                    for b_ix2 = b_ix1+1:obj.num_bins
+                        [tr_my_X, tr_my_ks] = obj.extractor(tr_X, tr_ks, b_ix1, b_ix2);
+                        [te_my_X, te_my_ks] = obj.extractor(te_X, te_ks, b_ix1, b_ix2);
+                        
+                        
+                        model = fitSVMPosterior(fitcsvm(tr_my_X, tr_my_ks));
+                        [~, probs] = model.predict(te_my_X);
+                        probs_correct = (te_my_ks == 1).*probs(:,2) + (te_my_ks == -1).*probs(:,1);
+                        mean_probs_correct(f_i, b_ix1, b_ix2) = mean(probs_correct);
+                        dist_func{f_i, b_ix2 - b_ix1} = [dist_func{f_i, b_ix2 - b_ix1} mean_probs_correct(f_i, b_ix1, b_ix2)];
+                        fprintf('fold:%d || %d vs. %d\n', f_i, b_ix1, b_ix2);
+                    end
+                end
+            end
+            mean_probs_correct = mean(mean_probs_correct);
+            df = cell(obj.num_bins-1,1);
+            for d = 1:obj.num_bins-1
+                df{d} = mean(cat(1,dist_func{:,d}));
+            end
+            dist_func = df;
+        end
+        
+        function [my_X, my_ks] = extractor(~, X, ks, b1, b2)
+            eq1 = ks == b1;
+            eq2 = ks == b2;
+            my_X = [X(eq1,:); X(eq2,:)];
+            my_ks = [ones(sum(eq1),1); -ones(sum(eq2),1)];
+        end
+        
+        function [mean_probs_correct, dist_func, mean_probs_correct_shuf, dist_func_shuf] = posterior_SVM(obj)
+            bin_X = cell(obj.num_bins,1);
+            for b_ix = 1:obj.num_bins
+                bin_X{b_ix} = obj.fw_X(obj.fw_ks == b_ix,:);
+            end
+            
+            mean_probs_correct = -ones(obj.num_bins);
+            mean_probs_correct_shuf = -ones(obj.num_bins);
+            dist_func = cell(obj.num_bins-1,1);
+            dist_func_shuf = cell(obj.num_bins-1,1);
+            for b_ix1 = 1:obj.num_bins-1
+                for b_ix2 = b_ix1+1:obj.num_bins
+                    my_X = cell2mat(bin_X([b_ix1 b_ix2]));
+                    my_ks = [ones(size(bin_X{b_ix1},1),1); -ones(size(bin_X{b_ix2},1),1)];
+                    my_X_shuf = shuffle(my_X, my_ks);
+
+                    model = fitSVMPosterior(fitcsvm(my_X, my_ks));
+                    model_shuf = fitSVMPosterior(fitcsvm(my_X_shuf, my_ks));
+                    [~, probs] = model.predict(my_X);
+                    [~, probs_shuf] = model_shuf.predict(my_X_shuf);
+
+                    probs_neg = probs(:,1);
+                    probs_pos = probs(:,2);
+                    probs_neg_shuf = probs_shuf(:,1);
+                    probs_pos_shuf = probs_shuf(:,2);
+                    probs_correct = (my_ks == 1).*probs_pos + (my_ks == -1).*probs_neg;
+                    probs_correct_shuf = (my_ks == 1).*probs_pos_shuf + (my_ks == -1).*probs_neg_shuf;
+                    mean_probs_correct(b_ix1, b_ix2) = mean(probs_correct);
+                    mean_probs_correct_shuf(b_ix1, b_ix2) = mean(probs_correct_shuf);
+                    dist_func{b_ix2 - b_ix1} = [dist_func{b_ix2 - b_ix1} mean_probs_correct(b_ix1, b_ix2)];
+                    dist_func_shuf{b_ix2 - b_ix1} = [dist_func_shuf{b_ix2 - b_ix1} mean_probs_correct_shuf(b_ix1, b_ix2)];
+                    fprintf('%d vs. %d\n', b_ix1, b_ix2);
+                end
+            end
+        end
     end
     
     methods(Static)
         function res = decoding_reporter(X, ks, centers)
             k_fold = 10;
-            alg = my_algs('ecoclin');
+            alg = my_algs('ecoc');
+            %alg = my_algs('ecoclin');
             %alg = my_algs('lda');
             
             train_slices = ceil((1:length(ks))./length(ks).*k_fold) ~= (1:k_fold).';
@@ -398,6 +482,7 @@ classdef SVMTrack < handle
                 ks_train = ks(train_slice); ks_test = ks(test_slice);
                 model = alg.train(X_train, ks_train);
                 [res.mean_margin(:,:,i_fold), res.mean_tanh_margin(:,:,i_fold), res.dprime2(:,:,i_fold)] = SVMTrack.various_dprime(model, X_test, ks_test);
+                %res.mean_probs_correct(:,:,i_fold) = SVMTrack.posterior_dprime(model, X_train, ks_train, X_test, ks_test);
                 pred_train = alg.test(model, X_train);
                 pred_test = alg.test(model, X_test);
                 res.MSE(i_fold) = MSE(ks_test, pred_test);
@@ -435,6 +520,36 @@ classdef SVMTrack < handle
                 dm = m_p - m_n;
                 v = (v_p + v_n)/2;
                 dprime2(class_pos, class_neg) = dm.^2./v;
+            end
+        end
+        
+        function mean_probs_correct = posterior_dprime(model, X_tr, ks_tr, X, ks)%%%%TODO
+            for i = 1:length(model.BinaryLearners)
+                learner = model.BinaryLearners{i};
+                class_pos = find(model.CodingMatrix(:,i) == 1);
+                class_neg = find(model.CodingMatrix(:,i) == -1);
+                filt = (ks == class_pos) | (ks == class_neg);
+                X_cut = X(filt,:);
+                ks_cut = zeros(size(ks));
+                ks_cut(ks == class_pos) = 1;
+                ks_cut(ks == class_neg) = -1;
+                ks_cut = ks_cut(filt);
+                
+                filt_tr = (ks_tr == class_pos) | (ks_tr == class_neg);
+                X_tr_cut = X_tr(filt_tr,:);
+                ks_tr_cut = zeros(size(ks_tr));
+                ks_tr_cut(ks_tr == class_pos) = 1;
+                ks_tr_cut(ks_tr == class_neg) = -1;
+                ks_tr_cut = ks_tr_cut(filt_tr);
+                score_learner = fitSVMPosterior(learner, X_tr_cut, ks_tr_cut);
+                [~, probs] = predict(score_learner, X_cut);
+                probs_neg = probs(:,1);
+                probs_pos = probs(:,2);
+                %probs_correct = -1000+zeros(size(probs_pos));
+                %probs_correct(ks_cut == 1) = probs_pos;
+                %probs_correct(ks_cut == -1) = probs_neg;
+                probs_correct = (ks_cut == 1).*probs_pos + (ks_cut == -1).*probs_neg;
+                mean_probs_correct = mean(probs_correct);
             end
         end
         
