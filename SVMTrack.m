@@ -36,12 +36,15 @@ classdef SVMTrack < handle
     end
     
     methods
-        function obj = SVMTrack(source_string, d_neurons, n_samples)
+        function obj = SVMTrack(source_string, d_neurons, n_samples, n_bins)
             if ~exist('n_samples', 'var')
                 n_samples = 20;
             end
             if ~exist('d_neurons', 'var')
                 d_neurons = 14;
+            end
+            if ~exist('n_bins', 'var')
+                n_bins = 20;
             end
             obj.source = source_string;
             obj.status = 'fresh';
@@ -57,7 +60,7 @@ classdef SVMTrack < handle
             obj.fw_y = obj.full_y(obj.forward_mask,:);
             obj.bw_y = obj.full_y(obj.backward_mask,:);
             
-            obj.num_bins = 20;
+            obj.num_bins = n_bins;
             [obj.fw_ks, obj.fw_centers] = gen_place_bins(obj.fw_y,...
                 obj.num_bins, range(obj.fw_y(:,1)).*obj.cm_per_pix, true);
             [obj.bw_ks, obj.bw_centers] = gen_place_bins(obj.bw_y,...
@@ -457,6 +460,8 @@ classdef SVMTrack < handle
                 end
             end
         end
+        
+
     end
     
     methods(Static)
@@ -645,6 +650,33 @@ classdef SVMTrack < handle
             L_merged = SVMTrack.merge_saves(L{:});
             obj = SVMTrack.recreate(L_merged);
         end
+        
+        function [bin_X, y_bin, mean_bin_X, cov_bin_X] = bin_data(X, ks, y_bin, use_shuf, combine)
+            %X = obj.([attr '_X']);
+            
+            %ks = obj.([attr '_ks']);
+            
+            %y_bin = obj.([attr '_centers']);
+            %y_bin = y_bin(:,1);
+            
+            if use_shuf
+                X = shuffle(X, ks);
+            end
+            
+            bin_X = cell(1,obj.num_bins);
+            for b_ix = 1:obj.num_bins
+                bin_X{b_ix} = X(ks == b_ix,:);
+            end
+            
+            mean_bin_X = cellfun(@mean, bin_X, 'UniformOutput', false);
+            cov_bin_X = cellfun(@cov, bin_X, 'UniformOutput', false);
+            if combine
+                mean_bin_X = cell2mat(mean_bin_X.');
+                cov_bin_X = cat(3, cov_bin_X{:});
+                cov_bin_X = permute(cov_bin_X, [3 1 2]);
+            end
+        end
+        
     end
     
 end

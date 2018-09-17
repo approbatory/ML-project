@@ -1,4 +1,5 @@
-ST = SVMTrack('../linear_track/Mouse-2024-20150317_202708-linear-track-TracesAndEvents.mat');
+ST = SVMTrack('../linear_track/Mouse-2024-20150317_202708-linear-track-TracesAndEvents.mat',...
+    14, 20, 50);
 
 %%
 %todo make the bins finer
@@ -6,7 +7,7 @@ ST = SVMTrack('../linear_track/Mouse-2024-20150317_202708-linear-track-TracesAnd
 %mean activity in each bin
 bin_X = cell(1,ST.num_bins);
 for b_ix = 1:ST.num_bins
-    bin_X{b_ix} = ST.fw_X(ST.fw_ks == b_ix,:);
+    bin_X{b_ix} = shuffle(ST.fw_X(ST.fw_ks == b_ix,:), ones(1,sum(ST.fw_ks==b_ix)));
 end
 
 mean_bin_X = cellfun(@mean, bin_X, 'UniformOutput', false);
@@ -37,12 +38,15 @@ for b_ix = 1:ST.num_bins-1
     [angles(b_ix), cos_angles(b_ix)] = angle_v(princ(b_ix,:), dXdy(b_ix,:));
 end
 
+angles_tangent = zeros(ST.num_bins-2,1);
+cos_angles_tangent = angles;
 for b_ix = 1:ST.num_bins-2
     [angles_tangent(b_ix), cos_angles_tangent(b_ix)] = angle_v(dXdy(b_ix,:), dXdy(b_ix+1,:));
 end
 
-
+figure; plot(angles); hold on; plot(angles_tangent)
 %%
+if false
 figure('Position', [100 100 1000 350]);
 subplot(1,2,1);
 imagesc(squeeze(mpc_c), [0.5 1]);
@@ -83,6 +87,7 @@ title 'mean posterior prob. of correct guess (no CV)'
 ylabel 'probability'
 legend unshuffled shuffled Location best
 
+end
 %%
 function [theta, cos_angle] = angle_v(a,b)
 a = a(:); b = b(:);
