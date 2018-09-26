@@ -9,12 +9,14 @@ classdef SVMTrack < handle
         
         fw_X;
         fw_y;
+        fw_scy;
         fw_ks;
         fw_centers;
         
         
         bw_X;
         bw_y;
+        bw_scy;
         bw_ks;
         bw_centers;
         
@@ -61,9 +63,9 @@ classdef SVMTrack < handle
             obj.bw_y = obj.full_y(obj.backward_mask,:);
             
             obj.num_bins = n_bins;
-            [obj.fw_ks, obj.fw_centers] = gen_place_bins(obj.fw_y,...
+            [obj.fw_ks, obj.fw_centers, ~, obj.fw_scy] = gen_place_bins(obj.fw_y,...
                 obj.num_bins, range(obj.fw_y(:,1)).*obj.cm_per_pix, true);
-            [obj.bw_ks, obj.bw_centers] = gen_place_bins(obj.bw_y,...
+            [obj.bw_ks, obj.bw_centers, ~, obj.bw_scy] = gen_place_bins(obj.bw_y,...
                 obj.num_bins, range(obj.bw_y(:,1)).*obj.cm_per_pix, true);
             
             
@@ -365,7 +367,7 @@ classdef SVMTrack < handle
             fw_me = getter(obj.(recstr), 'mean_err');
             for i = 1:size(fw_me,1)-1
                 if ~to_end
-                    other = fw_me(i+1,:);    
+                    other = fw_me(i+1,:);
                 else
                     other = fw_me(end,:);
                 end
@@ -440,12 +442,12 @@ classdef SVMTrack < handle
                     my_X = cell2mat(bin_X([b_ix1 b_ix2]));
                     my_ks = [ones(size(bin_X{b_ix1},1),1); -ones(size(bin_X{b_ix2},1),1)];
                     my_X_shuf = shuffle(my_X, my_ks);
-
+                    
                     model = fitSVMPosterior(fitcsvm(my_X, my_ks));
                     model_shuf = fitSVMPosterior(fitcsvm(my_X_shuf, my_ks));
                     [~, probs] = model.predict(my_X);
                     [~, probs_shuf] = model_shuf.predict(my_X_shuf);
-
+                    
                     probs_neg = probs(:,1);
                     probs_pos = probs(:,2);
                     probs_neg_shuf = probs_shuf(:,1);
@@ -461,7 +463,31 @@ classdef SVMTrack < handle
             end
         end
         
-
+        function [angles, angles_tangent] = find_angles(obj, mean_bin_X, bin_X, y_bin)
+            dX = diff(mean_bin_X);
+            dy = diff(y_bin);
+            dXdy = dX ./ dy;
+            princ = zeros(obj.num_bins, obj.total_neurons);
+            %todo find angle b/w principal axis and dX/dy
+            angles = zeros(obj.num_bins-1,1);
+            cos_angles = angles;
+            
+            for b_ix = 1:obj.num_bins
+                %Sigma = squeeze(cov_bin_X(b_ix,:,:));
+                coeffs = pca(bin_X{b_ix});
+                princ(b_ix,:) = coeffs(:,1);
+            end
+            
+            for b_ix = 1:obj.num_bins-1
+                [angles(b_ix), cos_angles(b_ix)] = SVMTrack.angle_v(princ(b_ix,:), dXdy(b_ix,:));
+            end
+            
+            angles_tangent = zeros(obj.num_bins-2,1);
+            cos_angles_tangent = angles;
+            for b_ix = 1:obj.num_bins-2
+                [angles_tangent(b_ix), cos_angles_tangent(b_ix)] = SVMTrack.angle_v(dXdy(b_ix,:), dXdy(b_ix+1,:));
+            end
+        end
     end
     
     methods(Static)
@@ -657,14 +683,15 @@ classdef SVMTrack < handle
             %ks = obj.([attr '_ks']);
             
             %y_bin = obj.([attr '_centers']);
-            %y_bin = y_bin(:,1);
+            y_bin = y_bin(:,1);
+            n_bins = numel(y_bin);
             
             if use_shuf
                 X = shuffle(X, ks);
             end
             
-            bin_X = cell(1,obj.num_bins);
-            for b_ix = 1:obj.num_bins
+            bin_X = cell(1,n_bins);
+            for b_ix = 1:n_bins
                 bin_X{b_ix} = X(ks == b_ix,:);
             end
             
@@ -675,6 +702,12 @@ classdef SVMTrack < handle
                 cov_bin_X = cat(3, cov_bin_X{:});
                 cov_bin_X = permute(cov_bin_X, [3 1 2]);
             end
+        end
+        
+        function [theta, cos_angle] = angle_v(a,b)
+            a = a(:); b = b(:);
+            cos_angle = (a.' * b) ./ norm(a) ./ norm(b);
+            theta = acosd(cos_angle);
         end
         
     end

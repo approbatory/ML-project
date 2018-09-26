@@ -1,4 +1,4 @@
-function [ks, centers, dims, scXY, numrowcol]  = gen_place_bins(ds, divs, scale, islinear)
+function [ks, centers, dims, scXY, numrowcol]  = gen_place_bins(ds, divs, scale, islinear, Direc)
 if ~exist('islinear', 'var')
     islinear = false;
 end
@@ -60,9 +60,9 @@ Bx = floor(X * Nx);
 if size(XY,2) == 2
     By = floor(Y ./ y_frac_range * Ny);
 
-    if islinear && false
-        Direc = (diff(X) > 0) + 1;
-        Direc = [2; Direc];
+    if islinear
+        %Direc = (diff(X) > 0) + 1;
+        %Direc = [2; Direc];
         ks = sub2ind([2, Nx, Ny], Direc, Bx+1, By+1);
     else
         ks = 1 + Bx + Nx*By;
@@ -70,7 +70,11 @@ if size(XY,2) == 2
     end
     dims = [1 ./ Nx, y_frac_range ./ Ny].*scale;
 else
-    ks = 1 + Bx;
+    if islinear
+        ks = sub2ind([2, Nx], Direc, Bx+1);
+    else
+        ks = 1 + Bx;
+    end
     dims = scale ./ Nx;
 end
 
@@ -85,6 +89,10 @@ if size(XY,2) == 2
     end
 else
     centers = ((1:Nx)-(1/2))*dims;
+    if islinear
+        centers = [centers; centers];
+        centers = centers(:).';
+    end
 end
 
 scX = X*scale;

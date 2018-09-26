@@ -1,6 +1,6 @@
 function [fw, bw, cm_per_pix] = select_directions(XY, varargin)
 p = inputParser;
-p.addRequired('XY', @(x) isnumeric(x) && size(x,2) == 2);
+p.addRequired('XY', @(x) isnumeric(x) && size(x,2) < 3);
 p.addParameter('speed_threshold', 4, @isnumeric);
 p.addParameter('total_length', 118, @isnumeric);
 p.addParameter('frame_sampling_freq', 20, @isnumeric);
