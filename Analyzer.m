@@ -5,7 +5,6 @@ classdef Analyzer < handle
         opt;
     end
     
-    
     methods
         function o = Analyzer(source_string, varargin)
             p = inputParser;
@@ -52,8 +51,10 @@ classdef Analyzer < handle
             o.res.unshuf.errors = emp;
             o.res.shuf.te_pred = emp;
             o.res.shuf.errors = emp;
+            
+            o.res.unshuf.mean_probs_correct = nan(2*o.opt.n_bins, 2*o.opt.n_bins);
+            o.res.shuf.mean_probs_correct = nan(2*o.opt.n_bins, 2*o.opt.n_bins);
         end
-        
         function [te_pred, errors] = decode_one(o, n_cells, do_shuf)
             my_X = o.data.X.fast(:, randperm(o.data.total_neurons) <= n_cells);
             if do_shuf
@@ -85,7 +86,6 @@ classdef Analyzer < handle
             toc(tot_timer);
             te_pred = cell2mat(te_pred);
         end
-        
         function decode(o, numer, denom)
             total_iters = numel(o.res.unshuf.te_pred);
             my_job = ceil((1:total_iters)./total_iters .* denom)==numer;
@@ -104,7 +104,51 @@ classdef Analyzer < handle
                 end
             end
         end
-        
+        function posterior_SVM_CV(o, shuf, numer, denom)
+            k = 10;
+            X = o.data.X.fast;
+            ks = o.data.y.ks;
+            if shuf
+                X = shuffle(X, ks);
+                field = 'shuf';
+            else
+                field = 'unshuf';
+            end
+            
+            %mean_probs_correct = nan(k, 2*o.opt.n_bins, 2*o.opt.n_bins);
+            
+            total_iters = (2*o.opt.n_bins)*(2*o.opt.n_bins-1)/2;
+            my_job = ceil((1:total_iters)./total_iters .* denom)==numer;
+            idx = 0;
+            my_timer = tic;
+            
+            for b1 = 1:2*o.opt.n_bins-1
+                for b2 = b1+1:2*o.opt.n_bins
+                    idx = idx + 1;
+                    if ~my_job(idx)
+                        continue;
+                    end
+                    buffer = zeros(k,1);
+                    for k_i = 1:k
+                        [tr_X, te_X, tr_ks, te_ks] = kfold_selector(k, k_i, X, ks);
+                        [tr_my_X, tr_my_ks] = Analyzer.extractor(tr_X, tr_ks, b1, b2);
+                        [te_my_X, te_my_ks] = Analyzer.extractor(te_X, te_ks, b1, b2);
+                        model = fitSVMPosterior(fitcsvm(tr_my_X, tr_my_ks));
+                        [~, probs] = model.predict(te_my_X);
+                        probs_correct = (te_my_ks == 1).*probs(:,2) + (te_my_ks == -1).*probs(:,1);
+                        buffer(k_i) = mean(probs_correct);
+                        fprintf('fold:%d || %d vs. %d\tshuf? %d\n', k_i, b1, b2, shuf);
+                    end
+                    o.res.(field).mean_probs_correct(b1,b2) = mean(buffer);
+                end
+            end
+            
+            toc(my_timer);
+        end
+        function calculate_bin_posteriors(o, numer, denom)
+            o.posterior_SVM_CV(false, numer, denom);
+            o.posterior_SVM_CV(true, numer, denom);
+        end
         function save_res(o, location)
             if nargin == 1
                 location = 'records';
@@ -116,11 +160,34 @@ classdef Analyzer < handle
             save(out_path, 'res', 'opt');
         end
     end
+    
     methods(Static)
-        function dispatch(p, num, denom)
+        function dispatch(p, num, denom, limited)
+            if ~exist('limited', 'var')
+                limited = false;
+            end
             ana = Analyzer(p);
-            ana.decode(num, denom);
+            if ~limited
+                ana.decode(num, denom);
+            end
+            ana.calculate_bin_posteriors(num, denom);
             ana.save_res();
+        end
+        function [my_X, my_ks] = extractor(X, ks, b1, b2)
+            eq1 = ks == b1;
+            eq2 = ks == b2;
+            my_X = [X(eq1,:); X(eq2,:)];
+            my_ks = [ones(sum(eq1),1); -ones(sum(eq2),1)];
+        end
+        function [m,e] = upper_diags_stats(varargin)
+            C = cellfun(...
+                @(M) arrayfun(@(i) diag(M,i), 1:size(M,1)-1,...
+                'UniformOutput', false),...
+                varargin, 'UniformOutput', false);
+            Q = cellfun(@(varargin)cat(1,varargin{:}),...
+                C{:}, 'UniformOutput', false);
+            m = cellfun(@mean, Q);
+            e = cellfun(@(x)std(x)./sqrt(length(x)), Q);
         end
         function obj = recreate(load_path)
             if ischar(load_path)
@@ -158,6 +225,11 @@ classdef Analyzer < handle
             obj.res.unshuf.errors = merger(cellfun(@(x)x.res.unshuf.errors, L, 'UniformOutput', false));
             obj.res.shuf.te_pred = merger(cellfun(@(x)x.res.shuf.te_pred, L, 'UniformOutput', false));
             obj.res.shuf.errors = merger(cellfun(@(x)x.res.shuf.errors, L, 'UniformOutput', false));
+            
+            mats_unshuf = cellfun(@(x)x.res.unshuf.mean_probs_correct, L, 'UniformOutput', false);
+            mats_shuf = cellfun(@(x)x.res.shuf.mean_probs_correct, L, 'UniformOutput', false);
+            obj.res.unshuf.mean_probs_correct = max(cat(3, mats_unshuf{:}), [], 3);
+            obj.res.shuf.mean_probs_correct = max(cat(3, mats_shuf{:}), [], 3);
             obj = Analyzer.recreate(obj);
         end
         function ret = empty_merge(varargin)
@@ -168,6 +240,102 @@ classdef Analyzer < handle
                 end
             end
             ret = [];
+        end
+    end
+    
+    methods
+        function make_plots(o)
+            mean_err = cellfun(@(x)mean(x.mean_err.te), o.res.unshuf.errors);
+            m_mean_err = mean(mean_err,2);
+            e_mean_err = std(mean_err,[],2)./sqrt(o.opt.n_samples);
+            mean_err_s = cellfun(@(x)mean(x.mean_err.te), o.res.shuf.errors);
+            m_mean_err_s = mean(mean_err_s,2);
+            e_mean_err_s = std(mean_err_s,[],2)./sqrt(o.opt.n_samples);
+            
+            imse = 1./cellfun(@(x)mean(x.MSE.te), o.res.unshuf.errors);
+            m_imse = mean(imse,2);
+            e_imse = std(imse,[],2)./sqrt(o.opt.n_samples);
+            imse_s = 1./cellfun(@(x)mean(x.MSE.te), o.res.shuf.errors);
+            m_imse_s = mean(imse_s,2);
+            e_imse_s = std(imse_s,[],2)./sqrt(o.opt.n_samples);
+            
+            figure;
+            hold on;
+            errorbar(o.data.neuron_nums, m_mean_err, e_mean_err);
+            errorbar(o.data.neuron_nums, m_mean_err_s, e_mean_err_s);
+            set(gca, 'YScale', 'log');
+            legend unshuffled shuffled;
+            xlabel 'Number of cells'
+            ylabel 'Mean error (cm)'
+            title 'Decoding error vs. Number of cells used'
+            plt = Plot();
+            plt.XMinorTick = 'off';
+            plt.YGrid = 'on';
+            plt.YMinorGrid = 'on';
+            plt.ShowBox = 'off';
+            plt.FontSize = 18;
+            
+            figure;
+            hold on;
+            errorbar(o.data.neuron_nums, m_imse, e_imse);
+            errorbar(o.data.neuron_nums, m_imse_s, e_imse_s);
+            %set(gca, 'YScale', 'log');
+            legend unshuffled shuffled Location best
+            xlabel 'Number of cells'
+            ylabel '1/MSE (cm^{-2})'
+            title 'Inverse decoding MSE vs. Number of cells used'
+            plt = Plot();
+            plt.XMinorTick = 'off';
+            plt.YGrid = 'on';
+            plt.YMinorGrid = 'off';
+            plt.ShowBox = 'off';
+            plt.FontSize = 18;
+            
+            figure;
+            subplot(2,2,1);
+            imagesc((o.res.unshuf.mean_probs_correct(1:2:end,1:2:end) +...
+                o.res.unshuf.mean_probs_correct(2:2:end,2:2:end))./2, [0 1]);
+            xlabel bin; ylabel bin; title 'mean correct posterior - same direction, unshuffled'; colorbar;
+            subplot(2,2,2);
+            imagesc((o.res.unshuf.mean_probs_correct(2:2:end,1:2:end) +...
+                o.res.unshuf.mean_probs_correct(1:2:end,2:2:end))./2, [0 1]);
+            xlabel bin; ylabel bin; title 'mean correct posterior - different direction, unshuffled'; colorbar;
+            subplot(2,2,3);
+            imagesc((o.res.shuf.mean_probs_correct(1:2:end,1:2:end) +...
+                o.res.shuf.mean_probs_correct(2:2:end,2:2:end))./2, [0 1]);
+            xlabel bin; ylabel bin; title 'mean correct posterior - same direction, shuffled'; colorbar;
+            subplot(2,2,4);
+            imagesc((o.res.shuf.mean_probs_correct(2:2:end,1:2:end) +...
+                o.res.shuf.mean_probs_correct(1:2:end,2:2:end))./2, [0 1]);
+            xlabel bin; ylabel bin; title 'mean correct posterior - different direction, shuffled'; colorbar;
+            
+            [o.res.unshuf.dist_func.mean, o.res.unshuf.dist_func.sem] =...
+                Analyzer.upper_diags_stats(o.res.unshuf.mean_probs_correct(1:2:end,1:2:end),...
+                o.res.unshuf.mean_probs_correct(2:2:end,2:2:end));
+            [o.res.unshuf.cross_dist_func.mean, o.res.unshuf.cross_dist_func.sem] =...
+                Analyzer.upper_diags_stats(o.res.unshuf.mean_probs_correct(2:2:end,1:2:end),...
+                o.res.unshuf.mean_probs_correct(1:2:end,2:2:end));
+            
+            [o.res.shuf.dist_func.mean, o.res.shuf.dist_func.sem] =...
+                Analyzer.upper_diags_stats(o.res.shuf.mean_probs_correct(1:2:end,1:2:end),...
+                o.res.shuf.mean_probs_correct(2:2:end,2:2:end));
+            [o.res.shuf.cross_dist_func.mean, o.res.shuf.cross_dist_func.sem] =...
+                Analyzer.upper_diags_stats(o.res.shuf.mean_probs_correct(2:2:end,1:2:end),...
+                o.res.shuf.mean_probs_correct(1:2:end,2:2:end));
+            
+            figure;
+            subplot(2,1,1);
+            hold on;
+            errorbar(o.res.unshuf.distance_function_probs.mean, o.res.unshuf.distance_function_probs.sem);
+            errorbar(o.res.unshuf.cross_distance_function_probs.mean, o.res.unshuf.cross_distance_function_probs.sem);
+            legend 'same direction' 'opposite direction';
+            xlabel 'bin distance'; ylabel probability; title 'mean correct posterior by distance - unshuffled';
+            subplot(2,1,2);
+            hold on;
+            errorbar(o.res.shuf.distance_function_probs.mean, o.res.shuf.distance_function_probs.sem);
+            errorbar(o.res.shuf.cross_distance_function_probs.mean, o.res.shuf.cross_distance_function_probs.sem);
+            legend 'same direction' 'opposite direction';
+            xlabel 'bin distance'; ylabel probability; title 'mean correct posterior by distance - shuffled';
         end
     end
 end
