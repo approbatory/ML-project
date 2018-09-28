@@ -171,7 +171,11 @@ classdef Analyzer < handle
                 ana.decode(num, denom);
             end
             ana.calculate_bin_posteriors(num, denom);
-            ana.save_res();
+            save_dir = [p '_records'];
+            if ~exist(save_dir, 'dir')
+                mkdir(save_dir);
+            end
+            ana.save_res(save_dir);
         end
         function [my_X, my_ks] = extractor(X, ks, b1, b2)
             eq1 = ks == b1;
