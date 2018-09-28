@@ -1,5 +1,4 @@
 function sherlock_aggregator_unit(source)
-cd ../ML-project
 addpath utils decoding
 source_dir = dir(source);
 saves_dir = [source '_records'];
