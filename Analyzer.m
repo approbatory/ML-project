@@ -159,6 +159,20 @@ classdef Analyzer < handle
             opt = o.opt;
             save(out_path, 'res', 'opt');
         end
+        function [m,e] = get_err(o, setting, shuf)
+            switch setting
+                case 'mean_err'
+                    mean_err = cellfun(@(x)mean(x.mean_err.te), o.res.(shuf).errors);
+                    m = mean(mean_err,2);
+                    e = std(mean_err,[],2)./sqrt(o.opt.n_samples);
+                case 'imse'
+                    imse = 1./cellfun(@(x)mean(x.MSE.te), o.res.(shuf).errors);
+                    m = mean(imse,2);
+                    e = std(imse,[],2)./sqrt(o.opt.n_samples);
+                otherwise
+                    error('setting must be either mean_err or imse');
+            end
+        end
     end
     
     methods(Static)
@@ -247,6 +261,7 @@ classdef Analyzer < handle
         end
     end
     
+    %plotting methods
     methods
         function make_plots(o)
             mean_err = cellfun(@(x)mean(x.mean_err.te), o.res.unshuf.errors);
@@ -330,16 +345,86 @@ classdef Analyzer < handle
             figure;
             subplot(2,1,1);
             hold on;
-            errorbar(o.res.unshuf.distance_function_probs.mean, o.res.unshuf.distance_function_probs.sem);
-            errorbar(o.res.unshuf.cross_distance_function_probs.mean, o.res.unshuf.cross_distance_function_probs.sem);
-            legend 'same direction' 'opposite direction';
-            xlabel 'bin distance'; ylabel probability; title 'mean correct posterior by distance - unshuffled';
+            errorbar(o.res.unshuf.dist_func.mean, o.res.unshuf.dist_func.sem);
+            errorbar(o.res.shuf.dist_func.mean, o.res.shuf.dist_func.sem);
+            legend unshuffled shuffled Location best;
+            xlabel 'bin distance'; ylabel probability; title 'mean correct posterior by distance - same directional bins';
+            ylim([0.5 1]);
             subplot(2,1,2);
             hold on;
-            errorbar(o.res.shuf.distance_function_probs.mean, o.res.shuf.distance_function_probs.sem);
-            errorbar(o.res.shuf.cross_distance_function_probs.mean, o.res.shuf.cross_distance_function_probs.sem);
-            legend 'same direction' 'opposite direction';
-            xlabel 'bin distance'; ylabel probability; title 'mean correct posterior by distance - shuffled';
+            errorbar(o.res.unshuf.cross_dist_func.mean, o.res.unshuf.cross_dist_func.sem);
+            errorbar(o.res.shuf.cross_dist_func.mean, o.res.shuf.cross_dist_func.sem);
+            legend unshuffled shuffled Location best;
+            xlabel 'bin distance'; ylabel probability; title 'mean correct posterior by distance - opposite directional bins';
+            ylim([0.5 1]);
+        end
+    end
+    methods(Static)
+        function anas = aggregate_plots(anas)
+            if ischar(anas)
+                S = dir(fullfile(anas, 'Analyzer_*.mat'));
+                anas = cellfun(@fullfile, {S.folder}, {S.name}, 'UniformOutput', false);
+            end
+            n = numel(anas);
+            if iscell(anas) && all(cellfun(@ischar, anas))
+                for i = 1:n
+                    fprintf('recreating %s\n', anas{i});
+                    anas{i} = Analyzer.recreate(anas{i});
+                end
+            end
+            
+            figure;
+            hold on;
+            styles = {'-', '--', '-.', ':', '-o', '--o', '-.o', ':o'};
+            for i = 1:n
+                [m,e] = anas{i}.get_err('mean_err', 'unshuf'); 
+                errorbar(anas{i}.data.neuron_nums, m, e, styles{i}); 
+                leg1{i} = 'unshuffled'; 
+            end
+            for i = 1:n
+                [m,e] = anas{i}.get_err('mean_err', 'shuf'); 
+                errorbar(anas{i}.data.neuron_nums, m, e, styles{i}); 
+                leg2{i} = 'shuffled'; 
+            end
+            set(gca, 'YScale', 'log');
+            legend(leg1{:}, leg2{:}, 'Location', 'best');
+            xlabel 'Number of cells'
+            ylabel 'Mean error (cm)'
+            title 'Decoding error vs. Number of cells used'
+            plt = Plot();
+            plt.XMinorTick = 'off';
+            plt.YGrid = 'on';
+            plt.YMinorGrid = 'on';
+            plt.ShowBox = 'off';
+            plt.FontSize = 18;
+            plt.Colors = [repmat({'b'}, 1,n) repmat({'r'}, 1,n)];
+            plt.LineStyle = [styles(1:n), styles(1:n)];
+            
+            
+            figure;
+            hold on;
+            for i = 1:n
+                [m,e] = anas{i}.get_err('imse', 'unshuf'); 
+                errorbar(anas{i}.data.neuron_nums, m, e, styles{i}); 
+                leg1{i} = 'unshuffled'; 
+            end
+            for i = 1:n
+                [m,e] = anas{i}.get_err('imse', 'shuf'); 
+                errorbar(anas{i}.data.neuron_nums, m, e, styles{i}); 
+                leg2{i} = 'shuffled'; 
+            end
+            legend(leg1{:}, leg2{:}, 'Location', 'best');
+            xlabel 'Number of cells'
+            ylabel '1/MSE (cm^{-2})'
+            title 'Inverse decoding MSE vs. Number of cells used'
+            plt = Plot();
+            plt.XMinorTick = 'off';
+            plt.YGrid = 'on';
+            plt.YMinorGrid = 'off';
+            plt.ShowBox = 'off';
+            plt.FontSize = 18;
+            plt.Colors = [repmat({'b'}, 1,n) repmat({'r'}, 1,n)];
+            plt.LineStyle = [styles(1:n), styles(1:n)];
         end
     end
 end
