@@ -1,4 +1,4 @@
-ST = SVMTrack('../linear_track/Mouse-2024-20150317_202708-linear-track-TracesAndEvents.mat',...
+ST = SVMTrack('../linear_track/Mouse2028/Mouse-2028-20150327-linear-track/Mouse-2028-20150327_105544-linear-track-TracesAndEvents.mat',...
     14, 20, 20);
 %%
 % basic
@@ -61,36 +61,14 @@ ylim(ylim_);
 xlabel PLS1
 ylabel PLS2
 title(['Visualized covariances - shuffled, ' num2str(ST.num_bins) ' bins']);
-%%
+%% finding the angles, unshuffled and shuffled
 
-% dX = diff(mean_bin_X);
-% dy = diff(y_bin);
-% dXdy = dX ./ dy;
-% princ = zeros(ST.num_bins, ST.total_neurons);
-% %todo find angle b/w principal axis and dX/dy
-% angles = zeros(ST.num_bins-1,1);
-% cos_angles = angles;
-% 
-% for b_ix = 1:ST.num_bins
-%     Sigma = squeeze(cov_bin_X(b_ix,:,:));
-%     coeffs = pca(bin_X{1});
-%     princ(b_ix,:) = coeffs(:,1);
-% end
-% 
-% for b_ix = 1:ST.num_bins-1
-%     [angles(b_ix), cos_angles(b_ix)] = angle_v(princ(b_ix,:), dXdy(b_ix,:));
-% end
-% 
-% angles_tangent = zeros(ST.num_bins-2,1);
-% cos_angles_tangent = angles;
-% for b_ix = 1:ST.num_bins-2
-%     [angles_tangent(b_ix), cos_angles_tangent(b_ix)] = angle_v(dXdy(b_ix,:), dXdy(b_ix+1,:));
-% end
 [angles, angles_tangent] = ST.find_angles(mean_bin_X, bin_X, y_bin);
 [angles_shuf, angles_tangent_shuf] = ST.find_angles(mean_bin_X_shuf, bin_X_shuf, y_bin_shuf);
-%%
+%% plotting angles
 
 figure;
+subplot(2,3,1:3);
 hold on;
 
 plot(angles, '-o');
@@ -104,6 +82,30 @@ legend 'principal noise vs. tangent, unshuffled' 'principal noise vs. tangent, s
 xlabel 'bin'
 ylabel 'angle (degrees)'
 title 'Angle between maximal noise direction and direction of change in position parameter';
+
+M = 10;
+subplot(2,3,4);
+histogram(angles, M, 'FaceColor', 'b');
+xlim([0 180]);
+L_ = line([90 90], ylim);
+L_.Color = 'k';
+xlabel 'angle (degrees)'
+title 'Noise angle - unshuffled'
+subplot(2,3,5);
+histogram(angles_shuf, M, 'FaceColor', 'r');
+xlim([0 180]);
+L_ = line([90 90], ylim);
+L_.Color = 'k';
+xlabel 'angle (degrees)'
+title 'Noise angle - shuffled'
+subplot(2,3,6);
+histogram(angles_tangent, M, 'FaceColor', 'y');
+xlim([0 180]);
+L_ = line([90 90], ylim);
+L_.Color = 'k';
+%legend 'principal noise vs. tangent, unshuffled' 'principal noise vs. tangent, shuffled' '\Delta tangent angle' 'orthogonal'
+xlabel 'angle (degrees)'
+title '\Delta tangent angle'
 %% using bin_X and mean_bin_X, do the rotation scheme
 
 dX = diff(mean_bin_X);
@@ -125,49 +127,49 @@ fprintf(['The angle between principal noise component (pooled over 20 bins)'...
     ', and the direction of increase is:\n%.2f degrees\n'], theta);
 %%
 if false
-figure('Position', [100 100 1000 350]);
-subplot(1,2,1);
-imagesc(squeeze(mpc_c), [0.5 1]);
-colorbar;
-%axis equal
-title 'mean posterior prob. of correct guess'
-xlabel bin
-ylabel bin
-subplot(1,2,2);
-imagesc(squeeze(mpc_cs), [0.5 1]);
-colorbar;
-%axis equal
-title 'mean posterior prob. of correct guess - shuffled'
-xlabel bin
-ylabel bin
-
-m_ = @(C) cellfun(@mean, C);
-e_ = @(C) cellfun(@(x) std(x)./sqrt(numel(x)), C);
-figure('Position', [1000 1000 1000 350]);
-subplot(1,2,1);
-errorbar(m_(df_c), e_(df_c));
-hold on;
-errorbar(m_(df_cs), e_(df_cs));
-ylim([0.5 1]);
-xlabel 'bin distance'
-title 'mean posterior prob. of correct guess (with CV)'
-ylabel 'probability'
-legend unshuffled shuffled Location best
-
-
-subplot(1,2,2);
-errorbar(m_(df), e_(df));
-hold on;
-errorbar(m_(df_s), e_(df_s));
-ylim([0.5 1]);
-xlabel 'bin distance'
-title 'mean posterior prob. of correct guess (no CV)'
-ylabel 'probability'
-legend unshuffled shuffled Location best
-
+    figure('Position', [100 100 1000 350]);
+    subplot(1,2,1);
+    imagesc(squeeze(mpc_c), [0.5 1]);
+    colorbar;
+    %axis equal
+    title 'mean posterior prob. of correct guess'
+    xlabel bin
+    ylabel bin
+    subplot(1,2,2);
+    imagesc(squeeze(mpc_cs), [0.5 1]);
+    colorbar;
+    %axis equal
+    title 'mean posterior prob. of correct guess - shuffled'
+    xlabel bin
+    ylabel bin
+    
+    m_ = @(C) cellfun(@mean, C);
+    e_ = @(C) cellfun(@(x) std(x)./sqrt(numel(x)), C);
+    figure('Position', [1000 1000 1000 350]);
+    subplot(1,2,1);
+    errorbar(m_(df_c), e_(df_c));
+    hold on;
+    errorbar(m_(df_cs), e_(df_cs));
+    ylim([0.5 1]);
+    xlabel 'bin distance'
+    title 'mean posterior prob. of correct guess (with CV)'
+    ylabel 'probability'
+    legend unshuffled shuffled Location best
+    
+    
+    subplot(1,2,2);
+    errorbar(m_(df), e_(df));
+    hold on;
+    errorbar(m_(df_s), e_(df_s));
+    ylim([0.5 1]);
+    xlabel 'bin distance'
+    title 'mean posterior prob. of correct guess (no CV)'
+    ylabel 'probability'
+    legend unshuffled shuffled Location best
+    
 end
 %%
-plot_cov_ = @(m,S) plot_cov(m,S);
+%plot_cov_ = @(m,S) plot_cov(m,S);
 %%
 function [theta, cos_angle] = angle_v(a,b)
 a = a(:); b = b(:);
