@@ -173,6 +173,21 @@ classdef Analyzer < handle
                     error('setting must be either mean_err or imse');
             end
         end
+        function calc_distfuncs(o)
+            [o.res.unshuf.dist_func.mean, o.res.unshuf.dist_func.sem] =...
+                Analyzer.upper_diags_stats(o.res.unshuf.mean_probs_correct(1:2:end,1:2:end),...
+                o.res.unshuf.mean_probs_correct(2:2:end,2:2:end));
+            [o.res.unshuf.cross_dist_func.mean, o.res.unshuf.cross_dist_func.sem] =...
+                Analyzer.upper_diags_stats(o.res.unshuf.mean_probs_correct(2:2:end,1:2:end),...
+                o.res.unshuf.mean_probs_correct(1:2:end,2:2:end));
+            
+            [o.res.shuf.dist_func.mean, o.res.shuf.dist_func.sem] =...
+                Analyzer.upper_diags_stats(o.res.shuf.mean_probs_correct(1:2:end,1:2:end),...
+                o.res.shuf.mean_probs_correct(2:2:end,2:2:end));
+            [o.res.shuf.cross_dist_func.mean, o.res.shuf.cross_dist_func.sem] =...
+                Analyzer.upper_diags_stats(o.res.shuf.mean_probs_correct(2:2:end,1:2:end),...
+                o.res.shuf.mean_probs_correct(1:2:end,2:2:end));
+        end
     end
     
     methods(Static)
@@ -358,9 +373,109 @@ classdef Analyzer < handle
             xlabel 'bin distance'; ylabel probability; title 'mean correct posterior by distance - opposite directional bins';
             ylim([0.5 1]);
         end
+        
+        function [fw, bw] = angle_analysis(o)
+            tot_bins = 2*o.opt.n_bins;
+            bin_X = cell(1,tot_bins);
+            for b = 1:tot_bins
+                bin_X{b} = o.data.X.fast(o.data.y.ks==b,:);
+            end
+            mean_bin_X = cellfun(@mean, bin_X, 'UniformOutput', false);
+            cov_bin_X = cellfun(@cov, bin_X, 'UniformOutput', false);
+            
+            mean_bin_X = cell2mat(mean_bin_X.');
+            cov_bin_X = cat(3, cov_bin_X{:});
+            cov_bin_X = permute(cov_bin_X, [3 1 2]);
+            
+            fw.bin_X = bin_X(1:2:end);
+            bw.bin_X = bin_X(2:2:end);
+            fw.dX = diff(mean_bin_X(1:2:end,:));
+            bw.dX = diff(mean_bin_X(2:2:end,:));
+            for b = 1:o.opt.n_bins
+                coeffs = pca(fw.bin_X{b});
+                fw.princ(b,:) = coeffs(:,1);
+                
+                coeffs = pca(bw.bin_X{b});
+                bw.princ(b,:) = coeffs(:,1);
+            end
+            for b = 1:o.opt.n_bins-1
+                fw.angles(b) = angle_v(fw.princ(b,:), fw.dX(b,:));
+                bw.angles(b) = angle_v(bw.princ(b,:), bw.dX(b,:));
+            end
+            
+            figure;
+            hold on;
+            plot(fw.angles, '-o');
+            plot(bw.angles, '-o');
+            legend fw bw
+            %fw.dX = dX_fw; fw.princ = princ_fw; fw.angles = angles_fw;
+            fw_bindist = mean_bin_X(1:2:end,:) ./ sum(mean_bin_X(1:2:end,:),1);
+            bw_bindist = mean_bin_X(2:2:end,:) ./ sum(mean_bin_X(2:2:end,:),1);
+            
+            [~, fw_ord] = sort((1:o.opt.n_bins)*fw_bindist);
+            [~, bw_ord] = sort((1:o.opt.n_bins)*bw_bindist);
+            [~, e_fw_ord] = sort(-sum(fw_bindist .* log(fw_bindist)));
+            [~, e_bw_ord] = sort(-sum(bw_bindist .* log(bw_bindist)));
+            
+            %just doing fw eigvec viz for now
+            figure;
+            subplot(2,1,1);
+            %to_flip = ones(20,1);
+            %to_flip([6 7 8 9 10 12 13 14 15 16 17 18 19]) = -1;
+            %to_flip([6 7 8 10 12 20]) = -1;
+            imagesc(fw.princ(:,fw_ord).^2);
+            xlabel 'Neuron (ordered by position)'
+            ylabel 'Position bin'
+            title 'Principal noise eigenvectors by bin (squared components)'
+            colorbar
+            
+            subplot(2,1,2);
+            imagesc(fw.dX(:, fw_ord));
+            xlabel 'Neuron (ordered by position)'
+            ylabel 'Earlier bin in diff.'
+            title 'Mean activity diff. between bins'
+            colorbar
+        end
+        
+        function ord = neuron_pos_order(o, direc)
+            %rerange = @(x) (x-min(x))./sum(x-min(x));
+            slice_number = [0; cumsum(diff(o.data.y.direction) > 0)];
+            if strcmp(direc, 'fw')
+                X = o.data.X.fast(o.data.y.direction==1,:);
+                X = X - min(X);
+                X(X < prctile(X,75)) = 0;
+                X = X./sum(X);
+                
+                y = o.data.y.scaled(o.data.y.direction==1);
+                ind = X.'*y;
+                [~, ord] = sort(ind);
+                
+                fw_slice_number = slice_number(o.data.y.direction==1);
+                slice_sizes = tabulate(fw_slice_number);
+                slice_sizes = slice_sizes(:,2);
+                sliced_X = o.data.X.fast(o.data.y.direction==1,:);
+                sliced_X = mat2cell(sliced_X, slice_sizes, size(sliced_X,2));
+                max_len = max(cellfun(@(x)size(x,1), sliced_X));
+                sliced_X = cellfun(@(x)padarray(x,[max_len-size(x,1) 0],0,'pre'),...
+                    sliced_X, 'UniformOutput', false);
+                sliced_X = cat(3, sliced_X{:});
+            end
+            
+        end
+        
     end
     methods(Static)
-        function anas = aggregate_plots(anas)
+        function anas = aggregate_plots(anas, printit, fmat)
+            if ~exist('printit', 'var')
+                printit = false;
+            end
+            if ~exist('fmat', 'var')
+                fmat = 'png';
+            end
+            if printit
+                large_printer = @(f) print(['-d' fmat], '-r300', f);
+                small_printer = @(f) print(['-d' fmat], '-r1000', f);
+            end
             if ischar(anas)
                 S = dir(fullfile(anas, 'Analyzer_*.mat'));
                 anas = cellfun(@fullfile, {S.folder}, {S.name}, 'UniformOutput', false);
@@ -375,56 +490,66 @@ classdef Analyzer < handle
             
             figure;
             hold on;
-            styles = {'-', '--', '-.', ':', '-o', '--o', '-.o', ':o'};
             for i = 1:n
-                [m,e] = anas{i}.get_err('mean_err', 'unshuf'); 
-                errorbar(anas{i}.data.neuron_nums, m, e, styles{i}); 
-                leg1{i} = 'unshuffled'; 
+                [m,e] = anas{i}.get_err('mean_err', 'unshuf');
+                shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv(0.95), 'lineprops', 'b');
             end
             for i = 1:n
-                [m,e] = anas{i}.get_err('mean_err', 'shuf'); 
-                errorbar(anas{i}.data.neuron_nums, m, e, styles{i}); 
-                leg2{i} = 'shuffled'; 
+                [m,e] = anas{i}.get_err('mean_err', 'shuf');
+                shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv(0.95), 'lineprops', 'r');
             end
             set(gca, 'YScale', 'log');
-            legend(leg1{:}, leg2{:}, 'Location', 'best');
             xlabel 'Number of cells'
             ylabel 'Mean error (cm)'
-            title 'Decoding error vs. Number of cells used'
-            plt = Plot();
-            plt.XMinorTick = 'off';
-            plt.YGrid = 'on';
-            plt.YMinorGrid = 'on';
-            plt.ShowBox = 'off';
-            plt.FontSize = 18;
-            plt.Colors = [repmat({'b'}, 1,n) repmat({'r'}, 1,n)];
-            plt.LineStyle = [styles(1:n), styles(1:n)];
+            xlim([0 450]);
+            text(200, 7, 'Unshuffled', 'Color', 'blue');
+            text(300, 2.5, 'Shuffled', 'Color', 'red');
+            if printit
+                large_printer('graphs2/analyzer_figs/large/mean_errs_logscale');
+                figure_format
+                small_printer('graphs2/analyzer_figs/small/mean_errs_logscale');
+            end
             
             
             figure;
             hold on;
             for i = 1:n
-                [m,e] = anas{i}.get_err('imse', 'unshuf'); 
-                errorbar(anas{i}.data.neuron_nums, m, e, styles{i}); 
-                leg1{i} = 'unshuffled'; 
+                [m,e] = anas{i}.get_err('imse', 'unshuf');
+                shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv(0.95), 'lineprops', 'b');
             end
             for i = 1:n
-                [m,e] = anas{i}.get_err('imse', 'shuf'); 
-                errorbar(anas{i}.data.neuron_nums, m, e, styles{i}); 
-                leg2{i} = 'shuffled'; 
+                [m,e] = anas{i}.get_err('imse', 'shuf');
+                shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv(0.95), 'lineprops', 'r');
             end
-            legend(leg1{:}, leg2{:}, 'Location', 'best');
             xlabel 'Number of cells'
             ylabel '1/MSE (cm^{-2})'
-            title 'Inverse decoding MSE vs. Number of cells used'
-            plt = Plot();
-            plt.XMinorTick = 'off';
-            plt.YGrid = 'on';
-            plt.YMinorGrid = 'off';
-            plt.ShowBox = 'off';
-            plt.FontSize = 18;
-            plt.Colors = [repmat({'b'}, 1,n) repmat({'r'}, 1,n)];
-            plt.LineStyle = [styles(1:n), styles(1:n)];
+            xlim([0 450]);
+            text(200, 0.03, 'Unshuffled', 'Color', 'blue');
+            text(100, 0.09, 'Shuffled', 'Color', 'red');
+            if printit
+                large_printer('graphs2/analyzer_figs/large/IMSE');
+                figure_format
+                small_printer('graphs2/analyzer_figs/small/IMSE');
+            end
+            
+            for i = 1:numel(anas)
+                o = anas{i};
+                o.calc_distfuncs();
+                figure;
+                hold on
+                errorbar(o.res.unshuf.dist_func.mean, o.res.unshuf.dist_func.sem, '-b');
+                errorbar(o.res.shuf.dist_func.mean, o.res.shuf.dist_func.sem, '-r');
+                errorbar(o.res.unshuf.cross_dist_func.mean, o.res.unshuf.cross_dist_func.sem, ':b');
+                errorbar(o.res.shuf.cross_dist_func.mean, o.res.shuf.cross_dist_func.sem, ':r');
+                ylim([0.5 1]);
+                legend 'unshuffled - same direction' 'shuffled - same direction' 'unshuffled - opposite direction' 'shuffled - opposite direction' Location south
+                xlabel 'Bin distance'; ylabel Probability;
+                mouse = o.res.source(17:25);
+                title(['Mean correct posterior by distance - ' mouse]);
+                if printit
+                    large_printer(['graphs2/analyzer_figs/large/correct_posterior_' mouse]);
+                end
+            end
         end
     end
 end
