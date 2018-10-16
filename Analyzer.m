@@ -20,8 +20,14 @@ classdef Analyzer < handle
             o.opt.d_neurons = r.d_neurons;
             o.data.source = r.source_string;
             data_struct = load(o.data.source);
-            o.data.X.full = data_struct.tracesEvents.rawProb;
-            o.data.y.raw.full = data_struct.tracesEvents.position(:,1);
+            origin = split(o.data.source, '/');
+            if strcmp(origin{end}, 'Mouse-2022-20150326_093722-linear-track-TracesAndEvents.mat')
+                o.data.X.full = data_struct.tracesEvents.rawProb(91:end, :);
+                o.data.y.raw.full = data_struct.tracesEvents.position(91:end,1);
+            else
+                o.data.X.full = data_struct.tracesEvents.rawProb;
+                o.data.y.raw.full = data_struct.tracesEvents.position(:,1);
+            end
             [o.data.mask.fw, o.data.mask.bw, o.data.cm_per_pix] = ...
                 select_directions(o.data.y.raw.full);
             o.data.mask.fast = o.data.mask.fw | o.data.mask.bw;
