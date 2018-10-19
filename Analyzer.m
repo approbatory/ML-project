@@ -380,41 +380,157 @@ classdef Analyzer < handle
             ylim([0.5 1]);
         end
         
-        function [fw, bw] = angle_analysis(o)
+        function [bin_X, mean_bin_X, cov_bin_X, fw_princ, bw_princ,...
+                fw_angles, bw_angles, fw_dX, bw_dX, fw_angles_tangent, bw_angles_tangent, varargout] = bin_data(o, is_shuffled, use_pls)
+            activity_source = o.data.X.fast;
+            if is_shuffled
+                activity_source = shuffle(activity_source, o.data.y.ks);
+            end
+            
+            if use_pls
+                [~, ~, activity_source] = plsregress(activity_source, o.data.y.scaled, 2);
+                varargout{1} = activity_source;
+            end
+            
             tot_bins = 2*o.opt.n_bins;
             bin_X = cell(1,tot_bins);
             for b = 1:tot_bins
-                bin_X{b} = o.data.X.fast(o.data.y.ks==b,:);
+                bin_X{b} = activity_source(o.data.y.ks==b,:);
             end
             mean_bin_X = cellfun(@mean, bin_X, 'UniformOutput', false);
             cov_bin_X = cellfun(@cov, bin_X, 'UniformOutput', false);
-            
             mean_bin_X = cell2mat(mean_bin_X.');
             cov_bin_X = cat(3, cov_bin_X{:});
             cov_bin_X = permute(cov_bin_X, [3 1 2]);
             
-            fw.bin_X = bin_X(1:2:end);
-            bw.bin_X = bin_X(2:2:end);
-            fw.dX = diff(mean_bin_X(1:2:end,:));
-            bw.dX = diff(mean_bin_X(2:2:end,:));
+            fw_bin_X = bin_X(1:2:end);
+            bw_bin_X = bin_X(2:2:end);
+            fw_dX = diff(mean_bin_X(1:2:end,:));
+            bw_dX = diff(mean_bin_X(2:2:end,:));
+            
             for b = 1:o.opt.n_bins
-                coeffs = pca(fw.bin_X{b});
-                fw.princ(b,:) = coeffs(:,1);
+                coeffs = pca(fw_bin_X{b});
+                fw_princ(b,:) = coeffs(:,1);
                 
-                coeffs = pca(bw.bin_X{b});
-                bw.princ(b,:) = coeffs(:,1);
+                coeffs = pca(bw_bin_X{b});
+                bw_princ(b,:) = coeffs(:,1);
             end
             for b = 1:o.opt.n_bins-1
-                fw.angles(b) = angle_v(fw.princ(b,:), fw.dX(b,:));
-                bw.angles(b) = angle_v(bw.princ(b,:), bw.dX(b,:));
+                fw_angles(b) = angle_v(fw_princ(b,:), fw_dX(b,:));
+                bw_angles(b) = angle_v(bw_princ(b,:), bw_dX(b,:));
             end
             
-            figure;
+            for b = 1:o.opt.n_bins-2
+                fw_angles_tangent(b) = angle_v(fw_dX(b,:), fw_dX(b+1,:));
+                bw_angles_tangent(b) = angle_v(bw_dX(b,:), bw_dX(b+1,:));
+            end
+        end
+        
+        function [fw, bw] = angle_analysis(o, printit)
+            if ~exist('printit', 'var')
+                printit = false;
+            end
+            if printit
+                mouse_id = split(o.res.source,'/');
+                mouse_id = mouse_id{end};
+                mouse_id = split(mouse_id, '-');
+                mouse_id = [mouse_id{1} mouse_id{2}];
+            end
+            [~, mean_bin_X, ~, fw.princ, bw.princ, fw.angles, bw.angles, fw.dX, bw.dX, fw.angles_tangent, bw.angles_tangent] ...
+                = o.bin_data(false, false);
+            [~, ~, ~, fw.princ_shuf, bw.princ_shuf, fw.angles_shuf, bw.angles_shuf, ~, ~] = ...
+                o.bin_data(true, false);
+            [~, mean_bin_X_pls, cov_bin_X_pls, ~, ~, ~, ~, ~, ~, ~, ~, X_pls] ...
+                = o.bin_data(false, true);
+            [~, ~, cov_bin_X_pls_shuf, ~, ~, ~, ~, ~, ~, ~, ~, X_pls_shuf] = ...
+                o.bin_data(true, true);
+            
+            colors = parula(1000)*0.8;
+             
+            figure('Position', [0 0 800 600]);
+            
+            subplot(2,2,1);
             hold on;
-            plot(fw.angles, '-o');
-            plot(bw.angles, '-o');
-            legend fw bw
-            %fw.dX = dX_fw; fw.princ = princ_fw; fw.angles = angles_fw;
+            scatter(X_pls(:,1), X_pls(:,2), 1, o.data.y.scaled);
+            scatter(mean_bin_X_pls(:,1), mean_bin_X_pls(:,2), 10, [1 0 0]);
+            xlim_ = xlim; ylim_ = ylim;
+            xlim(xlim_); ylim(ylim_);
+            xlabel PLS1
+            ylabel PLS2
+            title(['Linear track activity, ' num2str(o.opt.n_bins) ' bins']);
+            
+            subplot(2,2,2);
+            hold on;
+            for b = 1:o.opt.n_bins
+                plot_cov(mean_bin_X_pls(2*b-1,:), cov_bin_X_pls(2*b-1,:,:),...
+                    colors(round(1000*b/o.opt.n_bins),:));
+                plot_cov(mean_bin_X_pls(2*b,:), cov_bin_X_pls(2*b,:,:),...
+                    colors(round(1000*b/o.opt.n_bins),:));
+            end
+            xlim(xlim_); ylim(ylim_);
+            xlabel PLS1
+            ylabel PLS2
+            title(['Visualized covariances, ' num2str(o.opt.n_bins) ' bins']);
+
+            subplot(2,2,3);
+            hold on;
+            scatter(X_pls_shuf(:,1), X_pls_shuf(:,2), 1, o.data.y.scaled);
+            scatter(mean_bin_X_pls(:,1), mean_bin_X_pls(:,2), 10, [1 0 0]);
+            xlim(xlim_); ylim(ylim_);
+            xlabel PLS1
+            ylabel PLS2
+            title(['Linear track activity, ' num2str(o.opt.n_bins) ' bins - shuffled']);
+            colormap parula
+            
+            subplot(2,2,4);
+            hold on;
+            for b = 1:o.opt.n_bins
+                plot_cov(mean_bin_X_pls(2*b-1,:), cov_bin_X_pls_shuf(2*b-1,:,:),...
+                    colors(round(1000*b/o.opt.n_bins),:));
+                plot_cov(mean_bin_X_pls(2*b,:), cov_bin_X_pls_shuf(2*b,:,:),...
+                    colors(round(1000*b/o.opt.n_bins),:));
+            end
+            xlim(xlim_); ylim(ylim_);
+            xlabel PLS1
+            ylabel PLS2
+            title(['Visualized covariances, ' num2str(o.opt.n_bins) ' bins - shuffled']);
+            
+            if printit
+                if ~exist(['graphs2/analyzer_figs/large/' mouse_id], 'dir')
+                    mkdir(['graphs2/analyzer_figs/large/' mouse_id]);
+                end
+                print('-dpng', ['graphs2/analyzer_figs/large/' mouse_id '/PLS_vis.png']);
+            end
+            
+            figure('Position', [0 0 800 500]);
+            
+            subplot(2,1,1);
+            hold on;
+            mean_angle = mean([fw.angles bw.angles]);
+            mean_angle_shuf = mean([fw.angles_shuf bw.angles_shuf]);
+            xlim([0 135]);
+            histogram([fw.angles bw.angles], 10);
+            histogram([fw.angles_shuf bw.angles_shuf], 10);
+            line([mean_angle mean_angle], ylim, 'Color', 'blue', 'LineWidth', 2);
+            line([mean_angle_shuf mean_angle_shuf], ylim, 'Color', 'red', 'LineWidth', 2);
+            line([90 90], ylim, 'Color', 'black', 'LineStyle', '--', 'LineWidth', 2);
+            legend 'Unshuffled' 'Shuffled' 'Mean angle (Unshuffled)' 'Mean angle (Shuffled)' Orthogonal Location northwest
+            xlabel 'Angle (degrees)'
+            ylabel Frequency
+            title 'Angle between principal noise direction and tuning curve tangent'
+            
+            subplot(2,1,2);
+            hold on;
+            histogram([fw.angles_tangent bw.angles_tangent], 10, 'FaceColor', 'y');
+            xlim([0 135]);
+            xlabel 'Angle (degrees)'
+            ylabel Frequency
+            title 'Angle between consecutive tangent vectors'
+            
+            if printit
+                print('-dpng', ['graphs2/analyzer_figs/large/' mouse_id '/noise_angles.png']);
+            end
+            
             fw_bindist = mean_bin_X(1:2:end,:) ./ sum(mean_bin_X(1:2:end,:),1);
             bw_bindist = mean_bin_X(2:2:end,:) ./ sum(mean_bin_X(2:2:end,:),1);
             
@@ -423,24 +539,73 @@ classdef Analyzer < handle
             [~, e_fw_ord] = sort(-sum(fw_bindist .* log(fw_bindist)));
             [~, e_bw_ord] = sort(-sum(bw_bindist .* log(bw_bindist)));
             
-            %just doing fw eigvec viz for now
-            figure;
-            subplot(2,1,1);
-            %to_flip = ones(20,1);
-            %to_flip([6 7 8 9 10 12 13 14 15 16 17 18 19]) = -1;
-            %to_flip([6 7 8 10 12 20]) = -1;
-            imagesc(fw.princ(:,fw_ord).^2);
+            figure('Position', [0 0 1500 1000]);
+            
+            subplot(4,2,1);
+            imagesc(mean_bin_X(1:2:end, fw_ord));
             xlabel 'Neuron (ordered by position)'
             ylabel 'Position bin'
-            title 'Principal noise eigenvectors by bin (squared components)'
+            title 'Mean neural activity - forward motion'
             colorbar
             
-            subplot(2,1,2);
-            imagesc(fw.dX(:, fw_ord));
+            subplot(4,2,2);
+            imagesc(mean_bin_X(2:2:end, bw_ord));
+            xlabel 'Neuron (ordered by position)'
+            ylabel 'Position bin'
+            title 'Mean neural activity - backward motion'
+            colorbar
+            
+            subplot(4,2,3);
+            imagesc(abs(fw.princ(:,fw_ord)));
+            assert(all((sum(fw.princ(:,fw_ord).^2,2) - 1).^2 < eps), 'eigenvectors not normalized');
+            xlabel 'Neuron (ordered by position)'
+            ylabel 'Position bin'
+            title 'Abs. principal noise eigenvectors - forward motion'
+            colorbar
+            
+            subplot(4,2,4);
+            imagesc(abs(bw.princ(:,bw_ord)));
+            assert(all((sum(bw.princ(:,bw_ord).^2,2) - 1).^2 < eps), 'eigenvectors not normalized');
+            xlabel 'Neuron (ordered by position)'
+            ylabel 'Position bin'
+            title 'Abs. principal noise eigenvectors - backward motion'
+            colorbar
+            
+            subplot(4,2,5);
+            imagesc(abs(fw.princ_shuf(:,fw_ord)));
+            assert(all((sum(fw.princ_shuf(:,fw_ord).^2,2) - 1).^2 < eps), 'eigenvectors not normalized');
+            xlabel 'Neuron (ordered by position)'
+            ylabel 'Position bin'
+            title 'Abs. principal noise eigenvectors - forward motion, shuffled'
+            colorbar
+            
+            subplot(4,2,6);
+            imagesc(abs(bw.princ_shuf(:,bw_ord)));
+            assert(all((sum(bw.princ_shuf(:,bw_ord).^2,2) - 1).^2 < eps), 'eigenvectors not normalized');
+            xlabel 'Neuron (ordered by position)'
+            ylabel 'Position bin'
+            title 'Abs. principal noise eigenvectors - backward motion, shuffled'
+            colorbar
+            
+            subplot(4,2,7);
+            imagesc(abs(fw.dX(:, fw_ord)));
             xlabel 'Neuron (ordered by position)'
             ylabel 'Earlier bin in diff.'
-            title 'Mean activity diff. between bins'
+            title 'Abs. mean activity diff. between bins - forward motion'
             colorbar
+            
+            subplot(4,2,8);
+            imagesc(abs(bw.dX(:, bw_ord)));
+            xlabel 'Neuron (ordered by position)'
+            ylabel 'Earlier bin in diff.'
+            title 'Abs. mean activity diff. between bins - backward motion'
+            colorbar
+            c_ = load('/home/omer/ML-project/plotting/my_colormap_eigen.mat');
+            colormap(c_.c);
+            
+            if printit
+                print('-dpng', ['graphs2/analyzer_figs/large/' mouse_id '/noise_eigenvector.png']);
+            end
         end
         
         function ord = neuron_pos_order(o, direc)
@@ -497,19 +662,19 @@ classdef Analyzer < handle
             figure;
             hold on;
             for i = 1:n
-                [m,e] = anas{i}.get_err('mean_err', 'unshuf');
-                shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv(0.95), 'lineprops', 'b');
-            end
-            for i = 1:n
                 [m,e] = anas{i}.get_err('mean_err', 'shuf');
                 shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv(0.95), 'lineprops', 'r');
+            end
+            for i = 1:n
+                [m,e] = anas{i}.get_err('mean_err', 'unshuf');
+                shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv(0.95), 'lineprops', 'b');
             end
             set(gca, 'YScale', 'log');
             xlabel 'Number of cells'
             ylabel 'Mean error (cm)'
-            xlim([0 450]);
+            xlim([0 500]);
             text(200, 7, 'Unshuffled', 'Color', 'blue');
-            text(300, 2.5, 'Shuffled', 'Color', 'red');
+            text(300, 2.2, 'Shuffled', 'Color', 'red');
             if printit
                 large_printer('graphs2/analyzer_figs/large/mean_errs_logscale');
                 figure_format
@@ -520,16 +685,16 @@ classdef Analyzer < handle
             figure;
             hold on;
             for i = 1:n
-                [m,e] = anas{i}.get_err('imse', 'unshuf');
-                shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv(0.95), 'lineprops', 'b');
-            end
-            for i = 1:n
                 [m,e] = anas{i}.get_err('imse', 'shuf');
                 shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv(0.95), 'lineprops', 'r');
             end
+            for i = 1:n
+                [m,e] = anas{i}.get_err('imse', 'unshuf');
+                shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv(0.95), 'lineprops', 'b');
+            end
             xlabel 'Number of cells'
             ylabel '1/MSE (cm^{-2})'
-            xlim([0 450]);
+            xlim([0 500]);
             text(200, 0.03, 'Unshuffled', 'Color', 'blue');
             text(100, 0.09, 'Shuffled', 'Color', 'red');
             if printit
