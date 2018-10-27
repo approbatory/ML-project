@@ -23,15 +23,18 @@ classdef Analyzer < handle
             origin = split(o.data.source, '/');
             if strcmp(origin{end}, 'Mouse-2022-20150326_093722-linear-track-TracesAndEvents.mat')
                 o.data.X.full = data_struct.tracesEvents.rawProb(91:end, :);
+                o.data.X.full_spike = data_struct.tracesEvents.spikeDeconv(91:end, :);
                 o.data.y.raw.full = data_struct.tracesEvents.position(91:end,1);
             else
                 o.data.X.full = data_struct.tracesEvents.rawProb;
+                o.data.X.full_spike = data_struct.tracesEvents.spikeDeconv;
                 o.data.y.raw.full = data_struct.tracesEvents.position(:,1);
             end
             [o.data.mask.fw, o.data.mask.bw, o.data.cm_per_pix] = ...
                 select_directions(o.data.y.raw.full);
             o.data.mask.fast = o.data.mask.fw | o.data.mask.bw;
             o.data.X.fast = o.data.X.full(o.data.mask.fast,:);
+            o.data.X.fast_spike = o.data.X.full_spike(o.data.mask.fast,:);
             o.data.y.raw.fast = o.data.y.raw.full(o.data.mask.fast,:);
             
             o.data.y.direction = zeros(size(o.data.y.raw.full));
@@ -62,7 +65,14 @@ classdef Analyzer < handle
             o.res.shuf.mean_probs_correct = nan(2*o.opt.n_bins, 2*o.opt.n_bins);
         end
         function [te_pred, errors] = decode_one(o, n_cells, do_shuf)
-            my_X = o.data.X.fast(:, randperm(o.data.total_neurons) <= n_cells);
+            if islogical(n_cells) && (length(n_cells) == o.data.total_neurons) && isvector(n_cells)
+                cell_selection = n_cells;
+            elseif isscalar(n_cells) && isnumeric(n_cells)
+                cell_selection = randperm(o.data.total_neurons) <= n_cells;
+            else
+                error('wrong use of parameter n_cells: either cell mask or # of random cells to use');
+            end
+            my_X = o.data.X.fast(:, cell_selection);
             if do_shuf
                 my_X = shuffle(my_X, o.data.y.ks);
             end
@@ -110,47 +120,6 @@ classdef Analyzer < handle
                 end
             end
         end
-        function posterior_SVM_CV(o, shuf, numer, denom)
-            k = 10;
-            X = o.data.X.fast;
-            ks = o.data.y.ks;
-            if shuf
-                X = shuffle(X, ks);
-                field = 'shuf';
-            else
-                field = 'unshuf';
-            end
-            
-            %mean_probs_correct = nan(k, 2*o.opt.n_bins, 2*o.opt.n_bins);
-            
-            total_iters = (2*o.opt.n_bins)*(2*o.opt.n_bins-1)/2;
-            my_job = ceil((1:total_iters)./total_iters .* denom)==numer;
-            idx = 0;
-            my_timer = tic;
-            
-            for b1 = 1:2*o.opt.n_bins-1
-                for b2 = b1+1:2*o.opt.n_bins
-                    idx = idx + 1;
-                    if ~my_job(idx)
-                        continue;
-                    end
-                    buffer = zeros(k,1);
-                    for k_i = 1:k
-                        [tr_X, te_X, tr_ks, te_ks] = kfold_selector(k, k_i, X, ks);
-                        [tr_my_X, tr_my_ks] = Analyzer.extractor(tr_X, tr_ks, b1, b2);
-                        [te_my_X, te_my_ks] = Analyzer.extractor(te_X, te_ks, b1, b2);
-                        model = fitSVMPosterior(fitcsvm(tr_my_X, tr_my_ks));
-                        [~, probs] = model.predict(te_my_X);
-                        probs_correct = (te_my_ks == 1).*probs(:,2) + (te_my_ks == -1).*probs(:,1);
-                        buffer(k_i) = mean(probs_correct);
-                        fprintf('fold:%d || %d vs. %d\tshuf? %d\n', k_i, b1, b2, shuf);
-                    end
-                    o.res.(field).mean_probs_correct(b1,b2) = mean(buffer);
-                end
-            end
-            
-            toc(my_timer);
-        end
         function calculate_bin_posteriors(o, numer, denom)
             o.posterior_SVM_CV(false, numer, denom);
             o.posterior_SVM_CV(true, numer, denom);
@@ -164,20 +133,6 @@ classdef Analyzer < handle
             res = o.res;
             opt = o.opt;
             save(out_path, 'res', 'opt');
-        end
-        function [m,e] = get_err(o, setting, shuf)
-            switch setting
-                case 'mean_err'
-                    mean_err = cellfun(@(x)mean(x.mean_err.te), o.res.(shuf).errors);
-                    m = mean(mean_err,2);
-                    e = std(mean_err,[],2)./sqrt(o.opt.n_samples);
-                case 'imse'
-                    imse = 1./cellfun(@(x)mean(x.MSE.te), o.res.(shuf).errors);
-                    m = mean(imse,2);
-                    e = std(imse,[],2)./sqrt(o.opt.n_samples);
-                otherwise
-                    error('setting must be either mean_err or imse');
-            end
         end
         function calc_distfuncs(o)
             [o.res.unshuf.dist_func.mean, o.res.unshuf.dist_func.sem] =...
@@ -193,6 +148,25 @@ classdef Analyzer < handle
             [o.res.shuf.cross_dist_func.mean, o.res.shuf.cross_dist_func.sem] =...
                 Analyzer.upper_diags_stats(o.res.shuf.mean_probs_correct(2:2:end,1:2:end),...
                 o.res.shuf.mean_probs_correct(1:2:end,2:2:end));
+        end
+        function calc_muti(o, alpha, n_shufs)
+            if ~exist('alpha', 'var')
+                alpha = 0.01;
+            end
+            if ~exist('n_shufs', 'var')
+                n_shufs = 10^4;
+            end
+            
+            fw_part = o.data.y.direction == 1;
+            bw_part = o.data.y.direction == 2;
+            fw_ks = (o.data.y.ks(fw_part) + 1)/2;
+            bw_ks = o.data.y.ks(bw_part)/2;
+            
+            tic
+            o.res.muti = Analyzer.place_muti(o.data.X.fast_spike, o.data.y.ks, alpha, n_shufs);
+            o.res.muti_fw = Analyzer.place_muti(o.data.X.fast_spike(fw_part,:), fw_ks, alpha, n_shufs);
+            o.res.muti_bw = Analyzer.place_muti(o.data.X.fast_spike(bw_part,:), bw_ks, alpha, n_shufs);
+            toc
         end
     end
     
@@ -211,22 +185,6 @@ classdef Analyzer < handle
                 mkdir(save_dir);
             end
             ana.save_res(save_dir);
-        end
-        function [my_X, my_ks] = extractor(X, ks, b1, b2)
-            eq1 = ks == b1;
-            eq2 = ks == b2;
-            my_X = [X(eq1,:); X(eq2,:)];
-            my_ks = [ones(sum(eq1),1); -ones(sum(eq2),1)];
-        end
-        function [m,e] = upper_diags_stats(varargin)
-            C = cellfun(...
-                @(M) arrayfun(@(i) diag(M,i), 1:size(M,1)-1,...
-                'UniformOutput', false),...
-                varargin, 'UniformOutput', false);
-            Q = cellfun(@(varargin)cat(1,varargin{:}),...
-                C{:}, 'UniformOutput', false);
-            m = cellfun(@mean, Q);
-            e = cellfun(@(x)std(x)./sqrt(length(x)), Q);
         end
         function obj = recreate(load_path)
             if ischar(load_path)
@@ -271,6 +229,159 @@ classdef Analyzer < handle
             obj.res.shuf.mean_probs_correct = max(cat(3, mats_shuf{:}), [], 3);
             obj = Analyzer.recreate(obj);
         end
+    end
+    
+    methods(Access = public)
+        function posterior_SVM_CV(o, shuf, numer, denom)
+            k = 10;
+            X = o.data.X.fast;
+            ks = o.data.y.ks;
+            if shuf
+                X = shuffle(X, ks);
+                field = 'shuf';
+            else
+                field = 'unshuf';
+            end
+            
+            %mean_probs_correct = nan(k, 2*o.opt.n_bins, 2*o.opt.n_bins);
+            
+            total_iters = (2*o.opt.n_bins)*(2*o.opt.n_bins-1)/2;
+            my_job = ceil((1:total_iters)./total_iters .* denom)==numer;
+            idx = 0;
+            my_timer = tic;
+            
+            for b1 = 1:2*o.opt.n_bins-1
+                for b2 = b1+1:2*o.opt.n_bins
+                    idx = idx + 1;
+                    if ~my_job(idx)
+                        continue;
+                    end
+                    buffer = zeros(k,1);
+                    for k_i = 1:k
+                        [tr_X, te_X, tr_ks, te_ks] = kfold_selector(k, k_i, X, ks);
+                        [tr_my_X, tr_my_ks] = Analyzer.extractor(tr_X, tr_ks, b1, b2);
+                        [te_my_X, te_my_ks] = Analyzer.extractor(te_X, te_ks, b1, b2);
+                        model = fitSVMPosterior(fitcsvm(tr_my_X, tr_my_ks));
+                        [~, probs] = model.predict(te_my_X);
+                        probs_correct = (te_my_ks == 1).*probs(:,2) + (te_my_ks == -1).*probs(:,1);
+                        buffer(k_i) = mean(probs_correct);
+                        fprintf('fold:%d || %d vs. %d\tshuf? %d\n', k_i, b1, b2, shuf);
+                    end
+                    o.res.(field).mean_probs_correct(b1,b2) = mean(buffer);
+                end
+            end
+            
+            toc(my_timer);
+        end
+        function [m,e] = get_err(o, setting, shuf)
+            switch setting
+                case 'mean_err'
+                    mean_err = cellfun(@(x)mean(x.mean_err.te), o.res.(shuf).errors);
+                    m = mean(mean_err,2);
+                    e = std(mean_err,[],2)./sqrt(o.opt.n_samples);
+                case 'imse'
+                    imse = 1./cellfun(@(x)mean(x.MSE.te), o.res.(shuf).errors);
+                    m = mean(imse,2);
+                    e = std(imse,[],2)./sqrt(o.opt.n_samples);
+                otherwise
+                    error('setting must be either mean_err or imse');
+            end
+        end
+        function ret = bin_data(o, is_shuffled, use_pls)
+            activity_source = o.data.X.fast;
+            if is_shuffled
+                activity_source = shuffle(activity_source, o.data.y.ks);
+            end
+            
+            if use_pls
+                [~, ~, activity_source] = plsregress(activity_source, o.data.y.scaled, 2);
+                varargout{1} = activity_source;
+            end
+            
+            tot_bins = 2*o.opt.n_bins;
+            bin_X = cell(1,tot_bins);
+            for b = 1:tot_bins
+                bin_X{b} = activity_source(o.data.y.ks==b,:);
+            end
+            mean_bin_X = cellfun(@mean, bin_X, 'UniformOutput', false);
+            cov_bin_X = cellfun(@cov, bin_X, 'UniformOutput', false);
+            mean_bin_X = cell2mat(mean_bin_X.');
+            cov_bin_X = cat(3, cov_bin_X{:});
+            cov_bin_X = permute(cov_bin_X, [3 1 2]);
+            
+            fw_mean = mean_bin_X(1:2:end,:);
+            bw_mean = mean_bin_X(2:2:end,:);
+            fw_bin_X = bin_X(1:2:end);
+            bw_bin_X = bin_X(2:2:end);
+            fw_dX = diff(mean_bin_X(1:2:end,:));
+            bw_dX = diff(mean_bin_X(2:2:end,:));
+            
+            for b = 1:o.opt.n_bins
+                [coeffs, ~, lat] = pca(fw_bin_X{b});
+                fw_princ(b,:) = coeffs(:,1);
+                fw_latent(b,:) = lat(1:50);
+                
+                [coeffs, ~, lat] = pca(bw_bin_X{b});
+                bw_princ(b,:) = coeffs(:,1);
+                bw_latent(b,:) = lat(1:50);
+                
+                fw_n_m(b) = angle_v(fw_princ(b,:), fw_mean(b,:), true);
+                bw_n_m(b) = angle_v(bw_princ(b,:), bw_mean(b,:), true);
+            end
+            for b = 1:o.opt.n_bins-1
+                fw_angles(b) = angle_v(fw_princ(b,:), fw_dX(b,:), true);
+                bw_angles(b) = angle_v(bw_princ(b,:), bw_dX(b,:), true);
+                
+                
+                fw_m_t(b) = angle_v(fw_mean(b,:), fw_dX(b,:));
+                bw_m_t(b) = angle_v(bw_mean(b,:), bw_dX(b,:));
+            end
+            
+            for b = 1:o.opt.n_bins-2
+                fw_angles_tangent(b) = angle_v(fw_dX(b,:), fw_dX(b+1,:));
+                bw_angles_tangent(b) = angle_v(bw_dX(b,:), bw_dX(b+1,:));
+            end
+            
+            ret.bin_X.raw = bin_X;
+            ret.bin_X.mean = mean_bin_X;
+            ret.bin_X.cov = cov_bin_X;
+            ret.fw.princ = fw_princ;
+            ret.bw.princ = bw_princ;
+            ret.fw.latent = fw_latent;
+            ret.bw.latent = bw_latent;
+            ret.fw.mean = fw_mean;
+            ret.bw.mean = bw_mean;
+            ret.fw.angles.noise_tangent = fw_angles;
+            ret.bw.angles.noise_tangent = bw_angles;
+            ret.fw.angles.noise_mean = fw_n_m;
+            ret.bw.angles.noise_mean = bw_n_m;
+            ret.fw.angles.mean_tangent = fw_m_t;
+            ret.bw.angles.mean_tangent = bw_m_t;
+            ret.fw.dX = fw_dX;
+            ret.bw.dX = bw_dX;
+            ret.fw.angles.delta_tangent = fw_angles_tangent;
+            ret.bw.angles.delta_tangent = bw_angles_tangent;
+            ret.activity_source = activity_source;
+        end
+    end
+    
+    methods(Static, Access = private)
+        function [my_X, my_ks] = extractor(X, ks, b1, b2)
+            eq1 = ks == b1;
+            eq2 = ks == b2;
+            my_X = [X(eq1,:); X(eq2,:)];
+            my_ks = [ones(sum(eq1),1); -ones(sum(eq2),1)];
+        end
+        function [m,e] = upper_diags_stats(varargin)
+            C = cellfun(...
+                @(M) arrayfun(@(i) diag(M,i), 1:size(M,1)-1,...
+                'UniformOutput', false),...
+                varargin, 'UniformOutput', false);
+            Q = cellfun(@(varargin)cat(1,varargin{:}),...
+                C{:}, 'UniformOutput', false);
+            m = cellfun(@mean, Q);
+            e = cellfun(@(x)std(x)./sqrt(length(x)), Q);
+        end
         function ret = empty_merge(varargin)
             for i = 1:numel(varargin)
                 if ~isempty(varargin{i})
@@ -280,9 +391,48 @@ classdef Analyzer < handle
             end
             ret = [];
         end
+        function muti_struct = place_muti(X_spike, ks, alpha, n_shufs)
+            
+            tabu = @(Y) sparse(Y, 1, 1);
+            
+            [n_samp, total_neurons] = size(X_spike);
+            K = max(ks);
+            counts_y = tabu(ks);
+            muti_func = @(x) muti_bin(x, ks, K, counts_y);
+            
+            muti = zeros(1, total_neurons);
+            for c_ix = 1:total_neurons
+                sp_inds = find(X_spike(:,c_ix)~=0);
+                muti(c_ix) = muti_func(sp_inds);
+            end
+            
+            muti_shuf = zeros(n_shufs, total_neurons);
+            n_nzspike = sum(X_spike~=0);
+            for sh_ix = 1:n_shufs
+                for c_ix = 1:total_neurons
+                    fake_spike = randperm(n_samp, n_nzspike(c_ix));
+                    muti_shuf(sh_ix, c_ix) = muti_func(fake_spike);
+                end
+                if mod(sh_ix,100)==0, fprintf('%d ', sh_ix/100); end
+            end
+            fprintf('\n');
+            
+            pvals = mean(muti < muti_shuf);
+            sorted_pvals = sort(pvals);
+            crit = (1:numel(sorted_pvals))./numel(sorted_pvals).*alpha;
+            cutoff_ind = find(sorted_pvals < crit, 1, 'last');
+            cutoff = sorted_pvals(cutoff_ind);
+            bh_signif_cells = pvals <= cutoff;
+            
+            muti_struct.bits = muti;
+            muti_struct.alpha = alpha;
+            muti_struct.cutoff = cutoff;
+            muti_struct.signif = bh_signif_cells;
+            
+        end
     end
     
-    %plotting methods
+    %% plotting methods
     methods
         function make_plots(o)
             mean_err = cellfun(@(x)mean(x.mean_err.te), o.res.unshuf.errors);
@@ -379,53 +529,6 @@ classdef Analyzer < handle
             xlabel 'bin distance'; ylabel probability; title 'mean correct posterior by distance - opposite directional bins';
             ylim([0.5 1]);
         end
-        
-        function [bin_X, mean_bin_X, cov_bin_X, fw_princ, bw_princ,...
-                fw_angles, bw_angles, fw_dX, bw_dX, fw_angles_tangent, bw_angles_tangent, varargout] = bin_data(o, is_shuffled, use_pls)
-            activity_source = o.data.X.fast;
-            if is_shuffled
-                activity_source = shuffle(activity_source, o.data.y.ks);
-            end
-            
-            if use_pls
-                [~, ~, activity_source] = plsregress(activity_source, o.data.y.scaled, 2);
-                varargout{1} = activity_source;
-            end
-            
-            tot_bins = 2*o.opt.n_bins;
-            bin_X = cell(1,tot_bins);
-            for b = 1:tot_bins
-                bin_X{b} = activity_source(o.data.y.ks==b,:);
-            end
-            mean_bin_X = cellfun(@mean, bin_X, 'UniformOutput', false);
-            cov_bin_X = cellfun(@cov, bin_X, 'UniformOutput', false);
-            mean_bin_X = cell2mat(mean_bin_X.');
-            cov_bin_X = cat(3, cov_bin_X{:});
-            cov_bin_X = permute(cov_bin_X, [3 1 2]);
-            
-            fw_bin_X = bin_X(1:2:end);
-            bw_bin_X = bin_X(2:2:end);
-            fw_dX = diff(mean_bin_X(1:2:end,:));
-            bw_dX = diff(mean_bin_X(2:2:end,:));
-            
-            for b = 1:o.opt.n_bins
-                coeffs = pca(fw_bin_X{b});
-                fw_princ(b,:) = coeffs(:,1);
-                
-                coeffs = pca(bw_bin_X{b});
-                bw_princ(b,:) = coeffs(:,1);
-            end
-            for b = 1:o.opt.n_bins-1
-                fw_angles(b) = angle_v(fw_princ(b,:), fw_dX(b,:));
-                bw_angles(b) = angle_v(bw_princ(b,:), bw_dX(b,:));
-            end
-            
-            for b = 1:o.opt.n_bins-2
-                fw_angles_tangent(b) = angle_v(fw_dX(b,:), fw_dX(b+1,:));
-                bw_angles_tangent(b) = angle_v(bw_dX(b,:), bw_dX(b+1,:));
-            end
-        end
-        
         function [fw, bw] = angle_analysis(o, printit)
             if ~exist('printit', 'var')
                 printit = false;
@@ -446,7 +549,7 @@ classdef Analyzer < handle
                 o.bin_data(true, true);
             
             colors = parula(1000)*0.8;
-             
+            
             figure('Position', [0 0 800 600]);
             
             subplot(2,2,1);
@@ -471,7 +574,7 @@ classdef Analyzer < handle
             xlabel PLS1
             ylabel PLS2
             title(['Visualized covariances, ' num2str(o.opt.n_bins) ' bins']);
-
+            
             subplot(2,2,3);
             hold on;
             scatter(X_pls_shuf(:,1), X_pls_shuf(:,2), 1, o.data.y.scaled);
@@ -607,34 +710,8 @@ classdef Analyzer < handle
                 print('-dpng', ['graphs2/analyzer_figs/large/' mouse_id '/noise_eigenvector.png']);
             end
         end
-        
-        function ord = neuron_pos_order(o, direc)
-            %rerange = @(x) (x-min(x))./sum(x-min(x));
-            slice_number = [0; cumsum(diff(o.data.y.direction) > 0)];
-            if strcmp(direc, 'fw')
-                X = o.data.X.fast(o.data.y.direction==1,:);
-                X = X - min(X);
-                X(X < prctile(X,75)) = 0;
-                X = X./sum(X);
-                
-                y = o.data.y.scaled(o.data.y.direction==1);
-                ind = X.'*y;
-                [~, ord] = sort(ind);
-                
-                fw_slice_number = slice_number(o.data.y.direction==1);
-                slice_sizes = tabulate(fw_slice_number);
-                slice_sizes = slice_sizes(:,2);
-                sliced_X = o.data.X.fast(o.data.y.direction==1,:);
-                sliced_X = mat2cell(sliced_X, slice_sizes, size(sliced_X,2));
-                max_len = max(cellfun(@(x)size(x,1), sliced_X));
-                sliced_X = cellfun(@(x)padarray(x,[max_len-size(x,1) 0],0,'pre'),...
-                    sliced_X, 'UniformOutput', false);
-                sliced_X = cat(3, sliced_X{:});
-            end
-            
-        end
-        
     end
+    
     methods(Static)
         function anas = aggregate_plots(anas, printit, fmat)
             if ~exist('printit', 'var')
