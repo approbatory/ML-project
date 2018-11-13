@@ -1,5 +1,5 @@
 % to run all:
-% S = dir('full_records'); for fs = S', if ~fs.isdir, o = Analyzer.recreate(fullfile(fs.folder, fs.name)); pls_origin; end, end
+% S = dir('full_records'); for fs = S', if ~fs.isdir, o = Analyzer.recreate(fullfile(fs.folder, fs.name)); pls_origin; end, end; close all; clear; disp('done');
 printit = true;
 
 if printit
@@ -13,16 +13,17 @@ if printit
         mkdir(fig_dir);
     end
 end
+%% f_PLS_vis
 
-[XL, ~, act,~,~,~,~,stats] = plsregress(o.data.X.fast, o.data.y.scaled, 2);
+[XL, ~, act,~,~,~,~,stats] = plsregress(o.data.X.fast, zscore([o.data.y.scaled, o.data.y.direction]), 2);
 X_mean = mean(o.data.X.fast);
 
 act_origin = -X_mean * stats.W;
 
 ret = o.bin_data(false, false);
 ret_shuf = o.bin_data(true, false);
-%%
-h1 = figure;
+
+f_PLS_vis = figure;
 hold on;
 scatter(act(:,1), act(:,2), 20, o.data.y.scaled,...
     'filled', 'MarkerFaceAlpha', 0.05);
@@ -52,18 +53,19 @@ z_b = bw_vars.*ret.bw.princ*stats.W + q_b;
 mz_b = -bw_vars.*ret.bw.princ*stats.W + q_b;
 for b = 1:o.opt.n_bins
     n_vec = plot([q_f(b,1) z_f(b,1)],...
-        [q_f(b,2) z_f(b,2)], '-m');
+        [q_f(b,2) z_f(b,2)], '-k');
     plot([q_b(b,1) z_b(b,1)],...
-        [q_b(b,2) z_b(b,2)], '-m');
+        [q_b(b,2) z_b(b,2)], '-k');
     plot([q_f(b,1) mz_f(b,1)],...
-        [q_f(b,2) mz_f(b,2)], '-m');
+        [q_f(b,2) mz_f(b,2)], '-k');
     plot([q_b(b,1) mz_b(b,1)],...
-        [q_b(b,2) mz_b(b,2)], '-m');
+        [q_b(b,2) mz_b(b,2)], '-k');
 end
 legend([m_vec, t_vec, n_vec],...
     'Mean activity', 'Curve tangent', 'Principal noise');
-%%
-h2 = figure;
+legend Location best
+%% f_angles_by_bin
+f_angles_by_bin = figure;
 subplot(2,1,1); hold on;
 plot(ret.fw.angles.noise_tangent, 'DisplayName', 'Noise/Tangent');
 plot(ret.fw.angles.noise_mean, 'DisplayName', 'Noise/Mean');
@@ -84,26 +86,53 @@ title 'Dot product angles (backward direction)'
 xlabel 'Bin index'
 ylabel 'Angle (degrees)'
 %%
-h3 = figure;
-subplot(3,1,1);
+h2_1 = figure;
+subplot(2,1,1); hold on;
+plot(ret_shuf.fw.angles.noise_tangent, 'DisplayName', 'Noise/Tangent');
+plot(ret_shuf.fw.angles.noise_mean, 'DisplayName', 'Noise/Mean');
+plot(ret_shuf.fw.angles.mean_tangent, 'DisplayName', 'Mean/Tangent');
+line(xlim,[90 90], 'Color', 'k', 'DisplayName', 'orthogonal');
+l = legend('boxoff'); l.NumColumns = 2; legend Location best
+title 'Dot product angles, on shuffle (forward direction)'
+xlabel 'Bin index'
+ylabel 'Angle (degrees)'
+
+subplot(2,1,2); hold on; title 'bw'
+plot(ret_shuf.bw.angles.noise_tangent, 'DisplayName', 'Noise/Tangent');
+plot(ret_shuf.bw.angles.noise_mean, 'DisplayName', 'Noise/Mean');
+plot(ret_shuf.bw.angles.mean_tangent, 'DisplayName', 'Mean/Tangent');
+line(xlim,[90 90], 'Color', 'k', 'DisplayName', 'orthogonal');
+l = legend('boxoff'); l.NumColumns = 2; legend Location best
+title 'Dot product angles, on shuffle (backward direction)'
+xlabel 'Bin index'
+ylabel 'Angle (degrees)'
+%% f_angles_hist
+f_angles_hist = figure;
+subplot(3,1,1); hold on;
 w_ = [ret.fw.angles.noise_tangent, ret.bw.angles.noise_tangent];
 mw_ = mean(w_);
-histogram(w_, 'DisplayName', 'Noise/Tangent', 'FaceColor', 'b');
-legend boxoff
-line([90 90], ylim, 'Color', 'k', 'DisplayName', 'Orthogonal');
-line([mw_ mw_], ylim, 'Color', 'k', 'LineStyle', '--', 'DisplayName', 'Mean angle');
-xlim([45 135]);
+w_s = [ret_shuf.fw.angles.noise_tangent, ret_shuf.bw.angles.noise_tangent];
+mw_s = mean(w_s);
+histogram(w_s, 'DisplayName', 'Noise (shuffled)/Tangent', 'FaceColor', [0.8 0.8 0.9]);
+histogram(w_, 'DisplayName', 'Noise/Tangent', 'FaceColor', [0 0 1]);
+legend boxoff; legend Location west
+line([mw_s mw_s], ylim, 'Color', 'k', 'LineStyle', '--', 'DisplayName', 'Mean angle (shuffled)');
+line([mw_ mw_], ylim, 'Color', 'k', 'LineStyle', '-', 'LineWidth', 2, 'DisplayName', 'Mean angle');
+xlim([0 90]);
 xlabel 'Angle (degrees)'
 ylabel 'Frequency'
 
-subplot(3,1,2);
+subplot(3,1,2); hold on;
 w_ = [ret.fw.angles.noise_mean, ret.bw.angles.noise_mean];
 mw_ = mean(w_);
-histogram(w_, 'DisplayName', 'Noise/Mean', 'FaceColor', 'r');
-legend boxoff
-line([90 90], ylim, 'Color', 'k', 'DisplayName', 'Orthogonal');
-line([mw_ mw_], ylim, 'Color', 'k', 'LineStyle', '--', 'DisplayName', 'Mean angle');
-xlim([45 135]);
+w_s = [ret_shuf.fw.angles.noise_mean, ret_shuf.bw.angles.noise_mean];
+mw_s = mean(w_s);
+histogram(w_s, 'DisplayName', 'Noise (shuffled)/Mean', 'FaceColor', [0.9 0.8 0.8]);
+histogram(w_, 'DisplayName', 'Noise/Mean', 'FaceColor', [1 0 0]);
+legend boxoff; legend Location west
+line([mw_s mw_s], ylim, 'Color', 'k', 'LineStyle', '--', 'DisplayName', 'Mean angle (shuffled)');
+line([mw_ mw_], ylim, 'Color', 'k', 'LineStyle', '-', 'LineWidth', 2, 'DisplayName', 'Mean angle');
+xlim([0 90]);
 xlabel 'Angle (degrees)'
 ylabel 'Frequency'
 
@@ -111,15 +140,14 @@ subplot(3,1,3);
 w_ = [ret.fw.angles.mean_tangent, ret.bw.angles.mean_tangent];
 mw_ = mean(w_);
 histogram(w_, 'DisplayName', 'Mean/Tangent', 'FaceColor', 'y');
-legend boxoff; legend Location best
-line([90 90], ylim, 'Color', 'k', 'DisplayName', 'Orthogonal');
-line([mw_ mw_], ylim, 'Color', 'k', 'LineStyle', '--', 'DisplayName', 'Mean angle');
+legend boxoff; legend Location west
+%line([90 90], ylim, 'Color', 'k', 'LineWidth', 2, 'DisplayName', 'Orthogonal');
+line([mw_ mw_], ylim, 'Color', 'k', 'LineWidth', 2, 'DisplayName', 'Mean angle');
 xlim([45 135]);
 xlabel 'Angle (degrees)'
 ylabel 'Frequency'
-
-%%
-h4 = figure; hold on;
+%% f_noise_spect
+f_noise_spect = figure; hold on;
 tot_lat = [ret.fw.latent; ret.bw.latent];
 m_lat = mean(tot_lat);
 s_lat = std(tot_lat);
@@ -137,8 +165,8 @@ title 'Effect of shuffling on noise spectrum'
 %% printing section
 if printit
     printer = @(name) print('-dpng', fullfile(fig_dir, name));
-    figure(h1); printer('PLS_vis.png');
-    figure(h2); printer('angles_by_bin.png');
-    figure(h3); printer('angles_hist.png');
-    figure(h4); printer('noise_spect.png');
+    figure(f_PLS_vis); printer('PLS_vis.png');
+    figure(f_angles_by_bin); printer('angles_by_bin.png');
+    figure(f_angles_hist); printer('angles_hist.png');
+    figure(f_noise_spect); printer('noise_spect.png');
 end
