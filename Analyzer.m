@@ -247,6 +247,8 @@ classdef Analyzer < handle
             obj.res.unshuf.errors = merger(cellfun(@(x)x.res.unshuf.errors, L, 'UniformOutput', false));
             obj.res.shuf.te_pred = merger(cellfun(@(x)x.res.shuf.te_pred, L, 'UniformOutput', false));
             obj.res.shuf.errors = merger(cellfun(@(x)x.res.shuf.errors, L, 'UniformOutput', false));
+            obj.res.diag.te_pred = merger(cellfun(@(x)x.res.diag.te_pred, L, 'UniformOutput', false));
+            obj.res.diag.errors = merger(cellfun(@(x)x.res.diag.errors, L, 'UniformOutput', false));
             
             mats_unshuf = cellfun(@(x)x.res.unshuf.mean_probs_correct, L, 'UniformOutput', false);
             mats_shuf = cellfun(@(x)x.res.shuf.mean_probs_correct, L, 'UniformOutput', false);
