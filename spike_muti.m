@@ -1,18 +1,28 @@
-%figure;
-%hold on;
+figure;
+hold on;
 
-%c_ix = 140;
+c_ix = 250;
+rx = 5100:7100;
 
-%plot(tracesEvents.rawProb(:,c_ix));
-%%plot(tracesEvents.rawTraces(500:1500,100));
-%%plot(tracesEvents.tresholdEvents(500:1500,100));
+plot(rx,tracesEvents.rawTraces(rx,c_ix));
+plot(rx,tracesEvents.rawProb(rx,c_ix));
+%plot(tracesEvents.tresholdEvents(500:1500,100));
 %plot(tracesEvents.spikeDeconvTrace(:,c_ix));
-%plot(tracesEvents.spikeDeconv(:,c_ix));
+plot(rx,tracesEvents.spikeDeconv(rx,c_ix));
 %plot(tracesEvents.spikeML(:,c_ix));
 
-%%legend rawProb rawTraces tresholdEvents spikeDeconvTrace spikeDeconv spikeML
-%legend rawProb spikeDeconvTrace spikeDeconv spikeML
-
+%legend rawProb rawTraces tresholdEvents spikeDeconvTrace spikeDeconv spikeML
+legend rawTraces rawProb spikeDeconv
+xlabel Frame
+ylabel 'Neural trace'
+%%
+rx = 25340:30360;
+yc = tracesEvents.position(rx,1);
+yc = (yc - min(yc))./range(yc).*120;
+plot(rx, yc);
+xlabel Frame
+ylabel 'Track coord. (cm)'
+%%
 o = Analyzer.recreate('full_records/Analyzer_Mouse-2022-20150326_093722-linear-track-TracesAndEvents.mat_181016-144615_0.mat');
 %%
 my_ks = o.data.y.ks;

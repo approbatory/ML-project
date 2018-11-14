@@ -60,11 +60,13 @@ classdef Analyzer < handle
             o.res.unshuf.errors = emp;
             o.res.shuf.te_pred = emp;
             o.res.shuf.errors = emp;
+            o.res.diag.te_pred = emp;
+            o.res.diag.errors = emp;
             
             o.res.unshuf.mean_probs_correct = nan(2*o.opt.n_bins, 2*o.opt.n_bins);
             o.res.shuf.mean_probs_correct = nan(2*o.opt.n_bins, 2*o.opt.n_bins);
         end
-        function [te_pred, errors] = decode_one(o, n_cells, do_shuf)
+        function [te_pred, errors] = decode_one(o, n_cells, do_shuf, alg)
             if islogical(n_cells) && (length(n_cells) == o.data.total_neurons) && isvector(n_cells)
                 cell_selection = n_cells;
             elseif isscalar(n_cells) && isnumeric(n_cells)
@@ -77,7 +79,7 @@ classdef Analyzer < handle
                 my_X = shuffle(my_X, o.data.y.ks);
             end
             k_fold = 10;
-            alg = my_algs('ecoclin');
+            %alg = my_algs('ecoclin');
             te_pred = cell(k_fold,1);
             
             cs = o.data.y.centers;
@@ -107,15 +109,29 @@ classdef Analyzer < handle
             my_job = ceil((1:total_iters)./total_iters .* denom)==numer;
             all_jobs = false(size(o.res.unshuf.te_pred));
             all_jobs(my_job) = true;
+            
+            if ~isfield(o.res, 'diag')
+                o.res.diag.te_pred = cell(length(o.data.neuron_nums), o.opt.n_samples);
+                o.res.diag.errors = cell(length(o.data.neuron_nums), o.opt.n_samples);
+            end %TODO add for unshuf & shuf
+            
             for c_ix = 1:length(o.data.neuron_nums)
                 for rep_ix = 1:o.opt.n_samples
                     if ~all_jobs(c_ix, rep_ix)
                         continue;
                     end
+                    if isempty(o.res.unshuf.te_pred{c_ix,rep_ix})
                     [o.res.unshuf.te_pred{c_ix,rep_ix},...
-                        o.res.unshuf.errors{c_ix,rep_ix}] = o.decode_one(o.data.neuron_nums(c_ix), false);
+                        o.res.unshuf.errors{c_ix,rep_ix}] = o.decode_one(o.data.neuron_nums(c_ix), false, my_algs('ecoclin'));
+                    end
+                    if isempty(o.res.shuf.te_pred{c_ix,rep_ix})
                     [o.res.shuf.te_pred{c_ix,rep_ix},...
-                        o.res.shuf.errors{c_ix,rep_ix}] = o.decode_one(o.data.neuron_nums(c_ix), true);
+                        o.res.shuf.errors{c_ix,rep_ix}] = o.decode_one(o.data.neuron_nums(c_ix), true, my_algs('ecoclin'));
+                    end
+                    if isempty(o.res.diag.te_pred{c_ix,rep_ix})
+                    [o.res.diag.te_pred{c_ix,rep_ix},...
+                        o.res.diag.errors{c_ix,rep_ix}] = o.decode_one(o.data.neuron_nums(c_ix), true, my_algs('ecoclin', 'shuf'));
+                    end
                     fprintf('cells:%d/%d\treps:%d/%d\n', c_ix, length(o.data.neuron_nums), rep_ix, o.opt.n_samples);
                 end
             end
@@ -185,6 +201,15 @@ classdef Analyzer < handle
                 mkdir(save_dir);
             end
             ana.save_res(save_dir);
+        end
+        function dispatch_update(lp, num, denom)
+            o = Analyzer.recreate(lp);
+            o.decode(num, denom);
+            save_dir = [lp '_records'];
+            if ~exist(save_dir, 'dir')
+                mkdir(save_dir);
+            end
+            o.save_res(save_dir);
         end
         function obj = recreate(load_path)
             if ischar(load_path)
