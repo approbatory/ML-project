@@ -79,7 +79,9 @@ classdef Analyzer < handle
                 my_X = shuffle(my_X, o.data.y.ks);
             end
             k_fold = 10;
-            %alg = my_algs('ecoclin');
+            if ~exist('alg', 'var')
+                alg = my_algs('ecoclin');
+            end
             te_pred = cell(k_fold,1);
             
             cs = o.data.y.centers;
@@ -130,7 +132,7 @@ classdef Analyzer < handle
                     end
                     if isempty(o.res.diag.te_pred{c_ix,rep_ix})
                     [o.res.diag.te_pred{c_ix,rep_ix},...
-                        o.res.diag.errors{c_ix,rep_ix}] = o.decode_one(o.data.neuron_nums(c_ix), true, my_algs('ecoclin', 'shuf'));
+                        o.res.diag.errors{c_ix,rep_ix}] = o.decode_one(o.data.neuron_nums(c_ix), false, my_algs('ecoclin', 'shuf'));
                     end
                     fprintf('cells:%d/%d\treps:%d/%d\n', c_ix, length(o.data.neuron_nums), rep_ix, o.opt.n_samples);
                 end
@@ -763,6 +765,36 @@ classdef Analyzer < handle
                 end
             end
             
+            %bodge for aggregate muti plots
+            if printit == 2
+                for i = 1:n
+                    fullcells_err(i) =...
+                        mean(cellfun(@(x)mean(x.mean_err.te),...
+                        anas{i}.res.unshuf.errors(end,:)));
+                    fprintf('i=%d\tGot the full decoding error\n',i);
+                    fullcells_err_shuf(i) =...
+                        mean(cellfun(@(x)mean(x.mean_err.te),...
+                        anas{i}.res.shuf.errors(end,:)));
+                    fprintf('i=%d\tGot the full decoding error (shuf)\n',i);
+                    
+                    [~, errs_] = anas{i}.decode_one(anas{i}.res.muti.signif, false);
+                    muticells_err(i) = mean(errs_.mean_err.te);
+                    fprintf('i=%d\tGot the muti decoding error\n',i);
+                    [~, errs_] = anas{i}.decode_one(anas{i}.res.muti.signif, true);
+                    muticells_err_shuf(i) = mean(errs_.mean_err.te);
+                    fprintf('i=%d\tGot the muti decoding error (shuf)\n',i);
+                    
+                    [~, errs_] = anas{i}.decode_one(~anas{i}.res.muti.signif, false);
+                    nonmuticells_err(i) = mean(errs_.mean_err.te);
+                    fprintf('i=%d\tGot the nonmuti decoding error\n',i);
+                    [~, errs_] = anas{i}.decode_one(~anas{i}.res.muti.signif, true);
+                    nonmuticells_err_shuf(i) = mean(errs_.mean_err.te);
+                    fprintf('i=%d\tGot the nonmuti decoding error (shuf)\n',i);
+                end
+                keyboard
+                return;
+            end
+            
             figure;
             hold on;
             for i = 1:n
@@ -785,6 +817,34 @@ classdef Analyzer < handle
                 small_printer('graphs2/analyzer_figs/small/mean_errs_logscale');
             end
             
+            if any(cellfun(@(a)isfield(a.res, 'diag'), anas))
+                figure;
+                for i = 1:n
+                    if ~isfield(anas{i}.res, 'diag')
+                        continue;
+                    end
+                    [m,e] = anas{i}.get_err('mean_err', 'diag');
+                    shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv(0.95), 'lineprops', 'r');
+                end
+                for i = 1:n
+                    if ~isfield(anas{i}.res, 'diag')
+                        continue;
+                    end
+                    [m,e] = anas{i}.get_err('mean_err', 'unshuf');
+                    shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv(0.95), 'lineprops', 'b');
+                end
+                set(gca, 'YScale', 'log');
+                xlabel 'Number of cells'
+                ylabel 'Mean error (cm)'
+                xlim([0 500]);
+                text(200, 7, 'Full', 'Color', 'blue');
+                text(300, 2.2, 'Diagonal', 'Color', 'red');
+                if printit
+                    large_printer('graphs2/analyzer_figs/large/diag_mean_errs_logscale');
+                    figure_format
+                    small_printer('graphs2/analyzer_figs/small/diag_mean_errs_logscale');
+                end
+            end
             
             figure;
             hold on;
