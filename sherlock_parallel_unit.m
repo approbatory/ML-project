@@ -7,7 +7,8 @@ fprintf('random seed %d\n\n', my_rand_seed);
 addpath utils decoding
 try
     %Analyzer.dispatch(source, numer, denom);
-    Analyzer.dispatch_update(source, numer, denom);
+    %Analyzer.dispatch_update(source, numer, denom);
+    test_selector(source);
 catch me
     fprintf('%s / %s\n', me.identifier, me.message);
 end
