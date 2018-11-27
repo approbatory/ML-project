@@ -767,6 +767,8 @@ classdef Analyzer < handle
             
             %bodge for aggregate muti plots
             if printit == 2
+                load('saving_muti_decoding_results.mat', '*_err*');
+                if false
                 for i = 1:n
                     fullcells_err(i) =...
                         mean(cellfun(@(x)mean(x.mean_err.te),...
@@ -791,7 +793,51 @@ classdef Analyzer < handle
                     nonmuticells_err_shuf(i) = mean(errs_.mean_err.te);
                     fprintf('i=%d\tGot the nonmuti decoding error (shuf)\n',i);
                 end
-                keyboard
+                end
+                %keyboard
+                n_neu_full = cellfun(@(x)x.data.total_neurons, anas);
+                n_neu_sig  = cellfun(@(x)sum(x.res.muti.signif), anas);
+                n_neu_ins  = cellfun(@(x)sum(~x.res.muti.signif), anas);
+                [~, ordn] = sort(n_neu_full);
+                [~, ords] = sort(n_neu_sig);
+                [~, ordi] = sort(n_neu_ins);
+                figure; hold on;
+                plot(n_neu_full(ordn), fullcells_err(ordn), '-ok', 'DisplayName', 'Full');
+                plot(n_neu_sig(ords), muticells_err(ords), '-ob', 'DisplayName', 'Signif.');
+                plot(n_neu_ins(ordi), nonmuticells_err(ordi), '-or', 'DisplayName', 'Insignif.');
+                plot(n_neu_full(ordn), fullcells_err_shuf(ordn), '-.+k', 'DisplayName', 'Full (shuf)');
+                plot(n_neu_sig(ords), muticells_err_shuf(ords), '-.+b', 'DisplayName', 'Signif. (shuf)');
+                plot(n_neu_ins(ordi), nonmuticells_err_shuf(ordi), '-.+r', 'DisplayName', 'Insignif. (shuf)');
+                legend boxoff
+                set(gca, 'YScale', 'log');
+                ylim([1 100]);
+                xlabel 'Number of cells'; ylabel 'Mean error (cm)';
+                title 'Decoding error across mice, by MI significance';
+                
+                if printit
+                    large_printer('graphs2/analyzer_figs/large/err_muti_plot');
+                    figure_format
+                    small_printer('graphs2/analyzer_figs/small/err_muti_plot');
+                end
+                
+                
+                frac_signif = cellfun(@(x)mean(x.res.muti.signif), anas);
+                frac_signif_fw = cellfun(@(x)mean(x.res.muti_fw.signif), anas);
+                frac_signif_bw = cellfun(@(x)mean(x.res.muti_bw.signif), anas);
+                figure('Units', 'inches', 'Position', [1 1 4 3]);
+                stem(n_neu_full(ordn), frac_signif(ordn)); hold on;
+                stem(n_neu_full(ordn), frac_signif_fw(ordn));
+                stem(n_neu_full(ordn), frac_signif_bw(ordn));
+                legend Any Forward Backward Location southeast
+                ylim([0 1]);
+                xlabel 'Number of cells'; ylabel 'Fraction signif.';
+                title 'Fraction of cells with signif. place MI';
+                
+                if printit
+                    large_printer('graphs2/analyzer_figs/large/frac_signif');
+                    figure_format
+                    small_printer('graphs2/analyzer_figs/small/frac_signif');
+                end
                 return;
             end
             
@@ -836,9 +882,9 @@ classdef Analyzer < handle
                 set(gca, 'YScale', 'log');
                 xlabel 'Number of cells'
                 ylabel 'Mean error (cm)'
-                xlim([0 500]);
-                text(200, 7, 'Full', 'Color', 'blue');
-                text(300, 2.2, 'Diagonal', 'Color', 'red');
+                xlim([0 500]); ylim([1 100]);
+                text(200, 8, 'Diagonal', 'Color', 'red');
+                text(300, 2.2, 'Full', 'Color', 'blue');
                 if printit
                     large_printer('graphs2/analyzer_figs/large/diag_mean_errs_logscale');
                     figure_format
