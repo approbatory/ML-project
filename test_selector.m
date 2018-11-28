@@ -25,12 +25,14 @@ decode_series(source_paths{dispatch_index}, mouse_names{dispatch_index},...
 end
 
 function decode_series(source_path, mouse_id, opt, database_file)
-if ~exist(database_file, 'file')
-    conn = sqlite(database_file, 'create');
-    conn.exec('create table decoding (Mouse text, Setting text, NumNeurons int, DataSize int, MeanErrors real, MSE real)');
-else
-    conn = sqlite(database_file);
-end
+assert(exist(database_file, 'file')~=0, 'make sure the db file is there');
+%if ~exist(database_file, 'file')
+%    error('make sure the file is there');
+%    conn = sqlite(database_file, 'create');
+%    conn.exec('create table decoding (Mouse text, Setting text, NumNeurons int, DataSize int, MeanErrors real, MSE real)');
+%else
+%    conn = sqlite(database_file);
+%end
 
 table_name = 'decoding';
 field_names = {'Mouse', 'Setting', 'NumNeurons', 'DataSize', 'MeanErrors', 'MSE'};
@@ -50,25 +52,31 @@ if neuron_series(end) ~= num_neurons
     neuron_series = [neuron_series num_neurons];
 end
 
-
-for n_neu = neuron_series
+db_queue = cell(numel(neuron_series),3);
+for i = 1:numel(neuron_series)
+    n_neu = neuron_series(i);
     [mean_err, MSE] = decode_tensor(data_tensor, tr_dir, opt.bin_width, alg, false,...
         n_neu, num_trials);
-    conn.insert(table_name, field_names,...
-        {mouse_id, 'unshuffled', n_neu, num_trials, mean_err, MSE});
+    db_queue{i,1} = ...
+        {mouse_id, 'unshuffled', n_neu, num_trials, mean_err, MSE};
     fprintf('n_neu=%d\tmean_err = %.2f\n', n_neu, mean_err);
     
     [mean_err_s, MSE_s] = decode_tensor(data_tensor, tr_dir, opt.bin_width, alg, true,...
         n_neu, num_trials);
-    conn.insert(table_name, field_names,...
-        {mouse_id, 'shuffled', n_neu, num_trials, mean_err_s, MSE_s});
+    db_queue{i,2} = ...
+        {mouse_id, 'shuffled', n_neu, num_trials, mean_err_s, MSE_s};
     fprintf('n_neu=%d\tmean_err_s = %.2f\n', n_neu, mean_err_s);
     
     [mean_err_d, MSE_d] = decode_tensor(data_tensor, tr_dir, opt.bin_width, alg_diag, false,...
         n_neu, num_trials);
-    conn.insert(table_name, field_names,...
-        {mouse_id, 'diagonal', n_neu, num_trials, mean_err_d, MSE_d});
+    db_queue{i,3} = ...
+        {mouse_id, 'diagonal', n_neu, num_trials, mean_err_d, MSE_d};
     fprintf('n_neu=%d\tmean_err_d = %.2f\n\n', n_neu, mean_err_d);
+end
+pause(randi(200));
+conn = sqlite(database_file);
+for i = 1:numel(db_queue)
+    conn.insert(table_name, field_names, db_queue{i});
 end
 conn.close;
 end
