@@ -21,7 +21,7 @@ opt.d_neurons = 30;
 opt.bin_width = opt.total_length/opt.n_bins;
 
 decode_series(source_paths{dispatch_index}, mouse_names{dispatch_index},...
-    opt, 'tensor.db');
+    opt);
 end
 
 function decode_series(source_path, mouse_id, opt)
@@ -68,7 +68,7 @@ end
 if ~exist('records', 'dir')
     mkdir('records');
 end
-save(sprintf('records/decoding_record_%s.mat', timestring), db_queue);
+save(sprintf('records/decoding_record_%s.mat', timestring), 'db_queue');
 end
 
 function [T, d] = tensor_loader(source_path, mouse_id, opt)
