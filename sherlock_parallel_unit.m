@@ -8,7 +8,7 @@ addpath utils decoding
 try
     %Analyzer.dispatch(source, numer, denom);
     %Analyzer.dispatch_update(source, numer, denom);
-    test_selector(source);
+    test_selector(str2num(source));
 catch me
     fprintf('%s / %s\n', me.identifier, me.message);
 end
