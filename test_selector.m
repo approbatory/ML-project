@@ -24,18 +24,9 @@ decode_series(source_paths{dispatch_index}, mouse_names{dispatch_index},...
     opt, 'tensor.db');
 end
 
-function decode_series(source_path, mouse_id, opt, database_file)
-assert(exist(database_file, 'file')~=0, 'make sure the db file is there');
-%if ~exist(database_file, 'file')
-%    error('make sure the file is there');
-%    conn = sqlite(database_file, 'create');
-%    conn.exec('create table decoding (Mouse text, Setting text, NumNeurons int, DataSize int, MeanErrors real, MSE real)');
-%else
-%    conn = sqlite(database_file);
-%end
-
-table_name = 'decoding';
-field_names = {'Mouse', 'Setting', 'NumNeurons', 'DataSize', 'MeanErrors', 'MSE'};
+function decode_series(source_path, mouse_id, opt)
+%table_name = 'decoding';
+%field_names = {'Mouse', 'Setting', 'NumNeurons', 'DataSize', 'MeanErrors', 'MSE'};
 [data_tensor, tr_dir] = tensor_loader(source_path, mouse_id, opt);
 
 num_neurons = size(data_tensor, 1);
@@ -73,12 +64,11 @@ for i = 1:numel(neuron_series)
         {mouse_id, 'diagonal', n_neu, num_trials, mean_err_d, MSE_d};
     fprintf('n_neu=%d\tmean_err_d = %.2f\n\n', n_neu, mean_err_d);
 end
-pause(randi(200));
-conn = sqlite(database_file);
-for i = 1:numel(db_queue)
-    conn.insert(table_name, field_names, db_queue{i});
+
+if ~exist('records', 'dir')
+    mkdir('records');
 end
-conn.close;
+save(sprintf('records/decoding_record_%s.mat', timestring), db_queue);
 end
 
 function [T, d] = tensor_loader(source_path, mouse_id, opt)
