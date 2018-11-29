@@ -1,5 +1,5 @@
 %% open sqlite connection
-conn = sqlite('tensor.db');
+conn = sqlite('decoding.db');
 %%
 minimal_params = conn.fetch('select min(N), min(D) from (select max(NumNeurons) as N, max(DataSize) as D from decoding group by Mouse);');
 min_num_neurons = minimal_params{1};
