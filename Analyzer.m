@@ -845,11 +845,11 @@ classdef Analyzer < handle
             hold on;
             for i = 1:n
                 [m,e] = anas{i}.get_err('mean_err', 'shuf');
-                shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv(0.95), 'lineprops', 'r');
+                shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv((1+0.95)/2), 'lineprops', 'r');
             end
             for i = 1:n
                 [m,e] = anas{i}.get_err('mean_err', 'unshuf');
-                shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv(0.95), 'lineprops', 'b');
+                shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv((1+0.95)/2), 'lineprops', 'b');
             end
             set(gca, 'YScale', 'log');
             xlabel 'Number of cells'
@@ -870,14 +870,14 @@ classdef Analyzer < handle
                         continue;
                     end
                     [m,e] = anas{i}.get_err('mean_err', 'diag');
-                    shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv(0.95), 'lineprops', 'r');
+                    shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv((1+0.95)/2), 'lineprops', 'r');
                 end
                 for i = 1:n
                     if ~isfield(anas{i}.res, 'diag')
                         continue;
                     end
                     [m,e] = anas{i}.get_err('mean_err', 'unshuf');
-                    shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv(0.95), 'lineprops', 'b');
+                    shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv((1+0.95)/2), 'lineprops', 'b');
                 end
                 set(gca, 'YScale', 'log');
                 xlabel 'Number of cells'
@@ -896,11 +896,11 @@ classdef Analyzer < handle
             hold on;
             for i = 1:n
                 [m,e] = anas{i}.get_err('imse', 'shuf');
-                shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv(0.95), 'lineprops', 'r');
+                shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv((1+0.95)/2), 'lineprops', 'r');
             end
             for i = 1:n
                 [m,e] = anas{i}.get_err('imse', 'unshuf');
-                shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv(0.95), 'lineprops', 'b');
+                shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv((1+0.95)/2), 'lineprops', 'b');
             end
             xlabel 'Number of cells'
             ylabel '1/MSE (cm^{-2})'

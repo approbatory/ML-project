@@ -17,6 +17,7 @@ opt.samp_freq = 20; %Hz
 opt.v_thresh = 4; %cm/s
 opt.n_bins = 20;
 opt.d_neurons = 30;
+opt.restrict_trials = 156;
 
 opt.bin_width = opt.total_length/opt.n_bins;
 
@@ -30,7 +31,15 @@ function decode_series(source_path, mouse_id, opt)
 [data_tensor, tr_dir] = tensor_loader(source_path, mouse_id, opt);
 
 num_neurons = size(data_tensor, 1);
-num_trials = min(sum(tr_dir == 1), sum(tr_dir == -1));
+if opt.restrict_trials > 0
+    num_trials = opt.restrict_trials;
+    max_trials = min(sum(tr_dir == 1), sum(tr_dir == -1));
+    if num_trials > max_trials
+        return;
+    end
+else
+    num_trials = min(sum(tr_dir == 1), sum(tr_dir == -1));
+end
 
 alg = my_algs('ecoclin');
 alg_diag = my_algs('ecoclin', 'shuf');
