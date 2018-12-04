@@ -60,11 +60,13 @@ classdef Analyzer < handle
             o.res.unshuf.errors = emp;
             o.res.shuf.te_pred = emp;
             o.res.shuf.errors = emp;
+            o.res.diag.te_pred = emp;
+            o.res.diag.errors = emp;
             
             o.res.unshuf.mean_probs_correct = nan(2*o.opt.n_bins, 2*o.opt.n_bins);
             o.res.shuf.mean_probs_correct = nan(2*o.opt.n_bins, 2*o.opt.n_bins);
         end
-        function [te_pred, errors] = decode_one(o, n_cells, do_shuf)
+        function [te_pred, errors] = decode_one(o, n_cells, do_shuf, alg)
             if islogical(n_cells) && (length(n_cells) == o.data.total_neurons) && isvector(n_cells)
                 cell_selection = n_cells;
             elseif isscalar(n_cells) && isnumeric(n_cells)
@@ -77,7 +79,9 @@ classdef Analyzer < handle
                 my_X = shuffle(my_X, o.data.y.ks);
             end
             k_fold = 10;
-            alg = my_algs('ecoclin');
+            if ~exist('alg', 'var')
+                alg = my_algs('ecoclin');
+            end
             te_pred = cell(k_fold,1);
             
             cs = o.data.y.centers;
@@ -107,15 +111,29 @@ classdef Analyzer < handle
             my_job = ceil((1:total_iters)./total_iters .* denom)==numer;
             all_jobs = false(size(o.res.unshuf.te_pred));
             all_jobs(my_job) = true;
+            
+            if ~isfield(o.res, 'diag')
+                o.res.diag.te_pred = cell(length(o.data.neuron_nums), o.opt.n_samples);
+                o.res.diag.errors = cell(length(o.data.neuron_nums), o.opt.n_samples);
+            end %TODO add for unshuf & shuf
+            
             for c_ix = 1:length(o.data.neuron_nums)
                 for rep_ix = 1:o.opt.n_samples
                     if ~all_jobs(c_ix, rep_ix)
                         continue;
                     end
+                    if isempty(o.res.unshuf.te_pred{c_ix,rep_ix})
                     [o.res.unshuf.te_pred{c_ix,rep_ix},...
-                        o.res.unshuf.errors{c_ix,rep_ix}] = o.decode_one(o.data.neuron_nums(c_ix), false);
+                        o.res.unshuf.errors{c_ix,rep_ix}] = o.decode_one(o.data.neuron_nums(c_ix), false, my_algs('ecoclin'));
+                    end
+                    if isempty(o.res.shuf.te_pred{c_ix,rep_ix})
                     [o.res.shuf.te_pred{c_ix,rep_ix},...
-                        o.res.shuf.errors{c_ix,rep_ix}] = o.decode_one(o.data.neuron_nums(c_ix), true);
+                        o.res.shuf.errors{c_ix,rep_ix}] = o.decode_one(o.data.neuron_nums(c_ix), true, my_algs('ecoclin'));
+                    end
+                    if isempty(o.res.diag.te_pred{c_ix,rep_ix})
+                    [o.res.diag.te_pred{c_ix,rep_ix},...
+                        o.res.diag.errors{c_ix,rep_ix}] = o.decode_one(o.data.neuron_nums(c_ix), false, my_algs('ecoclin', 'shuf'));
+                    end
                     fprintf('cells:%d/%d\treps:%d/%d\n', c_ix, length(o.data.neuron_nums), rep_ix, o.opt.n_samples);
                 end
             end
@@ -186,6 +204,15 @@ classdef Analyzer < handle
             end
             ana.save_res(save_dir);
         end
+        function dispatch_update(lp, num, denom)
+            o = Analyzer.recreate(lp);
+            o.decode(num, denom);
+            save_dir = [lp '_records'];
+            if ~exist(save_dir, 'dir')
+                mkdir(save_dir);
+            end
+            o.save_res(save_dir);
+        end
         function obj = recreate(load_path)
             if ischar(load_path)
                 my_save = load(load_path);
@@ -222,6 +249,8 @@ classdef Analyzer < handle
             obj.res.unshuf.errors = merger(cellfun(@(x)x.res.unshuf.errors, L, 'UniformOutput', false));
             obj.res.shuf.te_pred = merger(cellfun(@(x)x.res.shuf.te_pred, L, 'UniformOutput', false));
             obj.res.shuf.errors = merger(cellfun(@(x)x.res.shuf.errors, L, 'UniformOutput', false));
+            obj.res.diag.te_pred = merger(cellfun(@(x)x.res.diag.te_pred, L, 'UniformOutput', false));
+            obj.res.diag.errors = merger(cellfun(@(x)x.res.diag.errors, L, 'UniformOutput', false));
             
             mats_unshuf = cellfun(@(x)x.res.unshuf.mean_probs_correct, L, 'UniformOutput', false);
             mats_shuf = cellfun(@(x)x.res.shuf.mean_probs_correct, L, 'UniformOutput', false);
@@ -737,6 +766,7 @@ classdef Analyzer < handle
                 end
             end
             
+%<<<<<<< HEAD
 %             figure;
 %             hold on;
 %             for i = 1:n
@@ -800,6 +830,94 @@ classdef Analyzer < handle
                 shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv(0.95), 'lineprops', 'b');
                 fitline{i} = fishinfo_fit(anas{i}.data.neuron_nums(:), m(:));
             end
+%=======
+            %bodge for aggregate muti plots
+            if printit == 2
+                load('saving_muti_decoding_results.mat', '*_err*');
+                if false
+                for i = 1:n
+                    fullcells_err(i) =...
+                        mean(cellfun(@(x)mean(x.mean_err.te),...
+                        anas{i}.res.unshuf.errors(end,:)));
+                    fprintf('i=%d\tGot the full decoding error\n',i);
+                    fullcells_err_shuf(i) =...
+                        mean(cellfun(@(x)mean(x.mean_err.te),...
+                        anas{i}.res.shuf.errors(end,:)));
+                    fprintf('i=%d\tGot the full decoding error (shuf)\n',i);
+                    
+                    [~, errs_] = anas{i}.decode_one(anas{i}.res.muti.signif, false);
+                    muticells_err(i) = mean(errs_.mean_err.te);
+                    fprintf('i=%d\tGot the muti decoding error\n',i);
+                    [~, errs_] = anas{i}.decode_one(anas{i}.res.muti.signif, true);
+                    muticells_err_shuf(i) = mean(errs_.mean_err.te);
+                    fprintf('i=%d\tGot the muti decoding error (shuf)\n',i);
+                    
+                    [~, errs_] = anas{i}.decode_one(~anas{i}.res.muti.signif, false);
+                    nonmuticells_err(i) = mean(errs_.mean_err.te);
+                    fprintf('i=%d\tGot the nonmuti decoding error\n',i);
+                    [~, errs_] = anas{i}.decode_one(~anas{i}.res.muti.signif, true);
+                    nonmuticells_err_shuf(i) = mean(errs_.mean_err.te);
+                    fprintf('i=%d\tGot the nonmuti decoding error (shuf)\n',i);
+                end
+                end
+                %keyboard
+                n_neu_full = cellfun(@(x)x.data.total_neurons, anas);
+                n_neu_sig  = cellfun(@(x)sum(x.res.muti.signif), anas);
+                n_neu_ins  = cellfun(@(x)sum(~x.res.muti.signif), anas);
+                [~, ordn] = sort(n_neu_full);
+                [~, ords] = sort(n_neu_sig);
+                [~, ordi] = sort(n_neu_ins);
+                figure; hold on;
+                plot(n_neu_full(ordn), fullcells_err(ordn), '-ok', 'DisplayName', 'Full');
+                plot(n_neu_sig(ords), muticells_err(ords), '-ob', 'DisplayName', 'Signif.');
+                plot(n_neu_ins(ordi), nonmuticells_err(ordi), '-or', 'DisplayName', 'Insignif.');
+                plot(n_neu_full(ordn), fullcells_err_shuf(ordn), '-.+k', 'DisplayName', 'Full (shuf)');
+                plot(n_neu_sig(ords), muticells_err_shuf(ords), '-.+b', 'DisplayName', 'Signif. (shuf)');
+                plot(n_neu_ins(ordi), nonmuticells_err_shuf(ordi), '-.+r', 'DisplayName', 'Insignif. (shuf)');
+                legend boxoff
+                set(gca, 'YScale', 'log');
+                ylim([1 100]);
+                xlabel 'Number of cells'; ylabel 'Mean error (cm)';
+                title 'Decoding error across mice, by MI significance';
+                
+                if printit
+                    large_printer('graphs2/analyzer_figs/large/err_muti_plot');
+                    figure_format
+                    small_printer('graphs2/analyzer_figs/small/err_muti_plot');
+                end
+                
+                
+                frac_signif = cellfun(@(x)mean(x.res.muti.signif), anas);
+                frac_signif_fw = cellfun(@(x)mean(x.res.muti_fw.signif), anas);
+                frac_signif_bw = cellfun(@(x)mean(x.res.muti_bw.signif), anas);
+                figure('Units', 'inches', 'Position', [1 1 4 3]);
+                stem(n_neu_full(ordn), frac_signif(ordn)); hold on;
+                stem(n_neu_full(ordn), frac_signif_fw(ordn));
+                stem(n_neu_full(ordn), frac_signif_bw(ordn));
+                legend Any Forward Backward Location southeast
+                ylim([0 1]);
+                xlabel 'Number of cells'; ylabel 'Fraction signif.';
+                title 'Fraction of cells with signif. place MI';
+                
+                if printit
+                    large_printer('graphs2/analyzer_figs/large/frac_signif');
+                    figure_format
+                    small_printer('graphs2/analyzer_figs/small/frac_signif');
+                end
+                return;
+            end
+            
+            figure;
+            hold on;
+            for i = 1:n
+                [m,e] = anas{i}.get_err('mean_err', 'shuf');
+                shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv((1+0.95)/2), 'lineprops', 'r');
+            end
+            for i = 1:n
+                [m,e] = anas{i}.get_err('mean_err', 'unshuf');
+                shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv((1+0.95)/2), 'lineprops', 'b');
+%>>>>>>> 79f0f8dc433e458a489abbc0c98ebcfc76f96235
+            end
             xlabel 'Number of cells'
             ylabel '1/MSE (cm^{-2})'
             xlim([0 500]);
@@ -812,6 +930,34 @@ classdef Analyzer < handle
                 small_printer('graphs2/analyzer_figs/small/IMSE');
             end
             
+            if any(cellfun(@(a)isfield(a.res, 'diag'), anas))
+                figure;
+                for i = 1:n
+                    if ~isfield(anas{i}.res, 'diag')
+                        continue;
+                    end
+                    [m,e] = anas{i}.get_err('mean_err', 'diag');
+                    shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv((1+0.95)/2), 'lineprops', 'r');
+                end
+                for i = 1:n
+                    if ~isfield(anas{i}.res, 'diag')
+                        continue;
+                    end
+                    [m,e] = anas{i}.get_err('mean_err', 'unshuf');
+                    shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv((1+0.95)/2), 'lineprops', 'b');
+                end
+                set(gca, 'YScale', 'log');
+                xlabel 'Number of cells'
+                ylabel 'Mean error (cm)'
+                xlim([0 500]); ylim([1 100]);
+                text(200, 8, 'Diagonal', 'Color', 'red');
+                text(300, 2.2, 'Full', 'Color', 'blue');
+                if printit
+                    large_printer('graphs2/analyzer_figs/large/diag_mean_errs_logscale');
+                    figure_format
+                    small_printer('graphs2/analyzer_figs/small/diag_mean_errs_logscale');
+                end
+            end
             
             confunc = @(x)confint(x,0.95);
             e_values = cellfun(@(x)x.e, fitline);
@@ -828,6 +974,7 @@ classdef Analyzer < handle
             figure;
             errorbar(mouse_neurons, e_values, e_limits_lower, e_limits_upper, 'bo');
             hold on;
+%<<<<<<< HEAD
             errorbar(mouse_neurons, e_values_shuf, e_limits_shuf_lower, e_limits_shuf_upper, 'ro');
             xlabel 'Number of neurons'
             ylabel 'e fit (1/neuron)'
@@ -840,6 +987,14 @@ classdef Analyzer < handle
                 figure_format
                 small_printer('graphs2/analyzer_figs/small/e_fit');
             end
+            %=======
+            for i = 1:n
+                [m,e] = anas{i}.get_err('imse', 'shuf');
+                shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv((1+0.95)/2), 'lineprops', 'r');
+                [m,e] = anas{i}.get_err('imse', 'unshuf');
+                shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv((1+0.95)/2), 'lineprops', 'b');
+                %>>>>>>> 79f0f8dc433e458a489abbc0c98ebcfc76f96235
+            end
             return;
             
             %angle aggregation
@@ -849,6 +1004,7 @@ classdef Analyzer < handle
             Ns_M = Ns_T;
             M_T = N_T;
             for i = 1:n
+%<<<<<<< HEAD
                 ret = anas{i}.bin_data(false, false);
                 ret_shuf = anas{i}.bin_data(true, false);
                 N_T(i) = mean([ret.fw.angles.noise_tangent, ret.bw.angles.noise_tangent]);
@@ -856,6 +1012,9 @@ classdef Analyzer < handle
                 N_M(i) = mean([ret.fw.angles.noise_mean, ret.bw.angles.noise_mean]);
                 Ns_M(i) = mean([ret_shuf.fw.angles.noise_mean, ret_shuf.bw.angles.noise_mean]);
                 M_T(i) = mean([ret.fw.angles.mean_tangent, ret.bw.angles.mean_tangent]);
+%=======
+ 
+%>>>>>>> 79f0f8dc433e458a489abbc0c98ebcfc76f96235
             end
             figure;
             %scatter([ones(1,n), 2*ones(1,n), 3*ones(1,n), 4*ones(1,n), 5*ones(1,n)],...

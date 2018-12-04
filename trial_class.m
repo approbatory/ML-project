@@ -1,6 +1,6 @@
 % to run all:
 % S = dir('full_records'); for fs = S', if ~fs.isdir, o = Analyzer.recreate(fullfile(fs.folder, fs.name)); trial_class; end, end; close all; clear; disp('done');
-printit = true;
+printit = false;
 if printit
     mouse_id = split(o.res.source,'/');
     mouse_id = mouse_id{end};
