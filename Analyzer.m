@@ -365,7 +365,7 @@ classdef Analyzer < handle
         end
     end
     
-    methods(Static, Access = private)
+    methods(Static, Access = public)
         function [my_X, my_ks] = extractor(X, ks, b1, b2)
             eq1 = ks == b1;
             eq2 = ks == b2;
@@ -417,7 +417,7 @@ classdef Analyzer < handle
             end
             fprintf('\n');
             
-            pvals = mean(muti < muti_shuf);
+            pvals = mean(muti <= muti_shuf);
             sorted_pvals = sort(pvals);
             crit = (1:numel(sorted_pvals))./numel(sorted_pvals).*alpha;
             cutoff_ind = find(sorted_pvals < crit, 1, 'last');
@@ -427,6 +427,7 @@ classdef Analyzer < handle
             muti_struct.bits = muti;
             muti_struct.alpha = alpha;
             muti_struct.cutoff = cutoff;
+            muti_struct.pvals = pvals;
             muti_struct.signif = bh_signif_cells;
             
         end
@@ -736,48 +737,149 @@ classdef Analyzer < handle
                 end
             end
             
-            figure;
-            hold on;
-            for i = 1:n
-                [m,e] = anas{i}.get_err('mean_err', 'shuf');
-                shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv(0.95), 'lineprops', 'r');
-            end
-            for i = 1:n
-                [m,e] = anas{i}.get_err('mean_err', 'unshuf');
-                shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv(0.95), 'lineprops', 'b');
-            end
-            set(gca, 'YScale', 'log');
-            xlabel 'Number of cells'
-            ylabel 'Mean error (cm)'
-            xlim([0 500]);
-            text(200, 7, 'Unshuffled', 'Color', 'blue');
-            text(300, 2.2, 'Shuffled', 'Color', 'red');
-            if printit
-                large_printer('graphs2/analyzer_figs/large/mean_errs_logscale');
-                figure_format
-                small_printer('graphs2/analyzer_figs/small/mean_errs_logscale');
-            end
+%             figure;
+%             hold on;
+%             for i = 1:n
+%                 [m,e] = anas{i}.get_err('mean_err', 'shuf');
+%                 shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv(0.95), 'lineprops', 'r');
+%             end
+%             for i = 1:n
+%                 [m,e] = anas{i}.get_err('mean_err', 'unshuf');
+%                 shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv(0.95), 'lineprops', 'b');
+%             end
+%             set(gca, 'YScale', 'log');
+%             xlabel 'Number of cells'
+%             ylabel 'Mean error (cm)'
+%             xlim([0 500]);
+%             text(200, 7, 'Unshuffled', 'Color', 'blue');
+%             text(300, 2.2, 'Shuffled', 'Color', 'red');
+%             if printit == 2
+%                 large_printer('graphs2/analyzer_figs/large/mean_errs_logscale');
+%                 figure_format
+%                 small_printer('graphs2/analyzer_figs/small/mean_errs_logscale');
+%             end
             
-            
+            if any(cellfun(@(a)isfield(a.res, 'diag'), anas))
+                figure;
+                for i = 1:n
+                    if ~isfield(anas{i}.res, 'diag')
+                        continue;
+                    end
+                    [m,e] = anas{i}.get_err('mean_err', 'diag');
+                    shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv(0.95), 'lineprops', 'r');
+                end
+                for i = 1:n
+                    if ~isfield(anas{i}.res, 'diag')
+                        continue;
+                    end
+                    [m,e] = anas{i}.get_err('mean_err', 'unshuf');
+                    shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv(0.95), 'lineprops', 'b');
+                end
+                set(gca, 'YScale', 'log');
+                xlabel 'Number of cells'
+                ylabel 'Mean error (cm)'
+                xlim([0 500]);
+                text(300, 2.2, 'Full', 'Color', 'blue');
+                text(200, 8, 'Diagonal', 'Color', 'red');
+                if printit
+                    large_printer('graphs2/analyzer_figs/large/diag_mean_errs_logscale');
+                    figure_format
+                    small_printer('graphs2/analyzer_figs/small/diag_mean_errs_logscale');
+                end
+            end
+            return;
             figure;
             hold on;
             for i = 1:n
                 [m,e] = anas{i}.get_err('imse', 'shuf');
                 shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv(0.95), 'lineprops', 'r');
+                fitline_shuf{i} = fishinfo_fit(anas{i}.data.neuron_nums(:), m(:));
             end
             for i = 1:n
                 [m,e] = anas{i}.get_err('imse', 'unshuf');
                 shadedErrorBar(anas{i}.data.neuron_nums, m, e.*norminv(0.95), 'lineprops', 'b');
+                fitline{i} = fishinfo_fit(anas{i}.data.neuron_nums(:), m(:));
             end
             xlabel 'Number of cells'
             ylabel '1/MSE (cm^{-2})'
             xlim([0 500]);
             text(200, 0.03, 'Unshuffled', 'Color', 'blue');
             text(100, 0.09, 'Shuffled', 'Color', 'red');
+            
             if printit
                 large_printer('graphs2/analyzer_figs/large/IMSE');
                 figure_format
                 small_printer('graphs2/analyzer_figs/small/IMSE');
+            end
+            
+            
+            confunc = @(x)confint(x,0.95);
+            e_values = cellfun(@(x)x.e, fitline);
+            e_limits = cell2mat(cellfun(@(x)x(:,2) ,cellfun(confunc, fitline, 'UniformOutput', false), 'UniformOutput', false));
+            e_limits_lower = e_limits(1,:);
+            e_limits_upper = e_limits(2,:);
+            
+            e_values_shuf = cellfun(@(x)x.e, fitline_shuf);
+            e_limits_shuf = cell2mat(cellfun(@(x)x(:,2) ,cellfun(confunc, fitline_shuf, 'UniformOutput', false), 'UniformOutput', false));
+            e_limits_shuf_lower = e_limits_shuf(1,:);
+            e_limits_shuf_upper = e_limits_shuf(2,:);
+            
+            mouse_neurons = cellfun(@(x) x.data.total_neurons, anas);
+            figure;
+            errorbar(mouse_neurons, e_values, e_limits_lower, e_limits_upper, 'bo');
+            hold on;
+            errorbar(mouse_neurons, e_values_shuf, e_limits_shuf_lower, e_limits_shuf_upper, 'ro');
+            xlabel 'Number of neurons'
+            ylabel 'e fit (1/neuron)'
+            title 'a*N/(1+e*N) fit result'
+            legend unshuffled shuffled
+            set(gca, 'YScale', 'log');
+            %ylim([1 Inf]);
+            if printit
+                large_printer('graphs2/analyzer_figs/large/e_fit');
+                figure_format
+                small_printer('graphs2/analyzer_figs/small/e_fit');
+            end
+            return;
+            
+            %angle aggregation
+            N_T = zeros(1,n);
+            N_M = N_T;
+            Ns_T = zeros(1,n);
+            Ns_M = Ns_T;
+            M_T = N_T;
+            for i = 1:n
+                ret = anas{i}.bin_data(false, false);
+                ret_shuf = anas{i}.bin_data(true, false);
+                N_T(i) = mean([ret.fw.angles.noise_tangent, ret.bw.angles.noise_tangent]);
+                Ns_T(i) = mean([ret_shuf.fw.angles.noise_tangent, ret_shuf.bw.angles.noise_tangent]);
+                N_M(i) = mean([ret.fw.angles.noise_mean, ret.bw.angles.noise_mean]);
+                Ns_M(i) = mean([ret_shuf.fw.angles.noise_mean, ret_shuf.bw.angles.noise_mean]);
+                M_T(i) = mean([ret.fw.angles.mean_tangent, ret.bw.angles.mean_tangent]);
+            end
+            figure;
+            %scatter([ones(1,n), 2*ones(1,n), 3*ones(1,n), 4*ones(1,n), 5*ones(1,n)],...
+            %    [N_T, Ns_T, N_M, Ns_M, M_T], 50,...
+            %    [ones(1,n), 2*ones(1,n), 3*ones(1,n), 4*ones(1,n), 5*ones(1,n)], 'filled');
+            hold on;
+            scatter(1*ones(1,n), N_T,  50, [0   0   1], 'filled');
+            scatter(2*ones(1,n), Ns_T, 50, [0.6 0.6 1], 'filled');
+            scatter(3*ones(1,n), N_M,  50, [1   0   0], 'filled');
+            scatter(4*ones(1,n), Ns_M, 50, [1 0.6 0.6], 'filled');
+            scatter(5*ones(1,n), M_T,  50, [0.9   0.9   0], 'filled');
+            l_ = refline(0, 90);
+            l_.Color = 'black';
+            legend(l_, 'Orthogonal');
+            legend boxoff
+            ylabel 'Angle (degrees)';
+            ylim([0 135]);
+            set(gca, 'XTick', 1:5);
+            set(gca, 'XTickLabel', {'N/T', 'N/T (shuf)', 'N/M', 'N/M (shuf)', 'M/T'});
+            title 'Average angles across mice';
+            if printit
+                large_printer('graphs2/analyzer_figs/large/agg_angles');
+                figure_format
+                small_printer('graphs2/analyzer_figs/small/agg_angles');
             end
             
             for i = 1:numel(anas)
