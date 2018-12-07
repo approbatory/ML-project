@@ -6,7 +6,7 @@ min_num_neurons = minimal_params{1};
 min_num_trials = minimal_params{2};
 
 common_num_trials = 156;
-%% script parameters
+%% script parameters %% TODO!!!!! PLOT AS FN OF DATA SIZE
 printit = true;
 fmat = 'png';
 
@@ -22,8 +22,9 @@ if printit
 end
 
 %% mouse data to process
-mouse_names = {'Mouse2010', 'Mouse2012', 'Mouse2019', 'Mouse2022',...
-    'Mouse2023', 'Mouse2024', 'Mouse2026', 'Mouse2028'};
+%mouse_names = {'Mouse2010', 'Mouse2012', 'Mouse2019', 'Mouse2022',...
+%    'Mouse2023', 'Mouse2024', 'Mouse2026', 'Mouse2028'};
+mouse_names = {'Mouse2019', 'Mouse2022', 'Mouse2028'};
 n = length(mouse_names);
 
 %% plotting
@@ -46,9 +47,9 @@ xlim([0 500]);
 text(200, 7, 'Unshuffled', 'Color', 'blue');
 text(300, 2.2, 'Shuffled', 'Color', 'red');
 if printit
-    large_printer('graphs2/tensor_decoding_figs/large/mean_errs_logscale');
+    large_printer('graphs2/tensor_decoding_figs/large/mean_errs_logscale_156');
     figure_format
-    small_printer('graphs2/tensor_decoding_figs/small/mean_errs_logscale');
+    small_printer('graphs2/tensor_decoding_figs/small/mean_errs_logscale_156');
 end
 
 figure;
@@ -70,9 +71,9 @@ xlim([0 500]); ylim([1 100]);
 text(200, 8, 'Diagonal', 'Color', 'red');
 text(300, 2.2, 'Full', 'Color', 'blue');
 if printit
-    large_printer('graphs2/tensor_decoding_figs/large/diag_mean_errs_logscale');
+    large_printer('graphs2/tensor_decoding_figs/large/diag_mean_errs_logscale_156');
     figure_format
-    small_printer('graphs2/tensor_decoding_figs/small/diag_mean_errs_logscale');
+    small_printer('graphs2/tensor_decoding_figs/small/diag_mean_errs_logscale_156');
 end
 
 figure;
@@ -93,9 +94,9 @@ xlim([0 500]);
 text(300, 0.2, 'Unshuffled', 'Color', 'blue');
 text(400, 0.6, 'Shuffled', 'Color', 'red');
 if printit
-    large_printer('graphs2/tensor_decoding_figs/large/IMSE');
+    large_printer('graphs2/tensor_decoding_figs/large/IMSE_156');
     figure_format
-    small_printer('graphs2/tensor_decoding_figs/small/IMSE');
+    small_printer('graphs2/tensor_decoding_figs/small/IMSE_156');
 end
 
 %% close sqlite connection
@@ -104,10 +105,15 @@ conn.close;
 
 
 function [num_neuron_values, error_m, error_e] = get_errors(conn, mouse, setting, error_type, special)
+%command = ['select NumNeurons, ' error_type ' '...
+%    'from decoding where Mouse = ''' mouse ''' and Setting = ''' setting ''' and DataSize = '...
+%    '(select max(DataSize) from decoding where Mouse = ''' mouse ''') '...
+%    'order by NumNeurons'];
 command = ['select NumNeurons, ' error_type ' '...
-    'from decoding where Mouse = ''' mouse ''' and Setting = ''' setting ''' and DataSize = '...
-    '(select max(DataSize) from decoding where Mouse = ''' mouse ''') '...
+    'from decoding where Mouse = ''' mouse ''' and Setting = ''' setting ''' and DataSize = 156 '...
     'order by NumNeurons'];
+
+
 
 C = conn.fetch(command);
 num_neuron_values = unique(cell2mat(C(:,1)));

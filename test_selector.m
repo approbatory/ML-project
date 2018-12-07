@@ -18,9 +18,13 @@ opt.v_thresh = 4; %cm/s
 opt.n_bins = 20;
 opt.d_neurons = 30;
 opt.restrict_trials = 156;
+opt.neural_data_type = 'rawProb';%'spikeDeconv';%'rawTraces';
 
 opt.bin_width = opt.total_length/opt.n_bins;
-
+%%
+tensor_loader_ = @tensor_loader;
+tv = @tensor_vis;
+%%
 decode_series(source_paths{dispatch_index}, mouse_names{dispatch_index},...
     opt);
 end
@@ -83,7 +87,7 @@ end
 function [T, d] = tensor_loader(source_path, mouse_id, opt)
 load(source_path);
 track_coord = tracesEvents.position(:,1);
-X = tracesEvents.rawTraces;
+X = tracesEvents.(opt.neural_data_type);
 if strcmp(mouse_id, 'Mouse2022')
     track_coord = track_coord(91:end);
     X = X(91:end,:);
@@ -93,7 +97,52 @@ end
 data_tensor = construct_tensor(X, tr_bins, opt.n_bins, tr_s, tr_e);
 T = data_tensor; d = tr_dir;
 end
+%%
+function tensor_vis(data_tensor, tr_dir, f_val, w)
+right_tensor = data_tensor(:,:,tr_dir == 1);
+left_tensor = data_tensor(:,:,tr_dir == -1);
+flatten = @(t) reshape(t, [size(t,1), size(t,2)*size(t,3)]);
 
+right_meanact = mean(right_tensor, 3);
+left_meanact = mean(left_tensor, 3);
+
+[~,b_] = max(right_meanact,[],2);
+[~,o_right] = sort(b_);
+[~,b_] = max(left_meanact,[],2);
+[~,o_left] = sort(b_);
+
+right_meanact = right_meanact(o_right,:);
+right_tensor = right_tensor(o_right,:,:);
+left_meanact = left_meanact(o_left,:);
+left_tensor = left_tensor(o_left,:,:);
+
+if ~exist('f_val', 'var')
+    f_val = @(x)x;
+end
+figure;
+if ~exist('w', 'var')
+    w = 8;
+end
+sub_t = 20;
+subplot(2,w,1 ); imagesc(left_meanact);
+subplot(2,w,w+1); imagesc(right_meanact); xlabel 'Bin index'; ylabel 'Ordered cells'
+
+subplot(2,w,2:w); imagesc(f_val(flatten(left_tensor(:,:,1:sub_t))));
+title 'Neural activity for leftward trials'
+for i = 1:sub_t
+    hold on;
+    l_ = line([20*i 20*i]+0.5, ylim);
+    l_.Color = 'r';
+end
+subplot(2,w,w+2:2*w); imagesc(f_val(flatten(right_tensor(:,:,1:sub_t)))); xlabel 'Bin, trials (concatenated)'
+title 'Neural activity for rightward trials'
+for i = 1:sub_t
+    hold on;
+    l_ = line([20*i 20*i]+0.5, ylim);
+    l_.Color = 'r';
+end
+end
+%%
 function [mean_err, MSE, ps, ks] = decode_tensor(data_tensor, tr_dir,...
     binsize, alg, shuf, num_neurons, num_trials)
 [data_tensor, tr_dir] = cut_tensor(data_tensor, tr_dir, num_neurons, num_trials);
