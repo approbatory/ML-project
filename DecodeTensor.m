@@ -1,4 +1,4 @@
-classdef DecodeTensor < handle %% TODO::: put logic from sherlock aggregator in here
+classdef DecodeTensor < handle
     methods(Static) %higher level functions, collecting data
         function dispatch(dispatch_index)
             %Dispatching decoding as a function of number of cells using
@@ -581,6 +581,74 @@ classdef DecodeTensor < handle %% TODO::: put logic from sherlock aggregator in 
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     methods(Static) %appendix
+        function records = dispatch_confidence(dispatch_index)
+            %Dispatching decoding as a function of number of cells using
+            %default options
+            [source_path, mouse_name] = DecodeTensor.default_datasets(dispatch_index);
+            records = DecodeTensor.correct_bin_confidence(source_path, mouse_name,...
+                DecodeTensor.default_opt);
+        end
+        function records = correct_bin_confidence(source_path, mouse_id, opt)
+            [data_tensor, tr_dir] = DecodeTensor.tensor_loader(source_path, mouse_id, opt);
+            num_neurons = size(data_tensor, 1);
+            num_trials = min(sum(tr_dir == 1), sum(tr_dir == -1));
+            
+            [cut_tensor, cut_tr_dir] = ...
+                DecodeTensor.cut_tensor(data_tensor, tr_dir, num_neurons, num_trials);
+            bin_tensor = cat(2, cut_tensor(:,:,cut_tr_dir == 1), cut_tensor(:,:,cut_tr_dir == -1));
+            train_division = randperm(num_trials) <= num_trials/2;
+            test_division = ~train_division;
+            
+            records = cell(opt.n_bins*(opt.n_bins-1)/2, 3);
+            i = 0;
+            for bin_A = 1:2*opt.n_bins-1
+                X_A = squeeze(bin_tensor(:,bin_A,:)).';
+                tr_X_A = X_A(train_division,:);
+                te_X_A = X_A(test_division,:);
+                for bin_B = bin_A+1:2*opt.n_bins
+                    X_B = squeeze(bin_tensor(:,bin_B,:)).';
+                    tr_X_B = X_B(train_division,:);
+                    te_X_B = X_B(test_division,:);
+                    
+                    tr_ks = [zeros(1,size(tr_X_A,1))...
+                              ones(1,size(tr_X_B,1))];
+                    tr_X = [tr_X_A ; tr_X_B];
+                    tr_X_shuf = shuffle(tr_X, tr_ks);
+                    
+                    model = fitSVMPosterior(fitcsvm(tr_X, tr_ks));
+                    model_shuf = fitSVMPosterior(fitcsvm(tr_X_shuf, tr_ks));
+                    
+                    
+                    i = i + 1;
+                    
+                    [~, probs_A] = model.predict(te_X_A);
+                    [~, probs_B] = model.predict(te_X_B);
+                    probs_correct = [probs_A(:,1) ; probs_B(:,2)];
+
+                    records{i,1} = {mouse_id, 'unshuffled', bin_A, bin_B, mean(probs_correct)};
+                    
+                    [~, probs_A] = model_shuf.predict(te_X_A);
+                    [~, probs_B] = model_shuf.predict(te_X_B);
+                    probs_correct = [probs_A(:,1) ; probs_B(:,2)];
+                    
+                    records{i,2} = {mouse_id, 'diagonal', bin_A, bin_B, mean(probs_correct)};
+                    
+                    te_X_A_shuf = shuffle(te_X_A, zeros(1,size(te_X_A,1)));
+                    te_X_B_shuf = shuffle(te_X_B,  ones(1,size(te_X_B,1)));
+                    [~, probs_A] = model_shuf.predict(te_X_A_shuf);
+                    [~, probs_B] = model_shuf.predict(te_X_B_shuf);
+                    probs_correct = [probs_A(:,1) ; probs_B(:,2)];
+                    
+                    records{i,3} = {mouse_id, 'shuffled', bin_A, bin_B, mean(probs_correct)};
+                    
+                    fprintf('%s: done bin_A = %d and bin_B = %d\n', mouse_id, bin_A, bin_B);
+                end
+            end
+            if ~exist('records_confidence', 'dir')
+                mkdir('records_confidence');
+            end
+            save(sprintf('records_confidence/correct_confidence_%s.mat', timestring), 'records');
+        end
         function decode_datasize_series(source_path, mouse_id, opt)
             %%Decoding performance as a function of number of trials
             % in three settings: unshuffled, shuffled, and diagonal
@@ -691,33 +759,90 @@ classdef DecodeTensor < handle %% TODO::: put logic from sherlock aggregator in 
                 DecodeTensor.default_opt);
         end
         
+        function aggregate_pairwise_results
+            DecodeTensor.aggregate_results('save_dir', 'records_confidence',...
+                'table_name', 'pairwise', 'db_file', 'pairwise.db',...
+                'field_names', {'Mouse', 'Setting', 'BinA', 'BinB', 'CorrectConfidence'},...
+                'create_command',...
+                'create table pairwise(Mouse text, Setting text, BinA int, BinB int, CorrectConfidence real);',...
+                'save_varname', 'records');
+        end
+        
         function aggregate_results(varargin)
             p = inputParser;
             p.addParameter('save_dir', 'records', @ischar);
             p.addParameter('table_name', 'decoding', @ischar);
             p.addParameter('db_file', 'decoding.db', @ischar);
+            p.addParameter('field_names', {'Mouse', 'Setting', 'NumNeurons', 'DataSize', 'MeanErrors', 'MSE'}, @iscell);
+            p.addParameter('create_command', 'CREATE TABLE decoding(Mouse text, Setting text, NumNeurons int, DataSize int, MeanErrors real, MSE real);', @ischar);
+            p.addParameter('save_varname', 'db_queue', @ischar);
             p.parse(varargin{:});
             
             
             table_name = p.Results.table_name;
-            field_names = {'Mouse', 'Setting', 'NumNeurons', 'DataSize', 'MeanErrors', 'MSE'};
+            field_names = p.Results.field_names;%{'Mouse', 'Setting', 'NumNeurons', 'DataSize', 'MeanErrors', 'MSE'};
             S = dir(p.Results.save_dir);
             dbfile = p.Results.db_file;
             if ~exist(dbfile, 'file')
                 conn = sqlite(dbfile, 'create');
-                conn.exec('CREATE TABLE decoding(Mouse text, Setting text, NumNeurons int, DataSize int, MeanErrors real, MSE real);');
+                cleaner = onCleanup(@()conn.close);
+                %conn.exec('CREATE TABLE decoding(Mouse text, Setting text, NumNeurons int, DataSize int, MeanErrors real, MSE real);');
+                conn.exec(p.Results.create_command);
             else
                 conn = sqlite(dbfile);
+                cleaner = onCleanup(@()conn.close);
             end
             for i = 1:numel(S)
                 if ~S(i).isdir
-                    load(fullfile(S(i).folder, S(i).name));
+                    L = load(fullfile(S(i).folder, S(i).name));
+                    db_queue = L.(p.Results.save_varname);
                     for j = 1:numel(db_queue)
                         conn.insert(table_name, field_names, db_queue{j});
                     end
                 end
             end
-            conn.close;
+            %conn.close;
+        end
+        
+        function command = build_command(mouse, setting, error_type,...
+                num_neurons, num_trials)
+            if isempty(num_neurons) && isempty(num_trials)
+                command = sprintf(['select NumNeurons, DataSize,'...
+                    ' %s from decoding where Mouse = ''%s'' and'...
+                    ' Setting = ''%s'' order by NumNeurons, DataSize'],...
+                    error_type, mouse, setting);
+            end
+            if isempty(num_neurons) && strcmp(num_trials, 'max')
+                command = sprintf(['select NumNeurons, DataSize,'...
+                    ' %s from decoding where Mouse = ''%s'' and'...
+                    ' Setting = ''%s'' and DataSize ='...
+                    ' (select max(DataSize) from decoding'...
+                    ' where Mouse = ''%s'' and Setting = ''%s'')'...
+                    ' order by NumNeurons, DataSize'],...
+                    error_type, mouse, setting, mouse, setting);
+            end
+            if strcmp(num_neurons, 'max') && isempty(num_trials)
+                command = sprintf(['select NumNeurons, DataSize,'...
+                    ' %s from decoding where Mouse = ''%s'' and'...
+                    ' Setting = ''%s'' and NumNeurons ='...
+                    ' (select max(NumNeurons) from decoding'...
+                    ' where Mouse = ''%s'' and Setting = ''%s'')'...
+                    ' order by NumNeurons, DataSize'],...
+                    error_type, mouse, setting, mouse, setting);
+            end
+            if isempty(num_neurons) && isscalar(num_trials)
+                command = sprintf(['select NumNeurons, DataSize,'...
+                    ' %s from decoding where Mouse = ''%s'' and'...
+                    ' Setting = ''%s'' and DataSize = %s order by NumNeurons, DataSize'],...
+                    error_type, mouse, setting, num2str(num_trials));
+            end
+            if isscalar(num_neurons) && isempty(num_trials)
+                command = sprintf(['select NumNeurons, DataSize,'...
+                    ' %s from decoding where Mouse = ''%s'' and'...
+                    ' Setting = ''%s'' and NumNeurons = %s order by NumNeurons, DataSize'],...
+                    error_type, mouse, setting, num2str(num_neurons));
+            end
+            command = [command ';'];
         end
         
         function muti_struct = measure_muti(dispatch_index, data_size)
@@ -735,6 +860,73 @@ classdef DecodeTensor < handle %% TODO::: put logic from sherlock aggregator in 
             
             muti_struct = Utils.place_muti(X, ks, 0.01, 1e4, true);
         end
+        
+        
+        function [fast_frames, fast_regular_frames, track_bins, track_dir_bins] = aux_sel(XY, opt)
+            
+            total_length = opt.total_length; %cm
+            cutoff_p = opt.cutoff_p; %percentile
+            samp_freq = opt.samp_freq; %Hz
+            v_thresh = opt.v_thresh; %cm/s
+            n_bins = opt.n_bins;
+            leeway_frac = 1/n_bins;
+            
+            track_coord = XY(:,1);
+            %define the track distance in pixels to be between 5 and 95
+            %percentiles
+            track_range = (prctile(track_coord, 100-cutoff_p) -...
+                prctile(track_coord, cutoff_p));
+            %identify centimeters per pixel
+            cpp = total_length / track_range;
+            %calculation of velocity in cm/s
+            vel = [0; diff(track_coord)] .* cpp .* samp_freq;
+            
+            %select only frames above the threshold velocity (4cm/s by
+            %default)
+            fast_frames = abs(vel) > v_thresh;
+            %define trial start and end times as contiguous fast frames
+            trial_start = find(diff(fast_frames) == 1);
+            trial_end = find(diff(fast_frames) == -1);
+            
+            %filter out the trials that don't start at one end of the
+            %track and end at the other end of the track
+            sc = track_coord(trial_start); ec = track_coord(trial_end);
+            b = prctile(track_coord, cutoff_p) + track_range*leeway_frac;
+            t = prctile(track_coord, 100-cutoff_p) - track_range*leeway_frac;
+            regular_trial = ((sc < b) & (ec > t)) | ((ec < b) & (sc > t));
+            
+            trial_start = trial_start(regular_trial);
+            trial_end = trial_end(regular_trial);
+            
+            fast_regular_frames = false(size(fast_frames));
+            for i = 1:numel(trial_start)
+                fast_regular_frames(trial_start(i):trial_end(i)) = true;
+            end
+            
+            %determine the direction of motion for each trial
+            trial_direction((track_coord(trial_start) < b) & (track_coord(trial_end) > t)) = 1;
+            trial_direction((track_coord(trial_end) < b) & (track_coord(trial_start) > t)) = -1;
+            
+            %function for converting pixel valued position to place bin index
+            binner = @(y, n_bins)...
+                ceil(n_bins.*(y - prctile(track_coord, cutoff_p))./track_range);
+            
+            %add in direction information, rightward motion encoded as odd
+            %place-direction bin index, and leftward motion encoded as even
+            %place-direction bin index
+            add_in_direction = @(bins, vel) -(sign(vel)==1) + 2.*bins;
+            
+            track_bins = binner(track_coord, n_bins);
+            
+            %ensure that the bin index values are clamped to the proper
+            %bounds
+            track_bins(track_bins < 1) = 1;
+            track_bins(track_bins > n_bins) = n_bins;
+            
+            track_dir_bins = add_in_direction(track_bins, vel);
+        end
+        
+        
     end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%% Object creation %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -773,6 +965,12 @@ classdef DecodeTensor < handle %% TODO::: put logic from sherlock aggregator in 
             alg = my_algs('ecoclin');
             [me, mse] = DecodeTensor.decode_tensor(o.data_tensor, o.tr_dir,...
                 o.opt.bin_width, alg, shuf, num_neurons, num_trials);
+        end
+        
+        function sig = place_sig(o)
+            [X, ks] = DecodeTensor.tensor2dataset(o.data_tensor, o.tr_dir);
+            muti_struct = Utils.place_muti(X, ks, 0.01, 1e4, true);
+            sig = mean(muti_struct.signif);
         end
     end
 end
