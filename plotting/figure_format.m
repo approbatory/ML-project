@@ -21,6 +21,7 @@ ax.TickLength = [0.02 0.02];
 for i = 1:numel(ax.Children)
     if strcmp(ax.Children(i).Type, 'text')
         ax.Children(i).FontSize = p.Results.fontsize;
+        ax.Children(i).FontName = 'Arial';
     end
 end
 % box = [0 0 1.3 0.8];
