@@ -234,7 +234,7 @@ classdef DecodingPlotGenerator < handle
             success = l_.mainLine;
             %legend(success);
         end
-        function [series_values, error_m, error_e] =...
+        function [series_values, error_m, error_e, uniform_value] =...
                 get_errors(series_type, conn, mouse, setting, error_type, uniform_param)
             if strcmp(error_type, 'IMSE')
                 error_type = 'MSE';
@@ -274,7 +274,7 @@ classdef DecodingPlotGenerator < handle
             %end
             assert(length(Error) > 1, 'series unavailable');
             assert(all(Uniform(1) == Uniform), '%s must be uniform', Uniform_name);
-            
+            uniform_value = Uniform(1);
             series_values = unique(Series);
             error_m = zeros(size(series_values));
             error_e = zeros(size(series_values));
