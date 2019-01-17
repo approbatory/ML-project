@@ -189,7 +189,25 @@ else
     fprintf('The total active cells distributions have not been shown to be distinct, p = %e\n', p);
 end
 print_svg(name);
+%% Panel d_cdf <-- CDF does not look good
+name = 'total_activity_CDF';
+figure;
+hold on;
+%[f, x] = ecdf(sum(X,2));
+%[fs, xs] = ecdf(sum(X_shuf,2));
+%sub = 1:16;
+h2 = cdfplot(sum(X_shuf,2)); h2.Color = 'r';
+h = cdfplot(sum(X,2)); h.Color = 'b';
 
+xlabel 'Number of active cells'
+ylabel 'Empirical CDF'
+text(7, 0.5, 'Unshuffled', 'Color', 'blue');
+text(7, 0.3, 'Shuffled', 'Color', 'red');
+grid off
+title '';
+xlim([0 15]);
+figure_format;
+print_svg(name);
 %% Panel e_OLD: effect of correlations on total neuron's activity: pooled over 8 mice
 name = 'total_activity_change_pooled';
 clear h p

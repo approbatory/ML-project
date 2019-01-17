@@ -259,8 +259,12 @@ classdef Utils %Common utilities for dealing with neural data
             non_peak_mean = mean(trace(non_peak_frames));
         end
         
-        function pls_plot(X, signals)
-            [~, ~, XS, ~, ~, ~, ~, stats] = plsregress(X, zscore(signals), 2);
+        function [XS, stats] = pls_plot(X, signals, stats, xl_, yl_)
+            if exist('stats', 'var')
+                XS = (X - mean(X)) * stats.W;
+            else
+                [~, ~, XS, ~, ~, ~, ~, stats] = plsregress(X, zscore(signals), 2);
+            end
             origin = -mean(X) * stats.W;
             figure;
             num_sig = size(signals,2);
@@ -272,6 +276,12 @@ classdef Utils %Common utilities for dealing with neural data
                 scatter(origin(1), origin(2), 20, 'r');
                 xlabel PLS1; ylabel PLS2; title '2D PLS projections'
                 axis equal;
+                if exist('xl_', 'var')
+                    xlim(xl_);
+                end
+                if exist('yl_', 'var')
+                    ylim(yl_);
+                end
             end
         end
     end
