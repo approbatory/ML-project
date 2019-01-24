@@ -284,5 +284,10 @@ classdef Utils %Common utilities for dealing with neural data
                 end
             end
         end
+        
+        function [XS, stats, origin] = pls_short(X, signals)
+            [~,~,XS,~,~,~,~,stats] = plsregress(X, zscore(signals), 2);
+            origin = -mean(X)*stats.W;
+        end
     end
 end

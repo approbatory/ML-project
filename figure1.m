@@ -297,7 +297,7 @@ if all(h==1)
     fprintf('They are all distinct');
     disp(p)
 end
-%%
+
 p_sign = signtest(stdev_unshuffled, stdev_shuffled, 'Tail', 'right');
 figure;
 plot([stdev_unshuffled ; stdev_shuffled]./num_total_cells, '-k.');
@@ -316,3 +316,53 @@ else
     fprintf('Sign test insignificant, p=%e\n', p_sign);
 end
 print_svg(name);
+
+%% Panel comparing decoding performance for shuf/unshuf, shown on example trajectory
+decode_obj = DecodeTensor(4, 'rawTraces');
+[me, mse, ps, ks, model] = decode_obj.basic_decode(false, [], []);
+[me_s, mse_s, ps_s, ks_s, model_s] = decode_obj.basic_decode(true, [], []);
+
+%%
+o = Analyzer('../linear_track/Mouse2022/Mouse-2022-20150326-linear-track/Mouse-2022-20150326_093722-linear-track-TracesAndEvents.mat');
+opt = DecodeTensor.default_opt;
+[~,~,~,~,~,~,ks] = DecodeTensor.new_sel(o.data.y.raw.full, opt);
+ks = ks(o.data.mask.fast);
+
+ps = model.predict(o.data.X.fast);
+ps_s = model_s.predict(shuffle(o.data.X.fast, ks));
+%%
+f = figure;
+ax1 = subplot(2,1,1);
+plot((ceil(ks/2) - 0.5) * opt.bin_width, '-k'); hold on;
+plot((ceil(ps/2) - 0.5) * opt.bin_width, '-b'); 
+xlim([1440 1700]);
+%ylim([1 20]);
+set(gca, 'XTick', []);
+%xlabel 'Frame'; 
+%title 'Decoding from unshuffled data'
+ylabel 'Position (cm)';
+
+ax2 = subplot(2,1,2);
+%hold on;
+plot((ceil(ks/2) - 0.5) * opt.bin_width, '-k'); hold on;
+plot((ceil(ps_s/2) - 0.5) * opt.bin_width, '-r'); 
+xlim([1440 1700]);
+%ylim([1 20]);
+set(gca, 'XTick', []);
+%xlabel 'Frame';
+%title 'Decoding from shuffled data'
+ylabel 'Position (cm)';
+
+%%
+f.Units = 'inches';
+f.Position = [f.Position(1:2), [0.8125 0.585].*0.98*1.6.*[2 2]];
+
+ax1.Units = 'inches'; ax2.Units = 'inches';
+ax1.FontSize = 6; ax2.FontSize = 6;
+ax1.LineWidth = 0.5; ax2.LineWidth = 0.5;
+ax1.FontName = 'Helvetica LT Std';
+ax2.FontName = ax1.FontName;
+ax1.TickLength = [0.02 0.02];
+ax2.TickLength = [0.02 0.02];
+
+print_svg('decode_demo');

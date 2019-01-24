@@ -194,7 +194,7 @@ classdef DecodeTensor < handle
             data_tensor = DecodeTensor.construct_tensor(X, tr_bins, opt.n_bins, tr_s, tr_e);
             T = data_tensor; d = tr_dir;
         end
-        function [mean_err, MSE, ps, ks] = decode_tensor(data_tensor, tr_dir,...
+        function [mean_err, MSE, ps, ks, model] = decode_tensor(data_tensor, tr_dir,...
                 binsize, alg, shuf, num_neurons, num_trials)
             %%Running decoding on data tensor given decoding algorithm,
             % number of neurons, number of trials to use (per direction of
@@ -926,6 +926,91 @@ classdef DecodeTensor < handle
             track_dir_bins = add_in_direction(track_bins, vel);
         end
         
+        function res = noise_properties(T, d, using_corr)
+            [total_neurons, n_bins, n_trials] = size(T);
+            T_s = DecodeTensor.shuffle_tensor(T, d);
+            directions = [-1 1];
+            for i_d = 1:numel(directions)
+                dir_value = directions(i_d);
+                for i_b = 1:n_bins
+                    X = squeeze(T(:,i_b,d==dir_value)).';
+                    X_s = squeeze(T_s(:,i_b,d==dir_value)).';
+                    if using_corr
+                        X_noise = zscore(X);
+                        X_noise_s = zscore(X_s);
+                    else
+                        X_noise = X - mean(X);
+                        X_noise_s = X_s - mean(X_s);
+                    end
+                    Noise_Cov{i_d, i_b} = cov(X_noise);
+                    %if using_corr
+                    %    SD = sqrt(diag(Noise_Cov{i_d, i_b}));
+                    %    Noise_Cov{i_d, i_b} = Noise_Cov{i_d, i_b}./(SD*SD.');
+                    %end
+                    [coeff{i_d, i_b}, latent{i_d, i_b}] = pcacov(Noise_Cov{i_d, i_b});
+                    Noise_Cov_s{i_d, i_b} = cov(X_noise_s);
+                    %if using_corr
+                    %    Noise_Cov_s{i_d, i_b} = eye(total_neurons);
+                    %end
+                    %if using_corr
+                    %    SD = sqrt(diag(Noise_Cov_s{i_d, i_b}));
+                    %    Noise_Cov_s{i_d, i_b} = Noise_Cov_s{i_d, i_b}./(SD*SD.');
+                    %end
+                    [coeff_s{i_d, i_b}, latent_s{i_d, i_b}] = pcacov(Noise_Cov_s{i_d, i_b});
+                    Mean{i_d, i_b} = mean(X);
+                    %%TODO new loop calculating f'
+                end
+                
+                for i_b = 1:n_bins
+                    Random_Direction{i_d, i_b} = normalize(randn(total_neurons, 1), 'norm');
+                    Noise_in_Random_Direction{i_d, i_b} = Random_Direction{i_d, i_b}.' * Noise_Cov{i_d, i_b} * Random_Direction{i_d, i_b};
+                    Eigenvector_Loadings_Random{i_d, i_b} = Random_Direction{i_d, i_b}.' * coeff{i_d, i_b};
+                    Noise_in_Random_Direction_s{i_d, i_b} = Random_Direction{i_d, i_b}.' * Noise_Cov_s{i_d, i_b} * Random_Direction{i_d, i_b};
+                    Eigenvector_Loadings_Random_s{i_d, i_b} = Random_Direction{i_d, i_b}.' * coeff_s{i_d, i_b};
+                    if i_b > 1
+                        Signal_Direction_pre{i_d, i_b} = normalize(Mean{i_d, i_b} - Mean{i_d, i_b-1}, 'norm').';
+                        Noise_in_Direction_of_Signal_pre{i_d, i_b} = Signal_Direction_pre{i_d, i_b}.' * Noise_Cov{i_d, i_b} * Signal_Direction_pre{i_d, i_b};
+                        Eigenvector_Loadings_pre{i_d, i_b} = Signal_Direction_pre{i_d, i_b}.' * coeff{i_d, i_b};
+                        Noise_in_Direction_of_Signal_pre_s{i_d, i_b} = Signal_Direction_pre{i_d, i_b}.' * Noise_Cov_s{i_d, i_b} * Signal_Direction_pre{i_d, i_b};
+                        Eigenvector_Loadings_pre_s{i_d, i_b} = Signal_Direction_pre{i_d, i_b}.' * coeff_s{i_d, i_b};
+                    end
+                    if i_b < n_bins
+                        Signal_Direction_post{i_d, i_b} = normalize(Mean{i_d, i_b+1} - Mean{i_d, i_b}, 'norm').';
+                        Noise_in_Direction_of_Signal_post{i_d, i_b} = Signal_Direction_post{i_d, i_b}.' * Noise_Cov{i_d, i_b} * Signal_Direction_post{i_d, i_b};
+                        Eigenvector_Loadings_post{i_d, i_b} = Signal_Direction_post{i_d, i_b}.' * coeff{i_d, i_b};
+                        Noise_in_Direction_of_Signal_post_s{i_d, i_b} = Signal_Direction_post{i_d, i_b}.' * Noise_Cov_s{i_d, i_b} * Signal_Direction_post{i_d, i_b};
+                        Eigenvector_Loadings_post_s{i_d, i_b} = Signal_Direction_post{i_d, i_b}.' * coeff_s{i_d, i_b};
+                    end
+                    if (i_b > 1) && (i_b < n_bins)
+                        Signal_Direction_mid{i_d, i_b} = normalize(Mean{i_d, i_b+1} - Mean{i_d, i_b-1}, 'norm').';
+                        Noise_in_Direction_of_Signal_mid{i_d, i_b} = Signal_Direction_mid{i_d, i_b}.' * Noise_Cov{i_d, i_b} * Signal_Direction_mid{i_d, i_b};
+                        Eigenvector_Loadings_mid{i_d, i_b} = Signal_Direction_mid{i_d, i_b}.' * coeff{i_d, i_b};
+                        Noise_in_Direction_of_Signal_mid_s{i_d, i_b} = Signal_Direction_mid{i_d, i_b}.' * Noise_Cov_s{i_d, i_b} * Signal_Direction_mid{i_d, i_b};
+                        Eigenvector_Loadings_mid_s{i_d, i_b} = Signal_Direction_mid{i_d, i_b}.' * coeff_s{i_d, i_b};
+                    end
+                end
+            end
+            res.nd_rnd = Noise_in_Random_Direction;
+            res.nd_rnd_s = Noise_in_Random_Direction_s;
+            res.nd_pre = Noise_in_Direction_of_Signal_pre;
+            res.nd_pre_s = Noise_in_Direction_of_Signal_pre_s;
+            res.nd_post = Noise_in_Direction_of_Signal_post;
+            res.nd_post_s = Noise_in_Direction_of_Signal_post_s;
+            res.nd_mid = Noise_in_Direction_of_Signal_mid;
+            res.nd_mid_s = Noise_in_Direction_of_Signal_mid_s;
+            
+            res.el_rnd = Eigenvector_Loadings_Random;
+            res.el_rnd_s = Eigenvector_Loadings_Random_s;
+            res.el_pre = Eigenvector_Loadings_pre;
+            res.el_pre_s = Eigenvector_Loadings_pre_s;
+            res.el_post = Eigenvector_Loadings_post;
+            res.el_post_s = Eigenvector_Loadings_post_s;
+            res.el_mid = Eigenvector_Loadings_mid;
+            res.el_mid_s = Eigenvector_Loadings_mid_s;
+            
+            res.noise_spectrum = latent;
+            res.noise_spectrum_s = latent_s;
+        end
         
     end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -961,9 +1046,9 @@ classdef DecodeTensor < handle
             DecodeTensor.tensor_vis(pre(o.data_tensor), o.tr_dir);
         end
         
-        function [me, mse] = basic_decode(o, shuf, num_neurons, num_trials)
+        function [me, mse, ps, ks, model] = basic_decode(o, shuf, num_neurons, num_trials)
             alg = my_algs('ecoclin');
-            [me, mse] = DecodeTensor.decode_tensor(o.data_tensor, o.tr_dir,...
+            [me, mse, ps, ks, model] = DecodeTensor.decode_tensor(o.data_tensor, o.tr_dir,...
                 o.opt.bin_width, alg, shuf, num_neurons, num_trials);
         end
         
