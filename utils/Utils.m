@@ -289,5 +289,11 @@ classdef Utils %Common utilities for dealing with neural data
             [~,~,XS,~,~,~,~,stats] = plsregress(X, zscore(signals), 2);
             origin = -mean(X)*stats.W;
         end
+        
+        function res = colorcode(integer_array)
+            l_ = lines;
+            integer_array = integer_array - min(integer_array) + 1;
+            res = l_(integer_array, :);
+        end
     end
 end

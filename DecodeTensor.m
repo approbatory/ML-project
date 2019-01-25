@@ -1057,5 +1057,17 @@ classdef DecodeTensor < handle
             muti_struct = Utils.place_muti(X, ks, 0.01, 1e4, true);
             sig = mean(muti_struct.signif);
         end
+        
+        function n = total_neurons(o)
+            n = size(o.data_tensor,1);
+        end
+        
+        function n = n_bins(o)
+            n = size(o.data_tensor,2);
+        end
+        
+        function n = n_one_dir_trials(o)
+            n = floor(size(o.data_tensor,3)/2);
+        end
     end
 end

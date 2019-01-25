@@ -55,6 +55,30 @@ set(gca, 'YTick', []);
 figure_format;
 print_png('PLS_shuf');
 
+%%
+figure;
+scatter(XS(:,1), XS(:,2), 4, Utils.colorcode(ceil(ks/2)), 'filled', 'MarkerFaceAlpha', 0.02); hold on;
+scatter(origin(1), origin(2), 10, 'k');
+xlabel PLS1; ylabel PLS2;
+axis equal;
+xlim(xl_); ylim(yl_);
+set(gca, 'XTick', []);
+set(gca, 'YTick', []);
+text(-0.03, 0.03, 'Unshuffled', 'Color', 'b')
+figure_format;
+print_png('PLS_adjacent');
+
+figure;
+scatter(XS_s(:,1), XS_s(:,2), 4, Utils.colorcode(ceil(ks/2)), 'filled', 'MarkerFaceAlpha', 0.02); hold on;
+scatter(origin_s(1), origin_s(2), 10, 'k');
+xlabel PLS1; ylabel PLS2;
+axis equal;
+xlim(xl_); ylim(yl_);
+set(gca, 'XTick', []);
+set(gca, 'YTick', []);
+text(-0.03, 0.03, 'Shuffled', 'Color', 'r')
+figure_format;
+print_png('PLS_adjacent_shuf');
 % [~, stats] = Utils.pls_plot(X_fst, [ceil(ks_fst/2), mod(ks_fst,2)]);
 % suptitle('Using FST\_events, unshuffled');
 % colormap jet;
@@ -159,9 +183,11 @@ ylabel(sprintf('Signal direction\nin PC basis\n(squared)'))
 l_ = refline(0, 1./total_neurons);
 l_.Color = 'k';
 xlim([1 total_neurons]);
+set(gca, 'YTick', [1e-4, 1./total_neurons, 1e-2]);
+set(gca, 'YTickLabel', {'10^{-4}', '1/n', '10^{-2}'});
 figure_format;
 print_svg('signal_pc_loadings');
-
+%%
 figure;
 n = 1:n_trials/2;
 s = cell2mat(res.noise_spectrum(:).').';

@@ -35,7 +35,66 @@ print_svg(name);
 %print('-dpng', '-r900', fullfile(svg_save_dir, 'A.png'));
 %body
 conn.close;
+%% confusion mat %%TODO
+D_T = DecodeTensor(4, 'rawTraces');
+%%
+[~, ~, ps, ks, ~] = D_T.basic_decode(false, [], []);
+[~, ~, ps_s, ks_s, ~] = D_T.basic_decode(true, [], []);
 
+ps = ceil(ps/2);
+ks = ceil(ks/2);
+ps_s = ceil(ps_s/2);
+ks_s = ceil(ks_s/2);
+%%
+figure;
+C = confusionmat(ks, ps) ./ (2*D_T.n_one_dir_trials);
+C_s = confusionmat(ks_s, ps_s) ./ (2*D_T.n_one_dir_trials);
+C_perfect = confusionmat(ks_s, ks) ./ (2*D_T.n_one_dir_trials);
+CDiff = C_s - C;
+CsC = (C_s - C)./C;
+CsC(isnan(CsC)) = 0;
+imagesc(CDiff);
+colorbar;
+%title('Shuffled - Unshuffled');
+colormap(bluewhitered);
+xlabel 'Predicted bin'
+ylabel 'Correct bin'
+axis equal;
+xlim([0.5 20.5]); ylim([0.5 20.5]);
+figure_format('boxsize', [0.75 0.85]); box on;
+print_svg('confusion_diff');
+% figure; 
+% imagesc(C_perfect); colorbar; colormap(bluewhitered);
+% title('Perfect CM');
+% xlabel 'Predicted bin'
+% ylabel 'Correct bin'
+% figure;
+% imagesc(confusionmat(ks_s, ps_s));
+% colorbar;
+% title('Shuffled');
+%%  panel: full vs diagonal decoder on one mouse:
+name = 'fulldiagonal_Mouse2022';
+figure;
+
+dbfile = 'decoding.db';
+
+conn = sqlite(dbfile); %remember to close it
+mouse = 'Mouse2022';
+[n,m,e] = DecodingPlotGenerator.get_errors('NumNeurons', conn, mouse, 'unshuffled', 'IMSE', 'max');
+[ns,ms,es] = DecodingPlotGenerator.get_errors('NumNeurons', conn, mouse, 'diagonal', 'IMSE', 'max');
+hold on;
+DecodingPlotGenerator.errors_plotter(ns,ms,es, 'diagonal');
+DecodingPlotGenerator.errors_plotter(n,m,e, 'unshuffled');
+xlabel 'Number of cells'
+ylabel '1/MSE (cm^{-2})'
+xlim([0 500]);
+text(100, 0.18, 'Full', 'Color', 'blue');
+text(150, 0.1, 'Diagonal', 'Color', 'magenta');
+figure_format;
+
+
+print_svg(name);
+conn.close;
 %% panel B: decorrelation, pooled on all mice
 % Caption: As in <'decorrelation_Mouse2022'>, but aggregated over 8 mice.
 % 
@@ -90,9 +149,59 @@ text(10, 0.9, 'Shuffled', 'Color', 'red');
 figure_format;
 print_svg(name);
 conn.close;
+%% panel: full vs diagonal decoder on all mice
+name = 'fulldiagonal_pooled';
+figure;
+dbfile = 'decoding.db';
+conn = sqlite(dbfile); %remember to close it
+mouse_list = {'Mouse2010','Mouse2012',...
+    'Mouse2023','Mouse2026',...
+    'Mouse2019','Mouse2028',...
+    'Mouse2024','Mouse2022'};
+pooled_map = containers.Map('KeyType', 'double', 'ValueType', 'any');
+pooled_map_s = containers.Map('KeyType', 'double', 'ValueType', 'any');
+for i = 1:numel(mouse_list)
+    [n,m,~] = DecodingPlotGenerator.get_errors('NumNeurons', conn, mouse_list{i}, 'unshuffled', 'IMSE', 'max');
+    [ns,ms,~] = DecodingPlotGenerator.get_errors('NumNeurons', conn, mouse_list{i}, 'diagonal', 'IMSE', 'max');
+    for j = 1:numel(n)
+        if pooled_map.isKey(n(j))
+            pooled_map(n(j)) = [pooled_map(n(j)) m(j)];
+        else
+            pooled_map(n(j)) = m(j);
+        end
+    end
+    
+    for j = 1:numel(ns)
+        if pooled_map_s.isKey(ns(j))
+            pooled_map_s(ns(j)) = [pooled_map_s(ns(j)) ms(j)];
+        else
+            pooled_map_s(ns(j)) = ms(j);
+        end
+    end
+end
 
+neuron_nums = [1 (30:30:400)];
+imse_means = arrayfun(@(n) mean(pooled_map(n)), neuron_nums);
+imse_errbs = arrayfun(@(n) std(pooled_map(n))./sqrt(length(pooled_map(n))), neuron_nums);
+imse_counts = arrayfun(@(n) length(pooled_map(n)), neuron_nums);
+
+imse_means_s = arrayfun(@(n) mean(pooled_map_s(n)), neuron_nums);
+imse_errbs_s = arrayfun(@(n) std(pooled_map_s(n))./sqrt(length(pooled_map_s(n))), neuron_nums);
+imse_counts_s = arrayfun(@(n) length(pooled_map_s(n)), neuron_nums);
+hold on;
+DecodingPlotGenerator.errors_plotter(neuron_nums,imse_means_s,imse_errbs_s, 'diagonal');
+DecodingPlotGenerator.errors_plotter(neuron_nums,imse_means,imse_errbs, 'unshuffled');
+%body
+xlabel 'Number of cells'
+ylabel '1/MSE (cm^{-2})'
+xlim([0 400]);
+text(10, 0.4, 'Full', 'Color', 'blue');
+text(10, 0.3, 'Diagonal', 'Color', 'magenta');
+figure_format;
+print_svg(name);
+conn.close;
 %% TODO:: more panels for sample decoding (10 neurons/full, shuf/unshuf)
-%%and for fit to I/(1+eN)
+%%and for fit to In/(1+en)
 %% panel c: Fitting the number of cells at which information saturates
 % Fitting the inverse MSE of place decoders as a function of number of
 % cells to I_0 n / (1 + n/N) with parameters I_0 being the performance gain
@@ -332,37 +441,61 @@ ps = model.predict(o.data.X.fast);
 ps_s = model_s.predict(shuffle(o.data.X.fast, ks));
 %%
 f = figure;
-ax1 = subplot(2,1,1);
-plot((ceil(ks/2) - 0.5) * opt.bin_width, '-k'); hold on;
-plot((ceil(ps/2) - 0.5) * opt.bin_width, '-b'); 
-xlim([1440 1700]);
+xl_ = ([5372 5437] - 5372)/20;
+%ax1 = subplot(2,1,1);
+time = ((1:numel(ks)) - 5372)/20;
+plot(time, (ceil(ks/2) - 0.5) * opt.bin_width, '-k'); hold on;
+plot(time, (ceil(ps/2) - 0.5) * opt.bin_width, '-b'); 
+xlim(xl_);
 %ylim([1 20]);
-set(gca, 'XTick', []);
+%set(gca, 'XTick', []);
 %xlabel 'Frame'; 
 %title 'Decoding from unshuffled data'
 ylabel 'Position (cm)';
+xlabel 'Time (s)';
 
-ax2 = subplot(2,1,2);
-%hold on;
-plot((ceil(ks/2) - 0.5) * opt.bin_width, '-k'); hold on;
-plot((ceil(ps_s/2) - 0.5) * opt.bin_width, '-r'); 
-xlim([1440 1700]);
+%ax2 = subplot(2,1,2);
+hold on;
+plot(time, (ceil(ks/2) - 0.5) * opt.bin_width, '-k'); hold on;
+plot(time, (ceil(ps_s/2) - 0.5) * opt.bin_width, '-r'); 
+%xlim([1440 1700]);
+xlim(xl_);
 %ylim([1 20]);
-set(gca, 'XTick', []);
+%set(gca, 'XTick', []);
 %xlabel 'Frame';
 %title 'Decoding from shuffled data'
-ylabel 'Position (cm)';
-
-%%
-f.Units = 'inches';
-f.Position = [f.Position(1:2), [0.8125 0.585].*0.98*1.6.*[2 2]];
-
-ax1.Units = 'inches'; ax2.Units = 'inches';
-ax1.FontSize = 6; ax2.FontSize = 6;
-ax1.LineWidth = 0.5; ax2.LineWidth = 0.5;
-ax1.FontName = 'Helvetica LT Std';
-ax2.FontName = ax1.FontName;
-ax1.TickLength = [0.02 0.02];
-ax2.TickLength = [0.02 0.02];
-
+%ylabel 'Position (cm)';
+figure_format('boxsize', [0.8 0.7]*1.05); box on;
+% %
+% f.Units = 'inches';
+% f.Position = [f.Position(1:2), [0.8125 0.585].*0.98*1.6.*[1 2]];
+% pause(2);
+% ax1.Units = 'inches'; ax2.Units = 'inches';
+% ax1.FontSize = 6; ax2.FontSize = 6;
+% 
+% ax1.LineWidth = 0.5; ax2.LineWidth = 0.5;
+% ax1.FontName = 'Helvetica LT Std';
+% ax2.FontName = 'Helvetica LT Std';
+% ax1.TickLength = [0.02 0.02];
+% ax2.TickLength = [0.02 0.02];
+% 
 print_svg('decode_demo');
+
+%% raw trajectory demo
+figure; 
+time = ((1:numel(o.data.y.raw.full)) - 26000)/20;
+plot(time, 118*normalize(o.data.y.raw.full, 'range'), 'k');
+[~, ~, tr_s, tr_e, ~, ~, ~] = DecodeTensor.new_sel(o.data.y.raw.full, DecodeTensor.default_opt);
+bad_y = 118*normalize(o.data.y.raw.full, 'range');
+for tr_i = 1:numel(tr_s)
+    bad_y(tr_s(tr_i):tr_e(tr_i)) = nan;
+end
+hold on;
+plot(time, bad_y, 'r');
+xlim([0 4000]/20);
+ylabel 'Position (cm)'
+xlabel 'Time (s)'
+%set(gca, 'XTick', []);
+%set(gca, 'YTick', []);
+figure_format('boxsize', [0.8125*3 0.585].*0.98);
+print_svg('raw_traj');
