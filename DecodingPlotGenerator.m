@@ -216,6 +216,8 @@ classdef DecodingPlotGenerator < handle
                     color = 'b';
                 case 'diagonal'
                     color = 'm';
+                otherwise
+                    color = 'k';
             end
             assert(length(n) == length(e), 'equal size');
             if length(n) <= 1

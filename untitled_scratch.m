@@ -48,3 +48,62 @@ reg_mean_err = mean_err_func(ks_te, preds_reg);
 irreg_mean_err = mean_err_func(ks_irreg, preds_irreg);
 
 fprintf('Train on 1/2 regular, test on other 1/2 regular:\t%f cm error\nTrain on 1/2 regular, test on irregular:\t%f cm error\n', reg_mean_err, irreg_mean_err);
+
+%% pooled plot, normed at max neurons
+dbfile = 'decoding.db';
+conn = sqlite(dbfile); %remember to close it
+mouse_list = {'Mouse2010','Mouse2012',...
+    'Mouse2023','Mouse2026',...
+    'Mouse2019','Mouse2028',...
+    'Mouse2024','Mouse2022'};
+%% mid
+for i = 1:numel(mouse_list)
+    [nP{i}, mP{i}, eP{i}] = ...
+        DecodingPlotGenerator.get_errors('NumNeurons', conn,...
+        mouse_list{i}, 'unshuffled', 'IMSE', 'max');
+    [nPs{i}, mPs{i}, ePs{i}] = ...
+        DecodingPlotGenerator.get_errors('NumNeurons', conn,...
+        mouse_list{i}, 'shuffled', 'IMSE', 'max');
+    
+    index_of_180 = find(nPs{i} == 180,1);
+    norm_by = mPs{i}(index_of_180);
+    mPs_normed{i} = mPs{i} ./ norm_by;
+    ePs_normed{i} = ePs{i} ./ norm_by;
+    
+    %index_of_180 = find(nPs{i} == 180,1);
+    %norm_by = mPs{i}(index_of_180);
+    mP_normed{i} = mP{i} ./ norm_by;
+    eP_normed{i} = eP{i} ./ norm_by;
+end
+%%
+lookup_at_value = @(val, val_col, res_col) cell2mat(...
+    cellfun(@(n,m) m(n == val), val_col, res_col,...
+    'UniformOutput', false).');
+%%
+m_at_n = @(n) mean(lookup_at_value(n, nP, mP_normed));
+e_at_n = @(n) sqrt(var(lookup_at_value(n, nP, mP_normed)) +...
+    mean(lookup_at_value(n, nP, eP_normed).^2));
+
+m_at_n_s = @(n) mean(lookup_at_value(n, nPs, mPs_normed));
+e_at_n_s = @(n) sqrt(var(lookup_at_value(n, nPs, mPs_normed)) +...
+    mean(lookup_at_value(n, nPs, ePs_normed).^2));
+
+%%
+figure; hold on;
+nn = [1 (30:30:500)];
+mm = arrayfun(m_at_n, nn);
+mm_s = arrayfun(m_at_n_s, nn);
+ee = arrayfun(e_at_n, nn);
+ee_s = arrayfun(e_at_n_s, nn);
+errorbar(nn, mm, ee, 'b');
+errorbar(nn, mm_s, ee_s, 'r');
+%%
+figure; hold on;
+for i = 1:numel(mouse_list)
+    plot(nP{i}, mP_normed{i}, 'b');
+end
+for i = 1:numel(mouse_list)
+    plot(nPs{i}, mPs_normed{i}, 'r');
+end
+%% closing section
+conn.close;

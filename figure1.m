@@ -149,6 +149,113 @@ text(10, 0.9, 'Shuffled', 'Color', 'red');
 figure_format;
 print_svg(name);
 conn.close;
+
+%% panel: decorrelation, pooled on all mice
+% and normed to 1 on the imse perf at 
+% n_cells = 180 for shuffled
+name = 'decorrelation_pooled_normed';
+dbfile = 'decoding.db';
+conn = sqlite(dbfile); %remember to close it
+mouse_list = {'Mouse2010','Mouse2012',...
+    'Mouse2023','Mouse2026',...
+    'Mouse2019','Mouse2028',...
+    'Mouse2024','Mouse2022'};
+
+for i = 1:numel(mouse_list)
+    [nP{i}, mP{i}, eP{i}] = ...
+        DecodingPlotGenerator.get_errors('NumNeurons', conn,...
+        mouse_list{i}, 'unshuffled', 'IMSE', 'max');
+    [nPs{i}, mPs{i}, ePs{i}] = ...
+        DecodingPlotGenerator.get_errors('NumNeurons', conn,...
+        mouse_list{i}, 'shuffled', 'IMSE', 'max');
+    [nPd{i}, mPd{i}, ePd{i}] = ...
+        DecodingPlotGenerator.get_errors('NumNeurons', conn,...
+        mouse_list{i}, 'diagonal', 'IMSE', 'max');
+    
+    %index_of_180 = find(nP{i} == 180,1);
+    %norm_by = mP{i}(index_of_180);%REPLACE WITH LINEAR FIT
+    %fit_res = createFit_infoSaturation(nPs{i}, mPs{i});
+    %norm_by = fit_res.I_0;
+    fit_res = fit(double(nPs{i}), mPs{i}, 'p1*x', 'StartPoint', 0.002);
+    norm_by(i) = fit_res.p1;
+    mPs_normed{i} = mPs{i} ./ norm_by(i);
+    ePs_normed{i} = ePs{i} ./ norm_by(i);
+    %fit_res = createFit_infoSaturation(double(nP{i}), mP{i});
+    %norm_by(i) = fit_res.I_0;
+    %fprintf('s I_0: %f\t us I_0: %f\n', norm_by_s(i), norm_by(i));
+    mP_normed{i} = mP{i} ./ norm_by(i);
+    eP_normed{i} = eP{i} ./ norm_by(i);
+    mPd_normed{i} = mPd{i} ./ norm_by(i);
+    ePd_normed{i} = ePd{i} ./ norm_by(i);
+end
+lookup_at_value = @(val, val_col, res_col) cell2mat(...
+    cellfun(@(n,m) m(n == val), val_col, res_col,...
+    'UniformOutput', false).');
+
+m_at_n = @(n) mean(lookup_at_value(n, nP, mP_normed));
+e_at_n = @(n) sqrt(var(lookup_at_value(n, nP, mP_normed)) +...
+    mean(lookup_at_value(n, nP, eP_normed).^2));
+
+m_at_n_s = @(n) mean(lookup_at_value(n, nPs, mPs_normed));
+e_at_n_s = @(n) sqrt(var(lookup_at_value(n, nPs, mPs_normed)) +...
+    mean(lookup_at_value(n, nPs, ePs_normed).^2));
+
+m_at_n_d = @(n) mean(lookup_at_value(n, nPd, mPd_normed));
+e_at_n_d = @(n) sqrt(var(lookup_at_value(n, nPd, mPd_normed)) +...
+    mean(lookup_at_value(n, nPd, ePd_normed).^2));
+
+figure; hold on;
+nn = [1 (30:30:500)];
+mm = arrayfun(m_at_n, nn);
+mm_s = arrayfun(m_at_n_s, nn);
+mm_d = arrayfun(m_at_n_d, nn);
+ee = arrayfun(e_at_n, nn);
+ee_s = arrayfun(e_at_n_s, nn);
+ee_d = arrayfun(e_at_n_d, nn);
+%errorbar(nn, mm, ee, 'b');
+%errorbar(nn, mm_s, ee_s, 'r');
+DecodingPlotGenerator.errors_plotter(nn,mm_s,ee_s, 'shuffled');
+DecodingPlotGenerator.errors_plotter(nn,mm,ee, 'unshuffled');
+xlabel 'Number of cells'
+ylabel(sprintf('1/MSE in\nunits of cells'));
+xlim([0 500]);
+text(10, 350, 'Unshuffled', 'Color', 'blue');
+text(10, 420, 'Shuffled', 'Color', 'red');
+text(10, 490, 'y = x', 'Color', 'black');
+%axis equal;
+l_ = refline(1,0); l_.Color = 'k';
+xlim([0 500]); ylim([0 500]);
+figure_format;
+print_svg(name);
+
+figure; hold on;
+DecodingPlotGenerator.errors_plotter(nn, mm, ee, 'unshuffled');
+DecodingPlotGenerator.errors_plotter(nn, mm_d, ee_d, 'diagonal');
+xlabel 'Number of cells'
+ylabel(sprintf('1/MSE in\nunits of cells'));
+l_ = refline(1,0); l_.Color = 'k';
+xlim([0 500]); ylim([0 200]);
+text(10, 350/2.5, 'Full', 'Color', 'blue');
+text(10, 420/2.5, 'Diagonal', 'Color', 'magenta');
+text(10, 490/2.5, 'y = x', 'Color', 'black');
+figure_format; name = 'fulldiagonal_pooled_normed';
+print_svg(name);
+conn.close;
+%%
+figure;
+full_gain_m = cellfun(@(x,y)x-y, mP_normed, mPd_normed, 'UniformOutput', false);
+full_gain_e = cellfun(@(x,y)sqrt(x.^2+y.^2), eP_normed, ePd_normed, 'UniformOutput', false);
+m_at_n_gain = @(n) mean(lookup_at_value(n, nPd, full_gain_m));
+e_at_n_gain = @(n) sqrt(var(lookup_at_value(n, nPd, full_gain_m)) +...
+    mean(lookup_at_value(n, nPd, full_gain_e).^2));
+
+DecodingPlotGenerator.errors_plotter(nn, arrayfun(m_at_n_gain, nn), arrayfun(e_at_n_gain, nn),...
+    'diff');
+xlabel 'Number of cells'
+ylabel(sprintf('\\Delta1/MSE\nin units of cells'));
+text(10, 100, 'Full - Diagonal', 'Color', 'black');
+figure_format; name = 'fulldiagonal_normed_diff';
+print_svg(name);
 %% panel: full vs diagonal decoder on all mice
 name = 'fulldiagonal_pooled';
 figure;
