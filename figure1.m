@@ -534,23 +534,36 @@ end
 print_svg(name);
 
 %% Panel comparing decoding performance for shuf/unshuf, shown on example trajectory
-decode_obj = DecodeTensor(4, 'rawTraces');
+decode_obj = DecodeTensor(4, 'rawTraces', true); %only use first half of session
 [me, mse, ps, ks, model] = decode_obj.basic_decode(false, [], []);
 [me_s, mse_s, ps_s, ks_s, model_s] = decode_obj.basic_decode(true, [], []);
 
 %%
 o = Analyzer('../linear_track/Mouse2022/Mouse-2022-20150326-linear-track/Mouse-2022-20150326_093722-linear-track-TracesAndEvents.mat');
 opt = DecodeTensor.default_opt;
-[~,~,~,~,~,~,ks] = DecodeTensor.new_sel(o.data.y.raw.full, opt);
-ks = ks(o.data.mask.fast);
+[~,~,tr_start,tr_end,~,~,ks] = DecodeTensor.new_sel(o.data.y.raw.full, opt);
+tr_mask = false(numel(ks),1);
+for tr_i = 1:numel(tr_start)
+    tr_mask(tr_start(tr_i):tr_end(tr_i)) = true;
+end
+second_half_mask = (1:numel(ks)).' > floor(numel(ks)/2);
+fast_and_2nd_half = o.data.mask.fast & second_half_mask;
+tr_mask = tr_mask(fast_and_2nd_half);
 
-ps = model.predict(o.data.X.fast);
-ps_s = model_s.predict(shuffle(o.data.X.fast, ks));
+ks = ks(fast_and_2nd_half);
+X = o.data.X.full(fast_and_2nd_half, :);
+
+ps = model.predict(X);
+ps_s = model_s.predict(shuffle(X, ks));
+
+%perf
+mean_err = mean(abs(ceil(ks(tr_mask)/2) - ceil(ps(tr_mask)/2)));
+mean_err_s = mean(abs(ceil(ks(tr_mask)/2) - ceil(ps_s(tr_mask)/2)));
 %%
 f = figure;
-xl_ = ([5372 5437] - 5372)/20;
+xl_ = [0 3];
 %ax1 = subplot(2,1,1);
-time = ((1:numel(ks)) - 5372)/20;
+time = ((1:numel(ks)) - 8392)/20;
 plot(time, (ceil(ks/2) - 0.5) * opt.bin_width, '-k'); hold on;
 plot(time, (ceil(ps/2) - 0.5) * opt.bin_width, '-b'); 
 xlim(xl_);

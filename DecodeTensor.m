@@ -189,6 +189,12 @@ classdef DecodeTensor < handle
                 X = Utils.event_detection(X, true);
             end
             
+            if opt.first_half
+                total_length = numel(track_coord);
+                half_length = floor(total_length/2);
+                track_coord = track_coord(1:half_length);
+                X = X(1:half_length,:);
+            end
             
             [~, ~, tr_s, tr_e, tr_dir, tr_bins, ~] = DecodeTensor.new_sel(track_coord, opt);
             data_tensor = DecodeTensor.construct_tensor(X, tr_bins, opt.n_bins, tr_s, tr_e);
@@ -263,8 +269,14 @@ classdef DecodeTensor < handle
             ks( repmat(division,1,n_bins)) = sup_ks1;
             ks(~repmat(division,1,n_bins)) = sup_ks2;
             
-            [~, tot_ks] = DecodeTensor.tensor2dataset(data_tensor, tr_dir);
+            if shuf
+                data_tensor = DecodeTensor.shuffle_tensor(data_tensor, tr_dir);
+            end
+            [tot_X, tot_ks] = DecodeTensor.tensor2dataset(data_tensor, tr_dir);
             assert(isequal(ks(:), tot_ks(:)));%%Sanity check
+            if nargout == 5
+                model = alg.train(tot_X, tot_ks);
+            end
         end
     end
     methods(Static) %functions involving decoding pipeline decisions
@@ -1025,9 +1037,14 @@ classdef DecodeTensor < handle
     end
     
     methods
-        function o = DecodeTensor(dispatch_index, neural_data_type)
+        function o = DecodeTensor(dispatch_index, neural_data_type, first_half)
             [o.source_path, o.mouse_name] = DecodeTensor.default_datasets(dispatch_index);
             o.opt = DecodeTensor.default_opt;
+            if ~exist('first_half', 'var')
+                o.opt.first_half = false;
+            else
+                o.opt.first_half = first_half;
+            end
             if exist('neural_data_type', 'var')
                 o.opt.neural_data_type = neural_data_type;
             end
