@@ -134,13 +134,14 @@ classdef DecodeTensor < handle
             opt.v_thresh = 4; %cm/s
             opt.n_bins = 20;
             opt.d_neurons = 30;
-            opt.restrict_trials = 156;
+            opt.restrict_trials = -1;
             opt.neural_data_type = 'rawTraces';
             
             opt.bin_width = opt.total_length/opt.n_bins;
             
             %extra
             opt.d_trials = 30;
+            opt.first_half = false;
         end
         
         function [source_path, mouse_name] = default_datasets(index)
@@ -241,7 +242,7 @@ classdef DecodeTensor < handle
             %Error measurement functions. @(k)ceil(k/2) throws away
             %direction information.
             mean_err_func = @(ks, ps) mean(abs(ceil(ks/2) - ceil(ps/2))) * binsize;
-            MSE_func = @(ks, ps) mean((ceil(ks/2) - ceil(ps/2)).^2) * binsize;
+            MSE_func = @(ks, ps) mean((ceil(ks/2) - ceil(ps/2)).^2) * binsize.^2;
             
             %Train on first half
             model = alg.train(sup_X1, sup_ks1);
@@ -1022,6 +1023,72 @@ classdef DecodeTensor < handle
             
             res.noise_spectrum = latent;
             res.noise_spectrum_s = latent_s;
+            
+            
+            
+            
+            %starting from T,d
+            [n,k,t] = size(T);
+            
+            %choose forward T
+            Tf = T(:,:,d==1);
+            
+            %select the signal
+            signal = mean(Tf, 3);
+            [~, amax] = max(signal.');
+            [~, amax_ord] = sort(amax);
+            
+            %sort the neurons
+            s_Tf = Tf(amax_ord,:,:);
+            s_signal = mean(s_Tf, 3);
+            s_noise = s_Tf - s_signal;
+            
+            
+            [s_Xf, ~] = DecodeTensor.tensor2dataset(s_Tf, ones(1,sum(d==1)));
+            res.total_corr = corr(s_Xf);
+            %compute correlations
+            res.sig_corr = corr(s_signal.');
+            
+            noise_corr = zeros(n,n,k);
+            RMS_noise_corr = zeros(1,k);
+            for b = 1:k
+                noise_corr(:,:,b) = corr(squeeze(s_noise(:,b,:)).');
+                RMS_noise_corr(b) = sqrt((norm(noise_corr(:,:,b), 'fro').^2 - n)/2 ./ ((n^2-n)/2));
+            end
+            
+            res.mean_noise_corr = mean(noise_corr,3);
+            res.RMS_noise_corr = mean(RMS_noise_corr);
+            
+            %%%%%%%%%%%%%%%%now on shuffle
+            %starting from T_shuf,d
+            %[n,k,t] = size(T_shuf);
+            
+            %choose forward T
+            T_shuf = DecodeTensor.shuffle_tensor(T, d);
+            Tf_shuf = T_shuf(:,:,d==1);
+            
+            %select the signal
+            signal_shuf = mean(Tf_shuf, 3);
+            [~, amax_shuf] = max(signal_shuf.');
+            [~, amax_ord_shuf] = sort(amax_shuf);
+            
+            %sort the neurons
+            s_Tf_shuf = Tf_shuf(amax_ord_shuf,:,:);
+            s_signal_shuf = mean(s_Tf_shuf, 3);
+            s_noise_shuf = s_Tf_shuf - s_signal_shuf;
+            
+            %compute correlations
+            res.sig_corr_shuf = corr(s_signal_shuf.');
+            noise_corr_shuf = zeros(n,n,k);
+            RMS_noise_corr_shuf = zeros(1,k);
+            for b = 1:20
+                noise_corr_shuf(:,:,b) = corr(squeeze(s_noise_shuf(:,b,:)).');
+                RMS_noise_corr_shuf(b) = sqrt((norm(noise_corr_shuf(:,:,b), 'fro').^2 - n)/2 ./ ((n^2-n)/2));
+            end
+            
+            res.mean_noise_corr_shuf = mean(noise_corr_shuf,3);
+            res.RMS_noise_corr_shuf = mean(RMS_noise_corr_shuf);
+
         end
         
     end

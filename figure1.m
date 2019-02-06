@@ -26,8 +26,8 @@ DecodingPlotGenerator.errors_plotter(n,m,e, 'unshuffled');
 xlabel 'Number of cells'
 ylabel '1/MSE (cm^{-2})'
 xlim([0 500]);
-text(200, 0.3, 'Unshuffled', 'Color', 'blue');
-text(150, 0.8, 'Shuffled', 'Color', 'red');
+text(200, 0.3/5.9, 'Unshuffled', 'Color', 'blue');
+text(150, 0.8/5.9, 'Shuffled', 'Color', 'red');
 figure_format;
 
 print_svg(name);
@@ -88,8 +88,8 @@ DecodingPlotGenerator.errors_plotter(n,m,e, 'unshuffled');
 xlabel 'Number of cells'
 ylabel '1/MSE (cm^{-2})'
 xlim([0 500]);
-text(100, 0.18, 'Full', 'Color', 'blue');
-text(150, 0.1, 'Diagonal', 'Color', 'magenta');
+text(100, 0.18/5.9, 'Full', 'Color', 'blue');
+text(150, 0.1/5.9, 'Diagonal', 'Color', 'magenta');
 figure_format;
 
 
@@ -144,8 +144,8 @@ DecodingPlotGenerator.errors_plotter(neuron_nums,imse_means,imse_errbs, 'unshuff
 xlabel 'Number of cells'
 ylabel '1/MSE (cm^{-2})'
 xlim([0 400]);
-text(10, 0.75, 'Unshuffled', 'Color', 'blue');
-text(10, 0.9, 'Shuffled', 'Color', 'red');
+text(10, 0.75/5.9, 'Unshuffled', 'Color', 'blue');
+text(10, 0.9/5.9, 'Shuffled', 'Color', 'red');
 figure_format;
 print_svg(name);
 conn.close;
@@ -302,8 +302,8 @@ DecodingPlotGenerator.errors_plotter(neuron_nums,imse_means,imse_errbs, 'unshuff
 xlabel 'Number of cells'
 ylabel '1/MSE (cm^{-2})'
 xlim([0 400]);
-text(10, 0.4, 'Full', 'Color', 'blue');
-text(10, 0.3, 'Diagonal', 'Color', 'magenta');
+text(10, 0.4/5.9, 'Full', 'Color', 'blue');
+text(10, 0.3/5.9, 'Diagonal', 'Color', 'magenta');
 figure_format;
 print_svg(name);
 conn.close;
@@ -382,6 +382,7 @@ conn.close;
 opt = DecodeTensor.default_opt;
 opt.neural_data_type = 'FST_events';%'spikeDeconv';%'FST_events';
 opt.restrict_trials = -1;
+opt.first_half = false;
 [T, d] = DecodeTensor.tensor_loader(source_path, mouse_name, opt);
 
 [X, ks] = DecodeTensor.tensor2dataset(T~=0, d);
@@ -431,7 +432,7 @@ corr_effect = cell(8,1);
 num_samples = zeros(8,1);
 for m_i = 1:8
     [source_path, mouse_name] = DecodeTensor.default_datasets(m_i);
-    opt = DecodeTensor.default_opt;
+    opt = DecodeTensor.default_opt; opt.first_half = false;
     opt.neural_data_type = 'FST_events';%'spikeDeconv';%'FST_events';
     opt.restrict_trials = -1;
     [T, d] = DecodeTensor.tensor_loader(source_path, mouse_name, opt);
@@ -486,7 +487,7 @@ stdev_unshuffled = zeros(1,8);
 stdev_shuffled = zeros(1,8);
 for m_i = 1:8
     [source_path, mouse_name] = DecodeTensor.default_datasets(m_i);
-    opt = DecodeTensor.default_opt;
+    opt = DecodeTensor.default_opt; opt.first_half = false;
     opt.neural_data_type = 'FST_events';%'spikeDeconv';%'FST_events';
     opt.restrict_trials = -1;
     [T, d] = DecodeTensor.tensor_loader(source_path, mouse_name, opt);

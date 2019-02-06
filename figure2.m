@@ -220,3 +220,68 @@ set(gca, 'YScale', 'log');
 ylabel(sprintf('Unshuf./Shuf. noise\nvariance ratio'));
 figure_format;
 print_svg('noise_attenuation_boxplot');
+%% regression of nd_pre with perf
+dbfile = 'decoding.db';
+
+conn = sqlite(dbfile); %remember to close it
+%
+mouse_list = {'Mouse2010', 'Mouse2012', 'Mouse2019', 'Mouse2022',...
+                'Mouse2023', 'Mouse2024', 'Mouse2026', 'Mouse2028'};
+
+for i = 1:numel(mouse_list)
+    [nP{i}, mP{i}, eP{i}] = ...
+        DecodingPlotGenerator.get_errors('NumNeurons', conn,...
+        mouse_list{i}, 'unshuffled', 'IMSE', 'max');
+    [nPs{i}, mPs{i}, ePs{i}] = ...
+        DecodingPlotGenerator.get_errors('NumNeurons', conn,...
+        mouse_list{i}, 'shuffled', 'IMSE', 'max');
+    [nPd{i}, mPd{i}, ePd{i}] = ...
+        DecodingPlotGenerator.get_errors('NumNeurons', conn,...
+        mouse_list{i}, 'diagonal', 'IMSE', 'max');
+    
+    %index_of_180 = find(nP{i} == 180,1);
+    %norm_by = mP{i}(index_of_180);%REPLACE WITH LINEAR FIT
+    %fit_res = createFit_infoSaturation(nPs{i}, mPs{i});
+    %norm_by = fit_res.I_0;
+    fit_res = fit(double(nPs{i}), mPs{i}, 'p1*x', 'StartPoint', 0.002);
+    norm_by(i) = fit_res.p1;
+    mPs_normed{i} = mPs{i} ./ norm_by(i);
+    ePs_normed{i} = ePs{i} ./ norm_by(i);
+    %fit_res = createFit_infoSaturation(double(nP{i}), mP{i});
+    %norm_by(i) = fit_res.I_0;
+    %fprintf('s I_0: %f\t us I_0: %f\n', norm_by_s(i), norm_by(i));
+    mP_normed{i} = mP{i} ./ norm_by(i);
+    eP_normed{i} = eP{i} ./ norm_by(i);
+    mPd_normed{i} = mPd{i} ./ norm_by(i);
+    ePd_normed{i} = ePd{i} ./ norm_by(i);
+    
+    %calculating noise props `res` variable
+    [source_path, mouse_name] = DecodeTensor.default_datasets(i);
+    opt = DecodeTensor.default_opt;
+    opt.restrict_trials = -1;
+    
+    [T, d] = DecodeTensor.tensor_loader(source_path, mouse_name, opt);
+    res = DecodeTensor.noise_properties(T, d, true); %true for using_corr
+    q__ = cell2mat(res.nd_pre(:)) ./ cell2mat(res.nd_pre_s(:));
+    sh_by_unsh(i) = mean(q__);
+    sh_by_unsh_errbs(i) = std(q__) ./ sqrt(length(q__));
+    RMS_noise_corr(i) = res.RMS_noise_corr;
+    RMS_noise_corr_shuf(i) = res.RMS_noise_corr_shuf;
+    %^ use this to explain that v
+    shuffle_effective_neurons_change(i) = mPs_normed{i}(end) - mP_normed{i}(end);
+    shuffle_effective_neurons_change_errbs(i) = sqrt(ePs_normed{i}(end).^2 + eP_normed{i}(end).^2);
+end
+%%
+figure; plot(sh_by_unsh, shuffle_effective_neurons_change, 'o')
+text(sh_by_unsh+0.1, shuffle_effective_neurons_change+10, mouse_list)
+refline;
+xlabel 'Unshuf./Shuf. noise ratio in signal direction'
+ylabel 'Effective independent cell difference\newline shuf - unshuf (at max cells)'
+%
+conn.close;
+%%
+figure; plot(RMS_noise_corr./RMS_noise_corr_shuf, shuffle_effective_neurons_change, 'o')
+text(RMS_noise_corr./RMS_noise_corr_shuf+0.005, shuffle_effective_neurons_change+10, mouse_list)
+refline;
+xlabel 'RMS noise correlation ratio'
+ylabel 'Effective independent cell difference\newline shuf - unshuf (at max cells)'
