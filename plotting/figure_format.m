@@ -5,13 +5,15 @@ p.addOptional('lwid', 0.5, @isscalar);
 p.addOptional('fontsize', 6, @isscalar);
 p.parse(varargin{:});
 
+my_font = 'Helvetica LT Std';
+
 hf = gcf;
 hf.Units = 'inches';
 hf.Position = [hf.Position(1:2), p.Results.boxsize.*1.6];
 
 ax = gca;
 ax.FontSize = p.Results.fontsize;
-ax.FontName = 'Arial';
+ax.FontName = my_font;
 ax.Box = 'off';
 ax.LineWidth = p.Results.lwid;
 ax.Units = 'inches';
@@ -21,6 +23,7 @@ ax.TickLength = [0.02 0.02];
 for i = 1:numel(ax.Children)
     if strcmp(ax.Children(i).Type, 'text')
         ax.Children(i).FontSize = p.Results.fontsize;
+        ax.Children(i).FontName = my_font;
     end
 end
 % box = [0 0 1.3 0.8];
