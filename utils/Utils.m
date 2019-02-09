@@ -92,6 +92,13 @@ classdef Utils %Common utilities for dealing with neural data
             
         end
         
+        function p_adj = my_bh(pvals)
+            pvals = pvals(:);
+            m = numel(pvals);
+            [sorted_pvals, p_ord] = sort(pvals);
+            p_adj(p_ord) = cummin(sorted_pvals .* (m./(1:m)).', 'reverse');
+        end
+        
         
         
         %         function MI = muti_proc(counts_one, counts_y, N)
