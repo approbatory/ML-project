@@ -9,7 +9,8 @@ try
     %Analyzer.dispatch(source, numer, denom);
     %Analyzer.dispatch_update(source, numer, denom);
     %test_selector(str2num(source));
-    DecodeTensor.dispatch_datasize(str2double(source));
+    %DecodeTensor.dispatch_datasize(str2double(source));
+    DecodeTensor.dispatch(str2double(source));
 catch me
     fprintf('%s / %s\n', me.identifier, me.message);
 end
