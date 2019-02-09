@@ -272,16 +272,32 @@ for i = 1:numel(mouse_list)
     shuffle_effective_neurons_change_errbs(i) = sqrt(ePs_normed{i}(end).^2 + eP_normed{i}(end).^2);
 end
 %%
-figure; plot(sh_by_unsh, shuffle_effective_neurons_change, 'o')
-text(sh_by_unsh+0.1, shuffle_effective_neurons_change+10, mouse_list)
-refline;
-xlabel 'Unshuf./Shuf. noise ratio in signal direction'
-ylabel 'Effective independent cell difference\newline shuf - unshuf (at max cells)'
-%
+figure; 
+scatter(sh_by_unsh, shuffle_effective_neurons_change, 4, 'k','filled');
+[fitresult, gof] = fit(sh_by_unsh.', shuffle_effective_neurons_change.', 'poly1');
+hold on; 
+plot(fitresult, 'k'); legend off
+text(6.5, 150, sprintf('adj. R^2=%.2f', gof.adjrsquare));
+xlabel(sprintf('Unshuf./Shuf. noise\nvariance ratio'));
+ylabel(sprintf('\\Delta1/MSE\nin units of cells'));
+figure_format;
+print_svg('noise_improvement_regression');
 conn.close;
 %%
-figure; plot(RMS_noise_corr./RMS_noise_corr_shuf, shuffle_effective_neurons_change, 'o')
-text(RMS_noise_corr./RMS_noise_corr_shuf+0.005, shuffle_effective_neurons_change+10, mouse_list)
-refline;
+figure; 
 xlabel 'RMS noise correlation ratio'
-ylabel 'Effective independent cell difference\newline shuf - unshuf (at max cells)'
+ylabel(sprintf('\\Delta1/MSE\nin units of cells'));
+figure_format;
+[xData, yData] = prepareCurveData(RMS_noise_corr./RMS_noise_corr_shuf, shuffle_effective_neurons_change);
+%plot(RMS_noise_corr./RMS_noise_corr_shuf, shuffle_effective_neurons_change, 'o')
+%text(RMS_noise_corr./RMS_noise_corr_shuf+0.005, shuffle_effective_neurons_change+10, mouse_list)
+%refline;
+scatter(xData, yData, 4, 'k', 'filled');
+[fitresult, gof] = fit(xData, yData, 'poly1');
+hold on;
+plot(fitresult, 'k'); legend off
+text(1.7, 400, sprintf('adj. R^2=%.2f', gof.adjrsquare));
+xlabel 'RMS noise correlation ratio'
+ylabel(sprintf('\\Delta1/MSE\nin units of cells'));
+figure_format;
+print_svg('RMS_noise_corr_bad_regression');
