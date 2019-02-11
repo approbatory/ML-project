@@ -237,7 +237,10 @@ classdef DecodingPlotGenerator < handle
             %legend(success);
         end
         function [series_values, error_m, error_e, uniform_value] =...
-                get_errors(series_type, conn, mouse, setting, error_type, uniform_param)
+                get_errors(series_type, conn, mouse, setting, error_type, uniform_param, restricted_num_samples)
+            if ~exist('restricted_num_samples', 'var')
+                restricted_num_samples = 20;
+            end
             if strcmp(error_type, 'IMSE')
                 error_type = 'MSE';
                 special = 'inverse';
@@ -285,7 +288,12 @@ classdef DecodingPlotGenerator < handle
                 if exist('special', 'var') && strcmp(special, 'inverse')
                     error_samples = 1./error_samples;
                 end
-                error_m(i) = mean(error_samples);
+                if exist('restricted_num_samples', 'var') && restricted_num_samples > 0
+                    assert(restricted_num_samples <= numel(error_samples),...
+                        'not enough samples available for given sample size');
+                    error_samples = error_samples(1:restricted_num_samples);
+                end
+                error_m(i) = mean(error_samples);%restrict to only 20 samples
                 error_e(i) = std(error_samples) ./ sqrt(length(error_samples));
             end
         end
