@@ -82,7 +82,7 @@ classdef DecodeTensor < handle
             %decoding. The records are saved and later inputted to a SQLite
             %database.
             db_queue = cell(numel(neuron_series),3);
-            for i = 1:numel(neuron_series)
+            for i = numel(neuron_series):-1:1
                 n_neu = neuron_series(i);
                 [mean_err, MSE] = DecodeTensor.decode_tensor(data_tensor, tr_dir, opt.bin_width, alg, false,...
                     n_neu, num_trials);
@@ -325,6 +325,10 @@ classdef DecodeTensor < handle
             % to be within the range for the purpose
             % of calculating bin numbers.
             %
+            % Finally discard all trials that do not contain at least one
+            % sample from each bin. This can occur during fast motion, or
+            % if the number of place bins chosen is too high.
+            %
             % opt is the struct of options
             % opt.total_length = total length of the track (118cm)
             % opt.cutoff_p = percentile at which the length of the track in
@@ -362,6 +366,7 @@ classdef DecodeTensor < handle
             %define trial start and end times as contiguous fast frames
             trial_start = find(diff(fast_frames) == 1);
             trial_end = find(diff(fast_frames) == -1);
+            trial_start = trial_start(1:numel(trial_end));
             
             %filter out the trials that don't start at one end of the
             %track and end at the other end of the track
@@ -394,6 +399,22 @@ classdef DecodeTensor < handle
             track_bins(track_bins > n_bins) = n_bins;
             
             track_dir_bins = add_in_direction(track_bins, vel);
+            
+            %if a trial does not contain a sample from all bins, discard
+            %the trial
+            keep_trial = true(size(trial_start));
+            for tr_i = 1:numel(trial_start)
+                bins_present = track_bins(trial_start(tr_i):trial_end(tr_i));
+                for b = 1:n_bins
+                    if sum(bins_present == b) == 0
+                        keep_trial(tr_i) = false;
+                    end
+                end
+            end
+            trial_start = trial_start(keep_trial);
+            trial_end = trial_end(keep_trial);
+            trial_direction = trial_direction(keep_trial);
+            fprintf('Total trials: %d\tThrowing away %d\tkeeping %d\n', numel(keep_trial), sum(~keep_trial), sum(keep_trial));
         end
         
         function [data_tensor, counts_mat] = construct_tensor(X, tr_bins, n_bins, tr_s, tr_e)
@@ -423,6 +444,7 @@ classdef DecodeTensor < handle
                     counts_mat(b, tr_i) = size(trial_data(trial_bins == b,:),1);
                 end
             end
+            assert(all(counts_mat(:)~=0), 'some trial(s) have zero samples in a place bin, consider using fewer place bins');
         end
         
         function shuf_tensor = shuffle_tensor(data_tensor, tr_dir)
