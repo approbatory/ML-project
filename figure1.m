@@ -2,14 +2,14 @@
 svg_save_dir = 'figure1_svg';
 print_svg = @(name) print('-dsvg', fullfile(svg_save_dir, [name '.svg']));
 
-%% panel A: decorrelation result for Mouse2022
+%% panel A: decorrelation result for Mouse2022/21/24
 % Caption: Inverse mean squared error for a neural decoder for place as a
 % function of number of cells included in the decoder. Aggregated over 20
 % random cell subsets of fixed size, shown for one mouse. 
 % Shaded regions represent 95% confidence range.
 % Trial shuffled data does not reach a performance saturation at 500 neurons, whereas
 % unshuffled data does.
-name = 'decorrelation_Mouse2022';
+name = 'decorrelation_Mouse2022_24_28';
 figure;
 
 dbfile = 'decoding.db';
@@ -17,16 +17,20 @@ dbfile = 'decoding.db';
 conn = sqlite(dbfile); %remember to close it
 %DecodingPlotGenerator.plot_mice(conn, {'Mouse2022'}, 'shuffled', 'NumNeurons', 'IMSE', 'max');
 %DecodingPlotGenerator.plot_mice(conn, {'Mouse2022'}, 'unshuffled', 'NumNeurons', 'IMSE', 'max');
-mouse = 'Mouse2022';
-[n,m,e] = DecodingPlotGenerator.get_errors('NumNeurons', conn, mouse, 'unshuffled', 'IMSE', 'max');
-[ns,ms,es] = DecodingPlotGenerator.get_errors('NumNeurons', conn, mouse, 'shuffled', 'IMSE', 'max');
-hold on;
-DecodingPlotGenerator.errors_plotter(ns,ms,es, 'shuffled');
-DecodingPlotGenerator.errors_plotter(n,m,e, 'unshuffled');
+mouse_list = {'Mouse2022', 'Mouse2024', 'Mouse2028'};
+for m_i = 1:numel(mouse_list)
+    mouse = mouse_list{m_i};
+    disp(mouse);
+    [n,m,e] = DecodingPlotGenerator.get_errors('NumNeurons', conn, mouse, 'unshuffled', 'IMSE', 'max');
+    [ns,ms,es] = DecodingPlotGenerator.get_errors('NumNeurons', conn, mouse, 'shuffled', 'IMSE', 'max');
+    hold on;
+    DecodingPlotGenerator.errors_plotter(ns,ms,es, 'shuffled');
+    DecodingPlotGenerator.errors_plotter(n,m,e, 'unshuffled');
+end
 xlabel 'Number of cells'
 ylabel '1/MSE (cm^{-2})'
 xlim([0 500]);
-text(200, 0.3/5.9, 'Unshuffled', 'Color', 'blue');
+text(200+50, 0.3/5.9, 'Unshuffled', 'Color', 'blue');
 text(150, 0.8/5.9, 'Shuffled', 'Color', 'red');
 figure_format;
 
@@ -36,8 +40,9 @@ print_svg(name);
 %body
 conn.close;
 %% confusion mat %%TODO
-D_T = DecodeTensor(4, 'rawTraces');
-%%
+for i = 1:12
+D_T = DecodeTensor(i, 'rawTraces');
+
 [~, ~, ps, ks, ~] = D_T.basic_decode(false, [], []);
 [~, ~, ps_s, ks_s, ~] = D_T.basic_decode(true, [], []);
 
@@ -45,15 +50,20 @@ ps = ceil(ps/2);
 ks = ceil(ks/2);
 ps_s = ceil(ps_s/2);
 ks_s = ceil(ks_s/2);
-%%
-figure;
-C = confusionmat(ks, ps) ./ (2*D_T.n_one_dir_trials);
-C_s = confusionmat(ks_s, ps_s) ./ (2*D_T.n_one_dir_trials);
-C_perfect = confusionmat(ks_s, ks) ./ (2*D_T.n_one_dir_trials);
-CDiff = C_s - C;
+
+num_trials(i) = 2*D_T.n_one_dir_trials;
+C = confusionmat(ks, ps); %./ (2*D_T.n_one_dir_trials);
+C_s = confusionmat(ks_s, ps_s);% ./ (2*D_T.n_one_dir_trials);
+C_perfect = confusionmat(ks_s, ks);% ./ (2*D_T.n_one_dir_trials);
+CDiff(:,:,i) = C_s - C;
 CsC = (C_s - C)./C;
 CsC(isnan(CsC)) = 0;
-imagesc(CDiff);
+disp(i);
+end
+%%
+figure;
+m_CDiff = squeeze(sum(CDiff,3))./sum(num_trials);
+imagesc(m_CDiff);
 colorbar;
 %title('Shuffled - Unshuffled');
 colormap(bluewhitered);
@@ -73,23 +83,26 @@ print_svg('confusion_diff');
 % colorbar;
 % title('Shuffled');
 %%  panel: full vs diagonal decoder on one mouse:
-name = 'fulldiagonal_Mouse2022';
+name = 'fulldiagonal_Mouse2022_24_28';
 figure;
 
 dbfile = 'decoding.db';
 
 conn = sqlite(dbfile); %remember to close it
-mouse = 'Mouse2022';
-[n,m,e] = DecodingPlotGenerator.get_errors('NumNeurons', conn, mouse, 'unshuffled', 'IMSE', 'max');
-[ns,ms,es] = DecodingPlotGenerator.get_errors('NumNeurons', conn, mouse, 'diagonal', 'IMSE', 'max');
-hold on;
-DecodingPlotGenerator.errors_plotter(ns,ms,es, 'diagonal');
-DecodingPlotGenerator.errors_plotter(n,m,e, 'unshuffled');
+mouse_list = {'Mouse2022', 'Mouse2024', 'Mouse2028'};
+for m_i = 1:numel(mouse_list)
+    mouse = mouse_list{m_i};
+    [n,m,e] = DecodingPlotGenerator.get_errors('NumNeurons', conn, mouse, 'unshuffled', 'IMSE', 'max');
+    [ns,ms,es] = DecodingPlotGenerator.get_errors('NumNeurons', conn, mouse, 'diagonal', 'IMSE', 'max');
+    hold on;
+    DecodingPlotGenerator.errors_plotter(ns,ms,es, 'diagonal');
+    DecodingPlotGenerator.errors_plotter(n,m,e, 'unshuffled');
+end
 xlabel 'Number of cells'
 ylabel '1/MSE (cm^{-2})'
 xlim([0 500]);
-text(100, 0.18/5.9, 'Full', 'Color', 'blue');
-text(150, 0.1/5.9, 'Diagonal', 'Color', 'magenta');
+text(300, 0.18/5.9+0.006, 'Full', 'Color', 'blue');
+text(150+130, 0.1/5.9, 'Diagonal', 'Color', 'magenta');
 figure_format;
 
 
@@ -103,10 +116,9 @@ name = 'decorrelation_pooled';
 figure;
 dbfile = 'decoding.db';
 conn = sqlite(dbfile); %remember to close it
-mouse_list = {'Mouse2010','Mouse2012',...
-    'Mouse2023','Mouse2026',...
-    'Mouse2019','Mouse2028',...
-    'Mouse2024','Mouse2022'};
+mouse_list = {'Mouse2010', 'Mouse2012', 'Mouse2019', 'Mouse2022',...
+                'Mouse2023', 'Mouse2024', 'Mouse2026', 'Mouse2028',...
+                'Mouse2025', 'Mouse2011', 'Mouse2029', 'Mouse2021'};
 pooled_map = containers.Map('KeyType', 'double', 'ValueType', 'any');
 pooled_map_s = containers.Map('KeyType', 'double', 'ValueType', 'any');
 for i = 1:numel(mouse_list)
@@ -156,10 +168,11 @@ conn.close;
 name = 'decorrelation_pooled_normed';
 dbfile = 'decoding.db';
 conn = sqlite(dbfile); %remember to close it
-mouse_list = {'Mouse2010','Mouse2012',...
-    'Mouse2023','Mouse2026',...
-    'Mouse2019','Mouse2028',...
-    'Mouse2024','Mouse2022'};
+%mouse_list = {'Mouse2010', 'Mouse2012', 'Mouse2019', 'Mouse2022',...
+%                'Mouse2023', 'Mouse2024', 'Mouse2026', 'Mouse2028',...
+%                'Mouse2025', 'Mouse2011', 'Mouse2029', 'Mouse2021'};
+mouse_list = {'Mouse2019', 'Mouse2021', 'Mouse2022',...
+    'Mouse2028', 'Mouse2025', 'Mouse2024'}; %only mice with >80 trials
 
 for i = 1:numel(mouse_list)
     [nP{i}, mP{i}, eP{i}] = ...
@@ -221,7 +234,7 @@ ylabel(sprintf('1/MSE in\nunits of cells'));
 xlim([0 500]);
 text(10, 350, 'Unshuffled', 'Color', 'blue');
 text(10, 420, 'Shuffled', 'Color', 'red');
-text(10, 490, 'y = x', 'Color', 'black');
+%text(10, 490, 'y = x', 'Color', 'black');
 %axis equal;
 l_ = refline(1,0); l_.Color = 'k';
 xlim([0 500]); ylim([0 500]);
@@ -237,7 +250,7 @@ l_ = refline(1,0); l_.Color = 'k';
 xlim([0 500]); ylim([0 200]);
 text(10, 350/2.5, 'Full', 'Color', 'blue');
 text(10, 420/2.5, 'Diagonal', 'Color', 'magenta');
-text(10, 490/2.5, 'y = x', 'Color', 'black');
+%text(10, 490/2.5, 'y = x', 'Color', 'black');
 figure_format; name = 'fulldiagonal_pooled_normed';
 print_svg(name);
 conn.close;
@@ -425,12 +438,12 @@ title '';
 xlim([0 15]);
 figure_format;
 print_svg(name);
-%% Panel e_OLD: effect of correlations on total neuron's activity: pooled over 8 mice
+%% Panel e_OLD: effect of correlations on total neuron's activity: pooled over 12 mice
 name = 'total_activity_change_pooled';
 clear h p
-corr_effect = cell(8,1);
-num_samples = zeros(8,1);
-for m_i = 1:8
+corr_effect = cell(12,1);
+num_samples = zeros(12,1);
+for m_i = 1:12
     [source_path, mouse_name] = DecodeTensor.default_datasets(m_i);
     opt = DecodeTensor.default_opt; opt.first_half = false;
     opt.neural_data_type = 'FST_events';%'spikeDeconv';%'FST_events';
@@ -480,12 +493,12 @@ print_svg(name);
 %% Panel e : change in std of active cells dists (+sign test)
 name = 'change_in_std_pooled';
 clear h p
-corr_effect = cell(8,1);
-num_samples = zeros(8,1);
-num_total_cells = zeros(1,8);
-stdev_unshuffled = zeros(1,8);
-stdev_shuffled = zeros(1,8);
-for m_i = 1:8
+corr_effect = cell(12,1);
+num_samples = zeros(12,1);
+num_total_cells = zeros(1,12);
+stdev_unshuffled = zeros(1,12);
+stdev_shuffled = zeros(1,12);
+for m_i = 1:12
     [source_path, mouse_name] = DecodeTensor.default_datasets(m_i);
     opt = DecodeTensor.default_opt; opt.first_half = false;
     opt.neural_data_type = 'FST_events';%'spikeDeconv';%'FST_events';
@@ -517,13 +530,16 @@ end
 
 p_sign = signtest(stdev_unshuffled, stdev_shuffled, 'Tail', 'right');
 figure;
-plot([stdev_unshuffled ; stdev_shuffled]./num_total_cells, '-k.');
+%plot([stdev_unshuffled ; stdev_shuffled]./num_total_cells, '-k.');
+plot([stdev_unshuffled ; stdev_shuffled], '-k.');
 xlim([0.5 2.5]);
-ylim([3 9]*1e-3);
+%ylim([3 9]*1e-3);
+ylim([0 4]);
 set(gca, 'XTick', [1 2]);
 set(gca, 'XTickLabel', {'Unshuffled', 'Shuffled'});
-ylabel(sprintf('\\sigma/total cells\nof num. active cells'));
-text(1.5, 8.5e-3, '**', 'HorizontalAlignment', 'center');
+%ylabel(sprintf('\\sigma/total cells\nof num. active cells'));
+ylabel(sprintf('\\sigma of num.\nactive cells'));
+text(1.5, 3.5, '***', 'HorizontalAlignment', 'center');
 figure_format;
 %sigstar({{'Unshuffled', 'Shuffled'}}, p_sign);
 %figure_format;

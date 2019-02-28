@@ -7,8 +7,8 @@
 %cd m953-0122/
 
 
-load_path = fullfile('~','_distalopto_traces', 'enphr',...
-    'm953', 'm953-0122');
+load_path = fullfile('~','_distalopto_traces', 'mcherry',...
+    'm892', 'm892-1016');
 p_ = @(p) fullfile(load_path,p);
 
 load(p_('opto.mat'));
@@ -26,12 +26,22 @@ segment_length = 180;
 cs_start = ds.trial_indices(:,2) - ds.trial_indices(:,1)+1;
 tr_end = cs_start + segment_length - 1; %only using 180 frames
 
+res = detect_all_events(ds);
+X_full_bin = Utils.binarize_res(res, ds.trial_indices(end));
+%X_trials_bin = cell(1,num_trials);
+%for tr_ix = 1:num_trials
+%    X_trials_bin{tr_ix} = X_full_bin(ds.trial_indices(tr_ix,1):ds.trial_indices(tr_ix,4),:);
+%end
+%%
 X = zeros(num_cells, segment_length, num_trials);
+X_b = X;
 for tr_ix = 1:num_trials
     X(:,:,tr_ix) = ds.trials(tr_ix).traces(:, cs_start(tr_ix):tr_end(tr_ix));
+    X_b(:,:,tr_ix) = X_full_bin(ds.trial_indices(tr_ix,2):ds.trial_indices(tr_ix,2)+segment_length-1,:).';
 end
+X_b = X_b ~= 0;
 %%
-mean_act = squeeze(mean(X, 2));
+mean_act = squeeze(sum(X_b, 2));
 
 laser_on = true(1,num_trials);
 laser_on(off_trials) = false;
@@ -44,8 +54,10 @@ med_on = zeros(1,num_cells);
 med_off = zeros(1,num_cells);
 for ix = 1:num_cells
     p(ix) = ranksum(mean_act_on(ix, :), mean_act_off(ix, :));
-    med_on(ix) = median(mean_act_on(ix, :));
-    med_off(ix)= median(mean_act_off(ix,:));
+    %med_on(ix) = median(mean_act_on(ix, :));
+    %med_off(ix)= median(mean_act_off(ix,:));
+    med_on(ix) = mean(mean_act_on(ix, :));
+    med_off(ix)= mean(mean_act_off(ix,:));
 end
 fdr_BH = mafdr(p, 'BHFDR', true);
 signif = fdr_BH < 0.1;
@@ -65,4 +77,8 @@ boxplot(mean_act_off(off_ord,:).', 'plotstyle', 'compact');
 hold on;
 boxplot(mean_act_on(off_ord,:).', 'plotstyle', 'compact', 'colors', 'r');
 signif_indices = find(signif(off_ord));
-text(signif_indices, 250 + 0.*signif_indices, '*');
+text(signif_indices, 6 + 0.*signif_indices, '*');
+
+%%
+num_excited = sum(signif & (med_on > med_off));
+num_inhibited = sum(signif & (med_on < med_off));

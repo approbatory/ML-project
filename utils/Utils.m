@@ -143,6 +143,17 @@ classdef Utils %Common utilities for dealing with neural data
         %             MI = (zero_term + one_term) / N / log(2);
         %         end
         
+        function binarized = binarize_res(res, n_samples)
+            n_cells = numel(res);
+            binarized = zeros(n_samples, n_cells);
+            for i = 1:n_cells
+                events = res(i).auto;
+                for j = 1:size(events,1)
+                    binarized(floor((events(:,1) + events(:,2))/2), i) = events(:,3);
+                end
+            end
+        end
+        
         function [binarized, events] = event_detection_dependent(X)
             [n_samples, n_cells] = size(X);
             binarized = zeros(n_samples, n_cells);

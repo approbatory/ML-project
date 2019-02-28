@@ -48,13 +48,13 @@
       /><path style="stroke:none;" d="M21 112 L93 112 L93 40 L21 40 Z"
     /></g
     ><g transform="matrix(3.6,0,0,3.6,21,40)" style="fill-opacity:0; fill:rgb(0,0,0); text-rendering:optimizeSpeed; image-rendering:optimizeSpeed; color-rendering:optimizeSpeed; shape-rendering:crispEdges; stroke:rgb(0,0,0); color-interpolation:sRGB; stroke-opacity:0;"
-    ><image x="0" y="0" width="20" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAIAAAAC64paAAAA+0lEQVR42p2UvQ3C
-MBCF3xZsQZEdGICeAdJnAA+QngEipYOGilSu6CiiVBRIVMgDuKE73sURIIVAbEtR
-osjfvft5NsTaqpW0BedFjClPSTAfJQEUPgXWV+ENeRjn42H9yt0RWG6luQpDzIny
-hlun+jWwKIUtjIO5qFk0cgcIB/0IeGieyANYVZrLbx7jX5SFkRuGQfzgv8DczZyJ
-nTm+RguJgANPmJnvgM1epiyEqajkqcnJdX3/WH8E/Mq/36XzHxePv8OkppadZePz
-gzk2pCb9c6B9c/epj/lOZucu5NdtChz83+nxSYIDL33/U+DBwnWtjUi7gHTs1j4B
-tI9WC+XUwYQAAAAASUVORK5CYII=" style="clip-path:url(#clipPath2);" height="20" preserveAspectRatio="none"
+    ><image x="0" y="0" width="20" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAIAAAAC64paAAABE0lEQVR42pWUMQ6C
+QBBF/w3sbD2CRyCxJx6BI3gEjsAR6Gy5gAmJjSWJFR2FjZXUVuPfnXVCJODuZCkW
+eDPzZ2YXcjigGCTdhlFQNCLb7a6Sdgiv4g3uOY030EryyTAZkqXnyzakEAvTyFD5
+mfixi+cDzL/J1J1cgawWLYFJWNKCafU05gtQX+Y3Cubir4z8cNULmK01WHlmTmPa
+T7hP3NLFUnD87LVUmjPjcwqYSFRkS1710/ovbxLWYKutm77Subh4/XQxTx4ro6vi
+ydx9/+b9/wNrtWhvz7uDEANPS2D14xRa///D1gLtvzs/WWs84k8vGfK9j69akHQB
+cGawbzR+MhxauKk4f2wEkk7/5AIaJM8/QBMyjHPStFkAAAAASUVORK5CYII=" style="clip-path:url(#clipPath2);" height="20" preserveAspectRatio="none"
     /></g
     ><g style="fill:rgb(38,38,38); text-rendering:geometricPrecision; image-rendering:optimizeQuality; color-rendering:optimizeQuality; stroke-linejoin:round; stroke:rgb(38,38,38); color-interpolation:linearRGB; stroke-width:0.6667;"
     ><line y2="112" style="fill:none;" x1="21" x2="93" y1="112"
@@ -127,45 +127,45 @@ tI9WC+XUwYQAAAAASUVORK5CYII=" style="clip-path:url(#clipPath2);" height="20" pre
       /><line y2="40" style="fill:none;" x1="108" x2="108" y1="112"
     /></g
     ><g transform="matrix(0.5,0,0,0.5,101,40)" style="fill-opacity:0; fill:rgb(0,0,0); text-rendering:optimizeSpeed; image-rendering:optimizeSpeed; color-rendering:optimizeSpeed; shape-rendering:crispEdges; stroke:rgb(0,0,0); color-interpolation:sRGB; stroke-opacity:0;"
-    ><image x="0" y="0" width="14" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAACQCAIAAAC3Rs21AAABNklEQVR42sXYoW7C
-YBiF4f8CQBP0EiQGN4XCISYRWDIPF1CFad0EqVpSUbVgqqqqQNV0rgnJXFOBKgr1
-7RbeI75w8srnCk6IQoCFI06hCU6hXzgnmuIU+o1TaI5T6A/OiRY4hZY4hVY4hV5x
-TrTGKfQXp9AWp9A/nBPtcAq94xQ64BT6xDlRw0l0PIZJdDqFSXQ2g3nRxQIm0eUS
-JtH1GibRzQbmRXc7mET3e5hEowgm0SSBedE0hUk0z2ESLQqYRKsK5kXrGibRtoVJ
-tOtgEh0GmBfFez3tHwZTaNMbzImWN4MpNGsMptD4YjCFHkqDOdHt2WAKXWUGU+j8
-ZDCFTmKDOdEQGU2hhwdNoZ89TaHbG82JfjQ0ha4uNIW+lzSFzs80J/qW0RQ6OdEU
-OoppCg3CC/9a+g/Fjo22DZxGXQAAAABJRU5ErkJggg==" style="clip-path:url(#clipPath3);" height="144" preserveAspectRatio="none"
-      /><image x="0" y="0" width="14" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAACQCAIAAAC3Rs21AAABNklEQVR42sXYoW7C
-YBiF4f8CQBP0EiQGN4XCISYRWDIPF1CFad0EqVpSUbVgqqqqQNV0rgnJXFOBKgr1
-7RbeI75w8srnCk6IQoCFI06hCU6hXzgnmuIU+o1TaI5T6A/OiRY4hZY4hVY4hV5x
-TrTGKfQXp9AWp9A/nBPtcAq94xQ64BT6xDlRw0l0PIZJdDqFSXQ2g3nRxQIm0eUS
-JtH1GibRzQbmRXc7mET3e5hEowgm0SSBedE0hUk0z2ESLQqYRKsK5kXrGibRtoVJ
-tOtgEh0GmBfFez3tHwZTaNMbzImWN4MpNGsMptD4YjCFHkqDOdHt2WAKXWUGU+j8
-ZDCFTmKDOdEQGU2hhwdNoZ89TaHbG82JfjQ0ha4uNIW+lzSFzs80J/qW0RQ6OdEU
-OoppCg3CC/9a+g/Fjo22DZxGXQAAAABJRU5ErkJggg==" style="clip-path:url(#clipPath4);" height="144" preserveAspectRatio="none"
+    ><image x="0" y="0" width="14" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAACQCAIAAAC3Rs21AAABMUlEQVR42tXYIW/C
+YBhF4XrMFBo8Yg5LgiezOASeaRSmaoKqGUQzU7WEVM2QNJmqWRCYKRBTNcNgpr79
+hXPEm2U3Rz6/4GabLINlOc7QJ5yhBS6IPuMM3eEMfcEZWuGC6CvO0Bpn6BvO0AMu
+iL7jDG1xhn7gDD3hgugnztAzztAvnKEdLoh+4wy94Qz9wRmacFG014Mp2u/DFB0O
+YYqORrAoOh7DFJ1OYYrOZjBF53NYFF0uYYquVjBF12uYonkOi6JFAVN0t4MpWlUw
+ResaFkUPB5iibQtT9HSCKXo+w6Jo18EUvd1giuL9K3q5JpihzSXBDC2PCWbopkmw
+ILrYJ5ihkzLBDB1sE8zQbJNoQfTxSjN0caEZ+nCkGTppaEH0fk8zdFDSDL3b0gzN
+xAv/t/QXrJBehEVJB7MAAAAASUVORK5CYII=" style="clip-path:url(#clipPath3);" height="144" preserveAspectRatio="none"
+      /><image x="0" y="0" width="14" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAACQCAIAAAC3Rs21AAABMUlEQVR42tXYIW/C
+YBhF4XrMFBo8Yg5LgiezOASeaRSmaoKqGUQzU7WEVM2QNJmqWRCYKRBTNcNgpr79
+hXPEm2U3Rz6/4GabLINlOc7QJ5yhBS6IPuMM3eEMfcEZWuGC6CvO0Bpn6BvO0AMu
+iL7jDG1xhn7gDD3hgugnztAzztAvnKEdLoh+4wy94Qz9wRmacFG014Mp2u/DFB0O
+YYqORrAoOh7DFJ1OYYrOZjBF53NYFF0uYYquVjBF12uYonkOi6JFAVN0t4MpWlUw
+ResaFkUPB5iibQtT9HSCKXo+w6Jo18EUvd1giuL9K3q5JpihzSXBDC2PCWbopkmw
+ILrYJ5ihkzLBDB1sE8zQbJNoQfTxSjN0caEZ+nCkGTppaEH0fk8zdFDSDL3b0gzN
+xAv/t/QXrJBehEVJB7MAAAAASUVORK5CYII=" style="clip-path:url(#clipPath4);" height="144" preserveAspectRatio="none"
     /></g
     ><g style="fill:rgb(38,38,38); text-rendering:geometricPrecision; image-rendering:optimizeQuality; color-rendering:optimizeQuality; stroke-linejoin:round; stroke:rgb(38,38,38); color-interpolation:linearRGB; stroke-width:0.6667;"
     ><line y2="40" style="fill:none;" x1="108" x2="108" y1="112"
-      /><line y2="104.1096" style="fill:none;" x1="108" x2="107.28" y1="104.1096"
-      /><line y2="85.863" style="fill:none;" x1="108" x2="107.28" y1="85.863"
-      /><line y2="67.6164" style="fill:none;" x1="108" x2="107.28" y1="67.6164"
-      /><line y2="49.3699" style="fill:none;" x1="108" x2="107.28" y1="49.3699"
+      /><line y2="111.2591" style="fill:none;" x1="108" x2="107.28" y1="111.2591"
+      /><line y2="92.8322" style="fill:none;" x1="108" x2="107.28" y1="92.8322"
+      /><line y2="74.4054" style="fill:none;" x1="108" x2="107.28" y1="74.4054"
+      /><line y2="55.9785" style="fill:none;" x1="108" x2="107.28" y1="55.9785"
     /></g
-    ><g transform="translate(112.1067,104.1096)" style="font-size:7.2px; fill:rgb(38,38,38); text-rendering:geometricPrecision; image-rendering:optimizeQuality; color-rendering:optimizeQuality; font-family:'Helvetica LT Std'; stroke:rgb(38,38,38); color-interpolation:linearRGB;"
+    ><g transform="translate(112.1067,111.2591)" style="font-size:7.2px; fill:rgb(38,38,38); text-rendering:geometricPrecision; image-rendering:optimizeQuality; color-rendering:optimizeQuality; font-family:'Helvetica LT Std'; stroke:rgb(38,38,38); color-interpolation:linearRGB;"
     ><text x="0" xml:space="preserve" y="2" style="stroke:none;"
-      >-0.1</text
+      >-0.05</text
     ></g
-    ><g transform="translate(112.1067,85.863)" style="font-size:7.2px; fill:rgb(38,38,38); text-rendering:geometricPrecision; image-rendering:optimizeQuality; color-rendering:optimizeQuality; font-family:'Helvetica LT Std'; stroke:rgb(38,38,38); color-interpolation:linearRGB;"
+    ><g transform="translate(112.1067,92.8322)" style="font-size:7.2px; fill:rgb(38,38,38); text-rendering:geometricPrecision; image-rendering:optimizeQuality; color-rendering:optimizeQuality; font-family:'Helvetica LT Std'; stroke:rgb(38,38,38); color-interpolation:linearRGB;"
     ><text x="0" xml:space="preserve" y="2" style="stroke:none;"
       >0</text
     ></g
-    ><g transform="translate(112.1067,67.6164)" style="font-size:7.2px; fill:rgb(38,38,38); text-rendering:geometricPrecision; image-rendering:optimizeQuality; color-rendering:optimizeQuality; font-family:'Helvetica LT Std'; stroke:rgb(38,38,38); color-interpolation:linearRGB;"
+    ><g transform="translate(112.1067,74.4054)" style="font-size:7.2px; fill:rgb(38,38,38); text-rendering:geometricPrecision; image-rendering:optimizeQuality; color-rendering:optimizeQuality; font-family:'Helvetica LT Std'; stroke:rgb(38,38,38); color-interpolation:linearRGB;"
+    ><text x="0" xml:space="preserve" y="2" style="stroke:none;"
+      >0.05</text
+    ></g
+    ><g transform="translate(112.1067,55.9785)" style="font-size:7.2px; fill:rgb(38,38,38); text-rendering:geometricPrecision; image-rendering:optimizeQuality; color-rendering:optimizeQuality; font-family:'Helvetica LT Std'; stroke:rgb(38,38,38); color-interpolation:linearRGB;"
     ><text x="0" xml:space="preserve" y="2" style="stroke:none;"
       >0.1</text
-    ></g
-    ><g transform="translate(112.1067,49.3699)" style="font-size:7.2px; fill:rgb(38,38,38); text-rendering:geometricPrecision; image-rendering:optimizeQuality; color-rendering:optimizeQuality; font-family:'Helvetica LT Std'; stroke:rgb(38,38,38); color-interpolation:linearRGB;"
-    ><text x="0" xml:space="preserve" y="2" style="stroke:none;"
-      >0.2</text
     ></g
     ><g style="fill:rgb(38,38,38); text-rendering:geometricPrecision; image-rendering:optimizeQuality; color-rendering:optimizeQuality; stroke-linejoin:round; stroke:rgb(38,38,38); color-interpolation:linearRGB; stroke-width:0.6667;"
     ><line y2="40" style="fill:none;" x1="101" x2="108" y1="40"
