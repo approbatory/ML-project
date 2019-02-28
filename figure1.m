@@ -575,18 +575,18 @@ for tr_i = 1:numel(tr_start)
     tr_mask(tr_start(tr_i):tr_end(tr_i)) = true;
 end
 second_half_mask = (1:numel(ks)).' > floor(numel(ks)/2);
-fast_and_2nd_half = o.data.mask.fast & second_half_mask;
-tr_mask = tr_mask(fast_and_2nd_half);
+%fast_and_2nd_half = o.data.mask.fast & second_half_mask; 
+%tr_mask = tr_mask(fast_and_2nd_half);
 
-ks = ks(fast_and_2nd_half);
-X = o.data.X.full(fast_and_2nd_half, :);
+ks = ks(tr_mask);
+X = o.data.X.full(tr_mask, :);
 
 ps = model.predict(X);
 ps_s = model_s.predict(shuffle(X, ks));
 
 %perf
-mean_err = mean(abs(ceil(ks(tr_mask)/2) - ceil(ps(tr_mask)/2)));
-mean_err_s = mean(abs(ceil(ks(tr_mask)/2) - ceil(ps_s(tr_mask)/2)));
+mean_err = mean(abs(ceil(ks/2) - ceil(ps/2)));
+mean_err_s = mean(abs(ceil(ks/2) - ceil(ps_s/2)));
 %%
 f = figure;
 xl_ = [0 3];
@@ -613,7 +613,9 @@ xlim(xl_);
 %xlabel 'Frame';
 %title 'Decoding from shuffled data'
 %ylabel 'Position (cm)';
-figure_format('boxsize', [0.8 0.7]*1.05); box on;
+
+%%%figure_format('boxsize', [0.8 0.7]*1.05); box on;
+
 % %
 % f.Units = 'inches';
 % f.Position = [f.Position(1:2), [0.8125 0.585].*0.98*1.6.*[1 2]];
@@ -627,7 +629,8 @@ figure_format('boxsize', [0.8 0.7]*1.05); box on;
 % ax1.TickLength = [0.02 0.02];
 % ax2.TickLength = [0.02 0.02];
 % 
-print_svg('decode_demo');
+
+%%%%print_svg('decode_demo');
 
 %% raw trajectory demo
 figure; 
