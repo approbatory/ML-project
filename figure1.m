@@ -506,6 +506,7 @@ for m_i = 1:12
     [T, d] = DecodeTensor.tensor_loader(source_path, mouse_name, opt);
     
     [X, ks] = DecodeTensor.tensor2dataset(T~=0, d);
+    %[X, ks] = DecodeTensor.tensor2dataset(T, d);
     X_shuf = shuffle(X, ks);
     
     num_samples(m_i) = size(X,1);
@@ -529,20 +530,30 @@ if all(h==1)
 end
 
 p_sign = signtest(stdev_unshuffled, stdev_shuffled, 'Tail', 'right');
+%%
 figure;
 %plot([stdev_unshuffled ; stdev_shuffled]./num_total_cells, '-k.');
-plot([stdev_unshuffled ; stdev_shuffled], '-k.');
-xlim([0.5 2.5]);
-%ylim([3 9]*1e-3);
-ylim([0 4]);
-set(gca, 'XTick', [1 2]);
-set(gca, 'XTickLabel', {'Unshuffled', 'Shuffled'});
-%ylabel(sprintf('\\sigma/total cells\nof num. active cells'));
-ylabel(sprintf('\\sigma of num.\nactive cells'));
-text(1.5, 3.5, '***', 'HorizontalAlignment', 'center');
-figure_format;
+if false
+    plot([stdev_unshuffled ; stdev_shuffled], '-k.');
+    xlim([0.5 2.5]);
+    %ylim([3 9]*1e-3);
+    ylim([0 4]);
+    set(gca, 'XTick', [1 2]);
+    set(gca, 'XTickLabel', {'Unshuffled', 'Shuffled'});
+    %ylabel(sprintf('\\sigma/total cells\nof num. active cells'));
+    ylabel(sprintf('\\sigma of num.\nactive cells'));
+    text(1.5, 3.5, '***', 'HorizontalAlignment', 'center');
+    figure_format;
+end
+plot(ones(1,12), stdev_unshuffled - stdev_shuffled, 'k.');
+set(gca, 'XTick', 1);
+set(gca, 'XTickLabel', {});
+ylabel(sprintf('\\Delta\\sigma of num.\nactive cells'));
+ylim([0 0.5]);
+xlabel('Unshuffled - Shuffled');
 %sigstar({{'Unshuffled', 'Shuffled'}}, p_sign);
-%figure_format;
+text(1, 0.475, '***', 'HorizontalAlignment', 'center');
+figure_format;
 if p_sign < 0.05
     fprintf('Sign test significant, p=%e\n', p_sign);
 else
