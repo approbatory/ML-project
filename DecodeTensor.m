@@ -268,11 +268,15 @@ classdef DecodeTensor < handle
             mean_err = mean([mean_err1 mean_err2]);
             MSE = mean([MSE1 MSE2]);
             
-            ps( repmat(division,1,n_bins)) = sup_ps1;
-            ps(~repmat(division,1,n_bins)) = sup_ps2;
+            %ps( repmat(division,1,n_bins)) = sup_ps1;
+            ps( reshape(repmat(division, n_bins, 1), [], 1)) = sup_ps1;
+            %ps(~repmat(division,1,n_bins)) = sup_ps2;
+            ps(~reshape(repmat(division, n_bins, 1), [], 1)) = sup_ps2;
             
-            ks( repmat(division,1,n_bins)) = sup_ks1;
-            ks(~repmat(division,1,n_bins)) = sup_ks2;
+            %ks( repmat(division,1,n_bins)) = sup_ks1;
+            ks( reshape(repmat(division, n_bins, 1), [], 1)) = sup_ks1;
+            %ks(~repmat(division,1,n_bins)) = sup_ks2;
+            ks(~reshape(repmat(division, n_bins, 1), [], 1)) = sup_ks2;
             
             if shuf
                 data_tensor = DecodeTensor.shuffle_tensor(data_tensor, tr_dir);
@@ -500,7 +504,7 @@ classdef DecodeTensor < handle
             d2 = tr_dir(~division);
         end
         
-        function [sup_X, sup_ks] = tensor2dataset(data_tensor, tr_dir)
+        function [sup_X, sup_ks] = tensor2dataset_non_temporal(data_tensor, tr_dir)
             %%Converting the tensor to a dataset for supervised learning:
             % The bin and trial dimensions of the tensor are unrolled into
             % a data matrix of samples by neurons, and each sample is
@@ -517,6 +521,29 @@ classdef DecodeTensor < handle
                 for b = 1:n_bins
                     sup_X((b-1)*n_trials + t,:) = data_tensor(:, b, t);
                     sup_ks((b-1)*n_trials + t) = 2*b - (tr_dir(t) == 1);
+                end
+            end
+        end
+        
+        function [sup_X, sup_ks] = tensor2dataset(data_tensor, tr_dir)
+            %%Converting the tensor to a dataset for supervised learning:
+            % The bin and trial dimensions of the tensor are unrolled into
+            % a data matrix of samples by neurons, and each sample is
+            % assigned a value corresponding to its place-direction bin.
+            %
+            % Source: DecodeTensor.tensor2dataset :
+            % (data tensor, trial direction) →
+            % (data matrix, place-direction bin labels)
+            
+            [n_neurons, n_bins, n_trials] = size(data_tensor);
+            sup_X = zeros(n_bins*n_trials, n_neurons);
+            sup_ks = zeros(n_bins*n_trials,1);
+            for t = 1:n_trials
+                for b = 1:n_bins
+                    %sup_X((b-1)*n_trials + t,:) = data_tensor(:, b, t);
+                    %sup_ks((b-1)*n_trials + t) = 2*b - (tr_dir(t) == 1);
+                    sup_X((t-1)*n_bins + b,:) = data_tensor(:, b, t);
+                    sup_ks((t-1)*n_bins + b) = 2*b - (tr_dir(t) == 1);
                 end
             end
         end

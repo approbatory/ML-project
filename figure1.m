@@ -566,32 +566,68 @@ decode_obj = DecodeTensor(4, 'rawTraces', true); %only use first half of session
 [me, mse, ps, ks, model] = decode_obj.basic_decode(false, [], []);
 [me_s, mse_s, ps_s, ks_s, model_s] = decode_obj.basic_decode(true, [], []);
 
+figure; plot(mean(reshape(abs(ceil(ks/2) - ceil(ps/2)), 20, [])), 'b');
+hold on; plot(mean(reshape(abs(ceil(ks_s/2) - ceil(ps_s/2)), 20, [])), 'r');
 %%
 o = Analyzer('../linear_track/Mouse2022/Mouse-2022-20150326-linear-track/Mouse-2022-20150326_093722-linear-track-TracesAndEvents.mat');
 opt = DecodeTensor.default_opt;
 [~,~,tr_start,tr_end,~,~,ks] = DecodeTensor.new_sel(o.data.y.raw.full, opt);
-tr_mask = false(numel(ks),1);
+
+tr_mask = zeros(numel(ks),1);
+tr_lens = zeros(1,numel(tr_start));
 for tr_i = 1:numel(tr_start)
-    tr_mask(tr_start(tr_i):tr_end(tr_i)) = true;
+    tr_mask(tr_start(tr_i):tr_end(tr_i)) = tr_i;
+    tr_lens(tr_i) = tr_end(tr_i) - tr_start(tr_i) + 1;
 end
+
 second_half_mask = (1:numel(ks)).' > floor(numel(ks)/2);
 %fast_and_2nd_half = o.data.mask.fast & second_half_mask; 
 %tr_mask = tr_mask(fast_and_2nd_half);
+tr_mask = tr_mask .* second_half_mask;
+up_to_trial = min(tr_mask(tr_mask~=0));
 
-ks = ks(tr_mask);
-X = o.data.X.full(tr_mask, :);
-
-ps = model.predict(X);
-ps_s = model_s.predict(shuffle(X, ks));
+ks_cut = ks(tr_mask~=0);
+X_cut = o.data.X.full(tr_mask~=0, :);
+X_cut_s = shuffle(X_cut, ks_cut);
+ps_cut = model.predict(X_cut);
+ps_cut_s = model_s.predict(X_cut_s);
 
 %perf
-mean_err = mean(abs(ceil(ks/2) - ceil(ps/2)));
-mean_err_s = mean(abs(ceil(ks/2) - ceil(ps_s/2)));
+mean_err = mean(abs(ceil(ks_cut/2) - ceil(ps_cut/2)));
+mean_err_s = mean(abs(ceil(ks_cut/2) - ceil(ps_cut_s/2)));
+
+%trial-level median
+%build fake shuffled X
+trial_collection = up_to_trial+1:numel(tr_start);
+X_from_trials = cell(numel(trial_collection), 1);
+ks_from_trials = cell(numel(trial_collection), 1);
+for tr_i_ix = 1:numel(trial_collection)
+    tr_i = trial_collection(tr_i_ix);
+    s = tr_start(tr_i); e = tr_end(tr_i);
+    X_from_trials{tr_i_ix} = o.data.X.full(s:e,:);
+    ks_from_trials{tr_i_ix} = ks(s:e);
+end
+used_trial_lengths = cellfun(@(x)size(x,1), X_from_trials);
+X_concat = cell2mat(X_from_trials);
+ks_concat = cell2mat(ks_from_trials);
+X_s_concat = shuffle(X_concat, ks_concat);
+assert(isequal(X_from_trials, mat2cell(X_concat, used_trial_lengths, size(X_concat,2))));
+X_s_from_trials = mat2cell(X_s_concat, used_trial_lengths, size(X_s_concat,2));
+
+ps_from_trials = mat2cell(model.predict(X_concat), used_trial_lengths);
+ps_s_from_trials = mat2cell(model_s.predict(X_s_concat), used_trial_lengths);
+%for tr_i_ix = 1:numel(trial_collection)
+%    X_tr = X_from_trials{tr_i_ix};
+%    X_s_tr = X_s_from_trials{tr_i_ix};
+%    ks_tr = ks_from_trials{tr_i_ix};
+%    ps_tr{tr_i_ix} = model.predict(X_tr);
+%    ps_s_tr{tr_i_ix} = model_s.predict(X_s_tr);
+%end
 %%
 f = figure;
 xl_ = [0 3];
 %ax1 = subplot(2,1,1);
-time = ((1:numel(ks)) - 8392)/20;
+time = ((1:numel(ks)) - 0)/20;
 plot(time, (ceil(ks/2) - 0.5) * opt.bin_width, '-k'); hold on;
 plot(time, (ceil(ps/2) - 0.5) * opt.bin_width, '-b'); 
 xlim(xl_);
@@ -614,7 +650,7 @@ xlim(xl_);
 %title 'Decoding from shuffled data'
 %ylabel 'Position (cm)';
 
-%%%figure_format('boxsize', [0.8 0.7]*1.05); box on;
+%%figure_format('boxsize', [0.8 0.7]*1.05); box on;
 
 % %
 % f.Units = 'inches';
@@ -630,7 +666,7 @@ xlim(xl_);
 % ax2.TickLength = [0.02 0.02];
 % 
 
-%%%%print_svg('decode_demo');
+%%%print_svg('decode_demo_half_lap');
 
 %% raw trajectory demo
 figure; 
