@@ -31,7 +31,7 @@ try
 %         end
 %     end
 %     conn.close;
-    DecodeTensor.aggregate_results;
+    DecodeTensor.aggregate_results('db_file', 'padded_events_decoding.db');
 catch me
     fprintf('%s / %s\n', me.identifier, me.message);
 end
