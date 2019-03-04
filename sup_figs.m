@@ -863,40 +863,99 @@ print_svg(name);
 conn.close;
 
 %% do simple decode with raw_traces and spikeDeconv, on 3-4 mice
-for i = 1:12
-    D_T = DecodeTensor(i, 'rawTraces');
-    
-    [mean_err, MSE(i), ps, ks, ~] = D_T.basic_decode(false, [], []);
-    [mean_err_s, MSE_s(i), ps_s, ks_s, ~] = D_T.basic_decode(true, [], []);
-    
-    
-    D_T_spike = DecodeTensor(i, 'spikeDeconv');
-    
-    [mean_err, MSE_spike(i), ps, ks, ~] = D_T_spike.basic_decode(false, [], []);
-    [mean_err_s, MSE_spike_s(i), ps_s, ks_s, ~] = D_T_spike.basic_decode(true, [], []);
-    
-    %ps = ceil(ps/2);
-    %ks = ceil(ks/2);
-    %ps_s = ceil(ps_s/2);
-    %ks_s = ceil(ks_s/2);
-    
-    %num_trials(i) = 2*D_T.n_one_dir_trials;
-    %C = confusionmat(ks, ps); %./ (2*D_T.n_one_dir_trials);
-    %C_s = confusionmat(ks_s, ps_s);% ./ (2*D_T.n_one_dir_trials);
-    %C_perfect = confusionmat(ks_s, ks);% ./ (2*D_T.n_one_dir_trials);
-    %CDiff(:,:,i) = C_s - C;
-    %CsC = (C_s - C)./C;
-    %CsC(isnan(CsC)) = 0;
-    disp(i);
-end
-%% plot for above
-imse = 1./MSE; imse_spike = 1./MSE_spike;
-imse_s = 1./MSE_s; imse_spike_s = 1./MSE_spike_s;
-
-num_neurons = [182 202 304 497 239 422 272 257 197 451 210 441];
-
-shuf_diff = (1 - imse./imse_s) .* num_neurons;
-shuf_diff_spike = (1 - imse_spike./imse_spike_s) .* num_neurons;
-
+% for i = 1:12
+%     D_T = DecodeTensor(i, 'rawTraces');
+%     
+%     [mean_err, MSE(i), ps, ks, ~] = D_T.basic_decode(false, [], []);
+%     [mean_err_s, MSE_s(i), ps_s, ks_s, ~] = D_T.basic_decode(true, [], []);
+%     
+%     
+%     D_T_spike = DecodeTensor(i, 'spikeDeconv');
+%     
+%     [mean_err, MSE_spike(i), ps, ks, ~] = D_T_spike.basic_decode(false, [], []);
+%     [mean_err_s, MSE_spike_s(i), ps_s, ks_s, ~] = D_T_spike.basic_decode(true, [], []);
+%     
+%     %ps = ceil(ps/2);
+%     %ks = ceil(ks/2);
+%     %ps_s = ceil(ps_s/2);
+%     %ks_s = ceil(ks_s/2);
+%     
+%     %num_trials(i) = 2*D_T.n_one_dir_trials;
+%     %C = confusionmat(ks, ps); %./ (2*D_T.n_one_dir_trials);
+%     %C_s = confusionmat(ks_s, ps_s);% ./ (2*D_T.n_one_dir_trials);
+%     %C_perfect = confusionmat(ks_s, ks);% ./ (2*D_T.n_one_dir_trials);
+%     %CDiff(:,:,i) = C_s - C;
+%     %CsC = (C_s - C)./C;
+%     %CsC(isnan(CsC)) = 0;
+%     disp(i);
+% end
+% %% plot for above
+% imse = 1./MSE; imse_spike = 1./MSE_spike;
+% imse_s = 1./MSE_s; imse_spike_s = 1./MSE_spike_s;
+% 
+% num_neurons = [182 202 304 497 239 422 272 257 197 451 210 441];
+% 
+% shuf_diff = (1 - imse./imse_s) .* num_neurons;
+% shuf_diff_spike = (1 - imse_spike./imse_spike_s) .* num_neurons;
+% 
+% figure;
+% boxplot([shuf_diff.' , shuf_diff_spike.'], {'Traces', 'OASIS detected'});
+%% Decoding from padded events
+name = 'Decoding_from_padded_events';
 figure;
-boxplot([shuf_diff.' , shuf_diff_spike.'], {'Traces', 'OASIS detected'});
+
+dbfile = 'padded_events_decoding.db';
+
+conn = sqlite(dbfile); %remember to close it
+%DecodingPlotGenerator.plot_mice(conn, {'Mouse2022'}, 'shuffled', 'NumNeurons', 'IMSE', 'max');
+%DecodingPlotGenerator.plot_mice(conn, {'Mouse2022'}, 'unshuffled', 'NumNeurons', 'IMSE', 'max');
+mouse_list = {'Mouse2022'};%, 'Mouse2019', 'Mouse2028'};
+for m_i = 1:numel(mouse_list)
+    mouse = mouse_list{m_i};
+    disp(mouse);
+    [n,m,e] = DecodingPlotGenerator.get_errors('NumNeurons', conn, mouse, 'unshuffled', 'IMSE', 'max');
+    [ns,ms,es] = DecodingPlotGenerator.get_errors('NumNeurons', conn, mouse, 'shuffled', 'IMSE', 'max');
+    hold on;
+    DecodingPlotGenerator.errors_plotter(ns,ms,es, 'shuffled');
+    DecodingPlotGenerator.errors_plotter(n,m,e, 'unshuffled');
+end
+xlabel 'Number of cells'
+ylabel '1/MSE (cm^{-2})'
+xlim([0 500]);
+text(200+50, 0.3/5.9/27, 'Unshuffled', 'Color', 'blue');
+text(55, 0.8/5.9/20, 'Shuffled', 'Color', 'red');
+figure_format;
+
+print_svg(name);
+%print('-dsvg', fullfile(svg_save_dir, 'A.svg'));
+%print('-dpng', '-r900', fullfile(svg_save_dir, 'A.png'));
+%body
+conn.close;
+
+%%  panel: full vs diagonal decoder on one mouse (from padded events):
+name = 'Decoding_from_padded_events_fulldiagonal';
+figure;
+
+dbfile = 'padded_events_decoding.db';
+
+conn = sqlite(dbfile); %remember to close it
+mouse_list = {'Mouse2022'};%, 'Mouse2024', 'Mouse2028'};
+for m_i = 1:numel(mouse_list)
+    mouse = mouse_list{m_i};
+    [n,m,e] = DecodingPlotGenerator.get_errors('NumNeurons', conn, mouse, 'unshuffled', 'IMSE', 'max');
+    [ns,ms,es] = DecodingPlotGenerator.get_errors('NumNeurons', conn, mouse, 'diagonal', 'IMSE', 'max');
+    hold on;
+    DecodingPlotGenerator.errors_plotter(ns,ms*1e4,es*1e4, 'diagonal');
+    DecodingPlotGenerator.errors_plotter(n,m*1e4,e*1e4, 'unshuffled');
+end
+xlabel 'Number of cells'
+%ylabel '1/MSE (cm^{-2})'
+ylabel '1/MSE (m^{-2})'
+xlim([0 500]);
+text(300, 0.18/5.9/15*1e4, 'Full', 'Color', 'blue');
+text(150+130, 0.1/5.9/15*1e4, 'Diagonal', 'Color', 'magenta');
+figure_format;
+
+
+print_svg(name);
+conn.close;

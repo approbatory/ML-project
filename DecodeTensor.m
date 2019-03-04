@@ -1,11 +1,17 @@
 classdef DecodeTensor < handle
     methods(Static) %higher level functions, collecting data
-        function dispatch(dispatch_index)
+        function dispatch(dispatch_index, padded)
             %Dispatching decoding as a function of number of cells using
             %default options
+            if ~exist('padded', 'var')
+                padded = false;
+            end
             [source_path, mouse_name] = DecodeTensor.default_datasets(dispatch_index);
-            DecodeTensor.decode_series(source_path, mouse_name,...
-                DecodeTensor.default_opt);
+            opt = DecodeTensor.default_opt;
+            if padded
+                opt.neural_data_type = 'FST_padded';
+            end
+            DecodeTensor.decode_series(source_path, mouse_name, opt);
         end
         
         function decode_series(source_path, mouse_id, opt)
@@ -177,7 +183,7 @@ classdef DecodeTensor < handle
             % opt.n_bins = number of bins to use, e.g. 20
             load(source_path);
             track_coord = tracesEvents.position(:,1);
-            if any(strcmp(opt.neural_data_type, {'FST_events', 'FST_filled'}))
+            if any(strcmp(opt.neural_data_type, {'FST_events', 'FST_filled', 'FST_padded'}))
                 fieldname = 'rawTraces';
             else
                 fieldname = opt.neural_data_type;
@@ -192,6 +198,13 @@ classdef DecodeTensor < handle
             end
             if strcmp(opt.neural_data_type, 'FST_filled')
                 X = Utils.event_detection(X, true);
+            end
+            if strcmp(opt.neural_data_type, 'FST_padded')
+                X = Utils.event_detection(X);
+                pad_seconds = 2;
+                X_bin_full_padded = conv2(X, ones(pad_seconds*20,1), 'full');
+                X_bin_full_padded = X_bin_full_padded(1:size(X,1),:);
+                X = X_bin_full_padded;
             end
             
             if opt.first_half
@@ -1183,8 +1196,10 @@ classdef DecodeTensor < handle
             DecodeTensor.tensor_vis(pre(o.data_tensor), o.tr_dir);
         end
         
-        function [me, mse, ps, ks, model] = basic_decode(o, shuf, num_neurons, num_trials)
-            alg = my_algs('ecoclin');
+        function [me, mse, ps, ks, model] = basic_decode(o, shuf, num_neurons, num_trials, alg)
+            if ~exist('alg', 'var')
+                alg = my_algs('ecoclin');
+            end
             [me, mse, ps, ks, model] = DecodeTensor.decode_tensor(o.data_tensor, o.tr_dir,...
                 o.opt.bin_width, alg, shuf, num_neurons, num_trials);
         end

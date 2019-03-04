@@ -16,7 +16,15 @@ else
     error('no cells directory found');
 end
 
-off_trials = trial_inds.off;
+sham_session = isfield(trial_inds, 'sham') && ~isempty(trial_inds.sham);
+if sham_session
+    fprintf('This is a sham session\n');
+    sham_trials = trial_inds.sham;
+    real_trials = trial_inds.real;
+    off_trials = trial_inds.off;
+else
+    off_trials = trial_inds.off;
+end
 
 num_cells = ds.num_classified_cells;
 num_trials = ds.num_trials;
@@ -53,11 +61,25 @@ end
 %mean_act = cellfun(@(x) mean(x,2) , X_b);
 mean_act = X_b_mean;
 
-laser_on = true(1,num_trials);
-laser_on(off_trials) = false;
+if sham_session
+    laser_sham = false(1, num_trials);
+    laser_sham(sham_trials) = true;
+    laser_real = false(1, num_trials);
+    laser_real(real_trials) = true;
+    laser_off = false(1, num_trials);
+    laser_off(off_trials) = true;
+    %mean_act_on = mean_act(:, laser_real);
+    %mean_act_off = mean_act(:, laser_sham);
+    mean_act_on = mean_act(:, laser_sham);
+    mean_act_off = mean_act(:, laser_off);
+else
+    laser_on = true(1,num_trials);
+    laser_on(off_trials) = false;
+    mean_act_on = mean_act(:, laser_on);
+    mean_act_off = mean_act(:, ~laser_on);
+end
 
-mean_act_on = mean_act(:, laser_on);
-mean_act_off = mean_act(:, ~laser_on);
+
 
 p = -ones(1,num_cells);
 med_on = zeros(1,num_cells);
