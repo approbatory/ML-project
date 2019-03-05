@@ -959,3 +959,33 @@ figure_format;
 
 print_svg(name);
 conn.close;
+
+%% events padding length vs. decoding accuracy
+pad_second_values = [0 0.25 0.4 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1 1.5 2];
+%pad_second_values = (0:5:60)/20;
+n_reps = 20;
+%mean_err_pad = zeros(n_reps, numel(pad_second_values));
+%MSE_pad = mean_err_pad;
+%ps_pad = cell(n_reps, numel(pad_second_values));
+%ks_pad = ps_pad;
+for rep = 1:n_reps
+    parfor i_p = 1:numel(pad_second_values)
+        opt = DecodeTensor.default_opt;
+        opt.neural_data_type = 'FST_padded';
+        opt.pad_seconds = pad_second_values(i_p);
+        D_T = DecodeTensor(4, 'fake', opt);
+        my_timing = tic;
+        [mean_err_pad(rep, i_p), MSE_pad(rep, i_p), ps_pad{rep,i_p}, ks_pad{rep,i_p}, ~] = D_T.basic_decode(false, [], []);
+        fprintf('%d (s):: Unshuffled decoding with %.2f padding: m_e: %.2f\tMSE: %.2f\n',...
+            round(toc(my_timing)), opt.pad_seconds, mean_err_pad(rep, i_p), MSE_pad(rep, i_p));
+    end
+end
+save(sprintf('ideal_pad_%s.mat', timestring), 'mean_err_pad', 'MSE_pad', 'ps_pad', 'ks_pad', 'pad_second_values');
+%%
+figure; shadedErrorBar(pad_second_values, mean(1./MSE_pad), std(1./MSE_pad)./sqrt(n_reps));
+xlabel 'Padding duration (s)'
+ylabel '1/MSE (cm^{-2})'
+text(0.38, 0.003, '0.8s');
+figure_format;
+hold on; l_ = line([0.8 0.8], ylim); l_.Color = 'k';
+print_svg('optimal_padding');

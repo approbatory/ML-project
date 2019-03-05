@@ -148,6 +148,7 @@ classdef DecodeTensor < handle
             %extra
             opt.d_trials = 30;
             opt.first_half = false;
+            opt.pad_seconds = 0.8;
         end
         
         function [source_path, mouse_name] = default_datasets(index)
@@ -201,8 +202,8 @@ classdef DecodeTensor < handle
             end
             if strcmp(opt.neural_data_type, 'FST_padded')
                 X = Utils.event_detection(X);
-                pad_seconds = 2;
-                X_bin_full_padded = conv2(X, ones(pad_seconds*20,1), 'full');
+                %pad_seconds = 2;
+                X_bin_full_padded = conv2(X, ones(opt.pad_seconds*20,1), 'full');
                 X_bin_full_padded = X_bin_full_padded(1:size(X,1),:);
                 X = X_bin_full_padded;
             end
@@ -1170,16 +1171,20 @@ classdef DecodeTensor < handle
     end
     
     methods
-        function o = DecodeTensor(dispatch_index, neural_data_type, first_half)
+        function o = DecodeTensor(dispatch_index, neural_data_type, my_opt)
             [o.source_path, o.mouse_name] = DecodeTensor.default_datasets(dispatch_index);
-            o.opt = DecodeTensor.default_opt;
-            if ~exist('first_half', 'var')
-                o.opt.first_half = false;
+            if ~exist('my_opt', 'var')
+                o.opt = DecodeTensor.default_opt;
+                if ~exist('first_half', 'var')
+                    o.opt.first_half = false;
+                else
+                    o.opt.first_half = first_half;
+                end
+                if exist('neural_data_type', 'var')
+                    o.opt.neural_data_type = neural_data_type;
+                end
             else
-                o.opt.first_half = first_half;
-            end
-            if exist('neural_data_type', 'var')
-                o.opt.neural_data_type = neural_data_type;
+                o.opt = my_opt;
             end
             [o.data_tensor, o.tr_dir] = DecodeTensor.tensor_loader(o.source_path, o.mouse_name, o.opt);
         end
