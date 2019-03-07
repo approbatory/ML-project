@@ -909,7 +909,8 @@ dbfile = 'padded_events_decoding.db';
 conn = sqlite(dbfile); %remember to close it
 %DecodingPlotGenerator.plot_mice(conn, {'Mouse2022'}, 'shuffled', 'NumNeurons', 'IMSE', 'max');
 %DecodingPlotGenerator.plot_mice(conn, {'Mouse2022'}, 'unshuffled', 'NumNeurons', 'IMSE', 'max');
-mouse_list = {'Mouse2022'};%, 'Mouse2019', 'Mouse2028'};
+%mouse_list = {'Mouse2022', 'Mouse2019', 'Mouse2028'};
+mouse_list = {'Mouse2019', 'Mouse2022', 'Mouse2024'};
 for m_i = 1:numel(mouse_list)
     mouse = mouse_list{m_i};
     disp(mouse);
@@ -922,8 +923,9 @@ end
 xlabel 'Number of cells'
 ylabel '1/MSE (cm^{-2})'
 xlim([0 500]);
-text(200+50, 0.3/5.9/27, 'Unshuffled', 'Color', 'blue');
-text(55, 0.8/5.9/20, 'Shuffled', 'Color', 'red');
+text(200+50, 0.003, 'Unshuffled', 'Color', 'blue');
+text(40, 0.025, 'Shuffled', 'Color', 'red');
+
 figure_format;
 
 print_svg(name);
@@ -939,21 +941,21 @@ figure;
 dbfile = 'padded_events_decoding.db';
 
 conn = sqlite(dbfile); %remember to close it
-mouse_list = {'Mouse2022'};%, 'Mouse2024', 'Mouse2028'};
+mouse_list = {'Mouse2019', 'Mouse2022', 'Mouse2024'};
 for m_i = 1:numel(mouse_list)
     mouse = mouse_list{m_i};
     [n,m,e] = DecodingPlotGenerator.get_errors('NumNeurons', conn, mouse, 'unshuffled', 'IMSE', 'max');
     [ns,ms,es] = DecodingPlotGenerator.get_errors('NumNeurons', conn, mouse, 'diagonal', 'IMSE', 'max');
     hold on;
-    DecodingPlotGenerator.errors_plotter(ns,ms*1e4,es*1e4, 'diagonal');
-    DecodingPlotGenerator.errors_plotter(n,m*1e4,e*1e4, 'unshuffled');
+    DecodingPlotGenerator.errors_plotter(ns,ms,es, 'diagonal');
+    DecodingPlotGenerator.errors_plotter(n,m,e, 'unshuffled');
 end
 xlabel 'Number of cells'
-%ylabel '1/MSE (cm^{-2})'
-ylabel '1/MSE (m^{-2})'
+ylabel '1/MSE (cm^{-2})'
+%ylabel '1/MSE (m^{-2})'
 xlim([0 500]);
-text(300, 0.18/5.9/15*1e4, 'Full', 'Color', 'blue');
-text(150+130, 0.1/5.9/15*1e4, 'Diagonal', 'Color', 'magenta');
+text(10, 0.019, 'Full', 'Color', 'blue');
+text(10, 0.016, 'Diagonal', 'Color', 'magenta');
 figure_format;
 
 
