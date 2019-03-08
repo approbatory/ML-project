@@ -490,6 +490,89 @@ while true
 end
 
 num_sess = numel(sessions);
+me_ = zeros(1, num_sess);
+mse_ = me_;
+me_s_ = me_;
+mse_s_ = me_;
+num_neurons = me_;
+num_trials_ = me_;
+shuf_advantage = me_;
+sh_by_unsh = me_;
+res = cell(1, num_sess);
+time_taken = me_;
+%%
+parfor s_i = 1:num_sess
+    my_timer = tic;
+    try
+        session_path = sessions{s_i};
+        my_mouse = session_mouse{s_i};
+        o = DecodeTensor({session_path, my_mouse});
+        %[me_(s_i), mse_(s_i), ~, ~] = o.basic_decode(false, [], []);
+        %[me_s_(s_i), mse_s_(s_i), ~, ~] = o.basic_decode(true, [], []);
+        num_neurons(s_i) = size(o.data_tensor,1);
+        num_trials_(s_i) = size(o.data_tensor,3);
+        %shuf_advantage(s_i) = ((1./mse_s_(s_i)) - (1./mse_(s_i))) .* num_neurons(s_i) .* mse_s_(s_i);
+        
+        res{s_i} = DecodeTensor.noise_properties(o.data_tensor, o.tr_dir, true); %true for using_corr
+        sh_by_unsh(s_i) = mean(cell2mat(res{s_i}.nd_pre(:)) ./ cell2mat(res{s_i}.nd_pre_s(:)));
+        %rms_noise_corr(s_i) = res{s_i}.RMS_noise_corr;
+        %rms_noise_corr_shuf(s_i)
+        time_taken(s_i) = toc(my_timer);
+        fprintf('Done session %d/%d: shuf_advantage: %.2f\tsh_by_unsh: %.2f\tin time %.2fs\n',...
+            s_i, num_sess, shuf_advantage(s_i), sh_by_unsh(s_i), time_taken(s_i));
+        %loop_record(s_i) = struct('session_path', session_path, 'my_mouse', my_mouse,...
+        %    'mean_err', me_, 'MSE', mse_, 'mean_err_s', me_s_, 'MSE_s', mse_s_',...
+        %    'num_neurons', num_neurons, 'num_trials', num_trials_, 'shuf_advantage', shuf_advantage(s_i),...
+        %    'res_geometric', res, 'sh_by_unsh', sh_by_unsh(s_i), 'time_taken', time_taken);
+    catch e
+        shuf_advantage(s_i) = nan;
+        sh_by_unsh(s_i) = nan;
+        fprintf('ERROR on session %d/%d:\tneu:%d tr:%d time taken: %.2fs\n',...
+            s_i, num_sess, num_neurons(s_i), num_trials(s_i), toc(my_timer));
+        disp(e);
+    end
+end
+%%
+for s_i = 1:num_sess
+    if ~isempty(res{s_i})
+        rms_noise_corr(s_i) = res{s_i}.RMS_noise_corr;
+        rms_noise_corr_shuf(s_i) = res{s_i}.RMS_noise_corr_shuf;
+    end
+end
+%%
+safe_filter = ~isnan(sh_by_unsh) & (num_trials_ > 50) & (num_neurons > 50) & (me_ < 12) & (me_s_ < 12);
+sh_by_unsh_safe = sh_by_unsh(safe_filter);
+shuf_advantage_safe = shuf_advantage(safe_filter);
+session_mouse_safe = session_mouse(safe_filter);
+
+figure;
+scatter(sh_by_unsh_safe, shuf_advantage_safe, 4, categorical(session_mouse_safe), 'filled');
+[fitresult, gof] = fit(sh_by_unsh_safe.', shuf_advantage_safe.', 'poly1');
+hold on; 
+plot(fitresult, 'k'); legend off
+text(6.5, 0, sprintf('adj. R^2=%.2f', gof.adjrsquare));
+xlabel(sprintf('Unshuf./Shuf. noise\nvariance ratio'));
+ylabel(sprintf('\\Delta1/MSE\nin units of cells'));
+colormap lines;
+figure_format;
+print_svg('all_sessions_regression_line');
+%%
+rms_noise_corr_safe = rms_noise_corr(safe_filter);
+rms_noise_corr_shuf_safe = rms_noise_corr_shuf(safe_filter);
+noise_corr_diff = sqrt(rms_noise_corr_safe.^2 - rms_noise_corr_shuf_safe.^2);
+figure;
+scatter(rms_noise_corr_safe, shuf_advantage_safe, 4, categorical(session_mouse_safe), 'filled');
+[fitresult, gof] = fit(rms_noise_corr_safe.', shuf_advantage_safe.', 'poly1');
+hold on; 
+plot(fitresult, 'k'); legend off
+text(0.2, -100, sprintf('adj. R^2=%.2f', gof.adjrsquare));
+xlabel(sprintf('RMS noise correlation'));
+ylabel(sprintf('\\Delta1/MSE\nin units of cells'));
+colormap lines;
+figure_format;
+print_svg('all_sessions_regression_line_RMS_noise_corr');
+%%
+num_sess = numel(sessions);
 v_thresh = [0.5 1 1.5 2 2.5 3 3.5 4 4.5 5];
 n_trials_found = zeros(num_sess, numel(v_thresh));
 %%
@@ -934,6 +1017,49 @@ print_svg(name);
 %body
 conn.close;
 
+%% confusion mat %%TODO
+for i = 1:12
+D_T = DecodeTensor(i, 'FST_padded');
+
+[~, ~, ps, ks, ~] = D_T.basic_decode(false, [], []);
+[~, ~, ps_s, ks_s, ~] = D_T.basic_decode(true, [], []);
+
+ps = ceil(ps/2);
+ks = ceil(ks/2);
+ps_s = ceil(ps_s/2);
+ks_s = ceil(ks_s/2);
+
+num_trials(i) = 2*D_T.n_one_dir_trials;
+C = confusionmat(ks, ps); %./ (2*D_T.n_one_dir_trials);
+C_s = confusionmat(ks_s, ps_s);% ./ (2*D_T.n_one_dir_trials);
+C_perfect = confusionmat(ks_s, ks);% ./ (2*D_T.n_one_dir_trials);
+CDiff(:,:,i) = C_s - C;
+CsC = (C_s - C)./C;
+CsC(isnan(CsC)) = 0;
+disp(i);
+end
+%
+figure;
+m_CDiff = squeeze(sum(CDiff,3))./sum(num_trials);
+imagesc(m_CDiff);
+colorbar;
+%title('Shuffled - Unshuffled');
+colormap(bluewhitered);
+xlabel 'Predicted bin'
+ylabel 'Correct bin'
+axis equal;
+xlim([0.5 20.5]); ylim([0.5 20.5]);
+figure_format('boxsize', [0.75 0.85]); box on;
+print_svg('confusion_diff_events');
+% figure; 
+% imagesc(C_perfect); colorbar; colormap(bluewhitered);
+% title('Perfect CM');
+% xlabel 'Predicted bin'
+% ylabel 'Correct bin'
+% figure;
+% imagesc(confusionmat(ks_s, ps_s));
+% colorbar;
+% title('Shuffled');
 %%  panel: full vs diagonal decoder on one mouse (from padded events):
 name = 'Decoding_from_padded_events_fulldiagonal';
 figure;
@@ -991,3 +1117,112 @@ text(0.38, 0.003, '0.8s');
 figure_format;
 hold on; l_ = line([0.8 0.8], ylim); l_.Color = 'k';
 print_svg('optimal_padding');
+
+
+%% panel: decorrelation, pooled on all mice
+% and normed to 1 on the imse perf at 
+% n_cells = 180 for shuffled
+name = 'decorrelation_pooled_normed';
+dbfile = 'padded_events_decoding.db';
+conn = sqlite(dbfile); %remember to close it
+%mouse_list = {'Mouse2010', 'Mouse2012', 'Mouse2019', 'Mouse2022',...
+%                'Mouse2023', 'Mouse2024', 'Mouse2026', 'Mouse2028',...
+%                'Mouse2025', 'Mouse2011', 'Mouse2029', 'Mouse2021'};
+mouse_list = {'Mouse2019', 'Mouse2021', 'Mouse2022',...
+    'Mouse2028', 'Mouse2025', 'Mouse2024'}; %only mice with >80 trials
+
+for i = 1:numel(mouse_list)
+    [nP{i}, mP{i}, eP{i}] = ...
+        DecodingPlotGenerator.get_errors('NumNeurons', conn,...
+        mouse_list{i}, 'unshuffled', 'IMSE', 'max');
+    [nPs{i}, mPs{i}, ePs{i}] = ...
+        DecodingPlotGenerator.get_errors('NumNeurons', conn,...
+        mouse_list{i}, 'shuffled', 'IMSE', 'max');
+    [nPd{i}, mPd{i}, ePd{i}] = ...
+        DecodingPlotGenerator.get_errors('NumNeurons', conn,...
+        mouse_list{i}, 'diagonal', 'IMSE', 'max');
+    
+    %index_of_180 = find(nP{i} == 180,1);
+    %norm_by = mP{i}(index_of_180);%REPLACE WITH LINEAR FIT
+    %fit_res = createFit_infoSaturation(nPs{i}, mPs{i});
+    %norm_by = fit_res.I_0;
+    fit_res = fit(double(nPs{i}), mPs{i}, 'p1*x', 'StartPoint', 0.002);
+    norm_by(i) = fit_res.p1;
+    mPs_normed{i} = mPs{i} ./ norm_by(i);
+    ePs_normed{i} = ePs{i} ./ norm_by(i);
+    %fit_res = createFit_infoSaturation(double(nP{i}), mP{i});
+    %norm_by(i) = fit_res.I_0;
+    %fprintf('s I_0: %f\t us I_0: %f\n', norm_by_s(i), norm_by(i));
+    mP_normed{i} = mP{i} ./ norm_by(i);
+    eP_normed{i} = eP{i} ./ norm_by(i);
+    mPd_normed{i} = mPd{i} ./ norm_by(i);
+    ePd_normed{i} = ePd{i} ./ norm_by(i);
+end
+lookup_at_value = @(val, val_col, res_col) cell2mat(...
+    cellfun(@(n,m) m(n == val), val_col, res_col,...
+    'UniformOutput', false).');
+
+m_at_n = @(n) mean(lookup_at_value(n, nP, mP_normed));
+e_at_n = @(n) sqrt(var(lookup_at_value(n, nP, mP_normed)) +...
+    mean(lookup_at_value(n, nP, eP_normed).^2));
+
+m_at_n_s = @(n) mean(lookup_at_value(n, nPs, mPs_normed));
+e_at_n_s = @(n) sqrt(var(lookup_at_value(n, nPs, mPs_normed)) +...
+    mean(lookup_at_value(n, nPs, ePs_normed).^2));
+
+m_at_n_d = @(n) mean(lookup_at_value(n, nPd, mPd_normed));
+e_at_n_d = @(n) sqrt(var(lookup_at_value(n, nPd, mPd_normed)) +...
+    mean(lookup_at_value(n, nPd, ePd_normed).^2));
+
+figure; hold on;
+nn = [1 (30:30:500)];
+mm = arrayfun(m_at_n, nn);
+mm_s = arrayfun(m_at_n_s, nn);
+mm_d = arrayfun(m_at_n_d, nn);
+ee = arrayfun(e_at_n, nn);
+ee_s = arrayfun(e_at_n_s, nn);
+ee_d = arrayfun(e_at_n_d, nn);
+%errorbar(nn, mm, ee, 'b');
+%errorbar(nn, mm_s, ee_s, 'r');
+DecodingPlotGenerator.errors_plotter(nn,mm_s,ee_s, 'shuffled');
+DecodingPlotGenerator.errors_plotter(nn,mm,ee, 'unshuffled');
+xlabel 'Number of cells'
+ylabel(sprintf('1/MSE in\nunits of cells'));
+xlim([0 500]);
+text(10, 350, 'Unshuffled', 'Color', 'blue');
+text(10, 420, 'Shuffled', 'Color', 'red');
+%text(10, 490, 'y = x', 'Color', 'black');
+%axis equal;
+l_ = refline(1,0); l_.Color = 'k';
+xlim([0 500]); ylim([0 500]);
+figure_format;
+print_svg(name);
+
+figure; hold on;
+DecodingPlotGenerator.errors_plotter(nn, mm, ee, 'unshuffled');
+DecodingPlotGenerator.errors_plotter(nn, mm_d, ee_d, 'diagonal');
+xlabel 'Number of cells'
+ylabel(sprintf('1/MSE in\nunits of cells'));
+l_ = refline(1,0); l_.Color = 'k';
+xlim([0 500]); ylim([0 200]);
+text(10, 350/2.5, 'Full', 'Color', 'blue');
+text(10, 420/2.5, 'Diagonal', 'Color', 'magenta');
+%text(10, 490/2.5, 'y = x', 'Color', 'black');
+figure_format; name = 'fulldiagonal_pooled_normed';
+print_svg(name);
+conn.close;
+%
+figure;
+full_gain_m = cellfun(@(x,y)x-y, mP_normed, mPd_normed, 'UniformOutput', false);
+full_gain_e = cellfun(@(x,y)sqrt(x.^2+y.^2), eP_normed, ePd_normed, 'UniformOutput', false);
+m_at_n_gain = @(n) mean(lookup_at_value(n, nPd, full_gain_m));
+e_at_n_gain = @(n) sqrt(var(lookup_at_value(n, nPd, full_gain_m)) +...
+    mean(lookup_at_value(n, nPd, full_gain_e).^2));
+
+DecodingPlotGenerator.errors_plotter(nn, arrayfun(m_at_n_gain, nn), arrayfun(e_at_n_gain, nn),...
+    'diff');
+xlabel 'Number of cells'
+ylabel(sprintf('\\Delta1/MSE\nin units of cells'));
+text(10, 100, 'Full - Diagonal', 'Color', 'black');
+figure_format; name = 'fulldiagonal_normed_diff';
+print_svg(name);

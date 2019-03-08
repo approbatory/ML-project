@@ -301,3 +301,108 @@ xlabel 'RMS noise correlation ratio'
 ylabel(sprintf('\\Delta1/MSE\nin units of cells'));
 figure_format;
 print_svg('RMS_noise_corr_bad_regression');
+
+%% decoding from PLS vs number of dimensions
+o = DecodeTensor(4);
+n_reps = 20;
+dim_list = [1:10, 15, 20, 30, 50, 100, 200, 300, 400, 497];
+clear me mse model me_s mse_s model_s me_p mse_p model_p me_sp mse_sp model_sp
+for rep = 1:n_reps
+    [me(rep), mse(rep), ~, ~, model{rep}] = o.PLS_decode(-1, false, [], []);
+    fprintf('no pls: err: %.2f\n', me(rep));
+    [me_s(rep), mse_s(rep), ~, ~, model_s{rep}] = o.PLS_decode(-1, true, [], []);
+    fprintf('no pls: err: %.2f (shuf)\n', me_s(rep));
+    parfor d_i = 1:numel(dim_list)
+        d = dim_list(d_i);
+        [me_p(rep,d_i), mse_p(rep,d_i), ~, ~, model_p{rep,d_i}] = o.PLS_decode(d, false, [], []);
+        fprintf('pls %dd: err: %.2f\n', d, me_p(rep,d_i));
+        [me_sp(rep,d_i), mse_sp(rep,d_i), ~, ~, model_sp{rep,d_i}] = o.PLS_decode(d, true, [], []);
+        fprintf('pls %dd: err: %.2f (shuf)\n', d, me_sp(rep,d_i));
+    end
+end
+disp(me);
+%% saving results
+save decoding_pls_dims.mat dim_list me mse model me_s mse_s model_s me_p mse_p model_p me_sp mse_sp model_sp
+%% plotting: only 10 reps
+figure;
+sum_stats = {@mean, @(x)std(x)./sqrt(size(x,1)).*norminv((1+0.95)/2)};
+shadedErrorBar(dim_list, 1./mse_p(1:10,:), sum_stats, 'lineprops', 'b');
+shadedErrorBar(dim_list, 1./repmat(mse(1:10)', 1, numel(dim_list)), sum_stats, 'lineprops', 'b:');
+hold on;
+shadedErrorBar(dim_list, 1./mse_sp(1:10,:), sum_stats, 'lineprops', 'r');
+shadedErrorBar(dim_list, 1./repmat(mse_s(1:10)', 1, numel(dim_list)), sum_stats, 'lineprops', 'r:');
+set(gca, 'XScale', 'log');
+xlabel 'PLS dimension'
+ylabel '1/MSE (cm^{-2})'
+print_svg('decode_from_PLS');
+
+%%
+figure;
+sum_stats = {@mean, @(x)std(x)./sqrt(size(x,1)).*norminv((1+0.95)/2)};
+shadedErrorBar(dim_list, me_p(1:10,:), sum_stats, 'lineprops', 'b');
+shadedErrorBar(dim_list, repmat(me(1:10)', 1, numel(dim_list)), sum_stats, 'lineprops', 'b:');
+hold on;
+shadedErrorBar(dim_list, me_sp(1:10,:), sum_stats, 'lineprops', 'r');
+shadedErrorBar(dim_list, repmat(me_s(1:10)', 1, numel(dim_list)), sum_stats, 'lineprops', 'r:');
+set(gca, 'XScale', 'log');
+set(gca, 'YScale', 'log');
+xlabel 'PLS dimension'
+ylabel 'Mean error (cm)'
+print_svg('decode_from_PLS_mean_err');
+
+%%
+o = DecodeTensor(8);
+[my_me, my_mse, ~, ~, my_model] = o.PLS_decode(-1, false, [], []);
+fprintf('learned unshuf\n');
+%[my_me_p, my_mse_p, ~, ~, my_model_p, stats] = o.PLS_decode(497, false, [], []);
+[my_me_s, my_mse_s, ~, ~, my_model_s] = o.PLS_decode(-1, true, [], []);
+fprintf('learned shuf\n');
+%%
+%signal_direction = diff(mean(o.data_tensor(:,:, o.tr_dir==1),3),1,2);
+[X, ks] = DecodeTensor.tensor2dataset(o.data_tensor, o.tr_dir);
+clear b_bs b_s bs_s r_s
+for b = 1:o.opt.n_bins-1
+    f_bin = 2*b-1; f_bin_next = f_bin+2;
+    learner_index = find((my_model.CodingMatrix(f_bin,:)~=0) &...
+        (my_model.CodingMatrix(f_bin_next,:)~=0));
+    Beta = my_model.BinaryLearners{learner_index}.Beta;
+    Beta_s = my_model_s.BinaryLearners{learner_index}.Beta;
+    signal_dir = mean(X(ks==f_bin_next,:)) - mean(X(ks==f_bin,:));
+    b_bs(b) = angle_v(Beta, Beta_s, true);
+    b_s(b) = angle_v(Beta, signal_dir, true);
+    bs_s(b) = angle_v(Beta_s, signal_dir, true);
+    r_s(b) = angle_v(randn(size(X,2),1), signal_dir, true);
+end
+figure;
+subplot(2,1,1);
+plot(b_bs, 'DisplayName', 'Unshuf vs Shuf');
+hold on;
+plot(b_s, 'DisplayName', 'Unshuf vs \DeltaSignal');
+plot(bs_s, 'DisplayName', 'Shuf vs \DeltaSignal');
+plot(r_s, 'DisplayName', 'Random vs \DeltaSignal');
+legend Location best
+ylim([0 90]);
+xlabel 'Position bin'
+ylabel(sprintf('Angle between\nclassifiers (degrees)'));
+for b = 1:o.opt.n_bins-1
+    f_bin = 2*b; f_bin_next = f_bin+2;
+    learner_index = find((my_model.CodingMatrix(f_bin,:)~=0) &...
+        (my_model.CodingMatrix(f_bin_next,:)~=0));
+    Beta = my_model.BinaryLearners{learner_index}.Beta;
+    Beta_s = my_model_s.BinaryLearners{learner_index}.Beta;
+    signal_dir = mean(X(ks==f_bin_next,:)) - mean(X(ks==f_bin,:));
+    b_bs(b) = angle_v(Beta, Beta_s, true);
+    b_s(b) = angle_v(Beta, signal_dir, true);
+    bs_s(b) = angle_v(Beta_s, signal_dir, true);
+    r_s(b) = angle_v(randn(size(X,2),1), signal_dir, true);
+end
+subplot(2,1,2);
+plot(b_bs, 'DisplayName', 'b\_bs');
+hold on;
+plot(b_s, 'DisplayName', 'b\_s');
+plot(bs_s, 'DisplayName', 'bs\_s');
+plot(r_s, 'DisplayName', 'r\_s');
+%legend;
+ylim([0 90]);
+xlabel 'Position bin'
+ylabel(sprintf('Angle between\nclassifiers (degrees)'));

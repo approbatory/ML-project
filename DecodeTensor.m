@@ -219,8 +219,8 @@ classdef DecodeTensor < handle
             data_tensor = DecodeTensor.construct_tensor(X, tr_bins, opt.n_bins, tr_s, tr_e);
             T = data_tensor; d = tr_dir;
         end
-        function [mean_err, MSE, ps, ks, model] = decode_tensor(data_tensor, tr_dir,...
-                binsize, alg, shuf, num_neurons, num_trials)
+        function [mean_err, MSE, ps, ks, model, stats] = decode_tensor(data_tensor, tr_dir,...
+                binsize, alg, shuf, num_neurons, num_trials, pls_dims)
             %%Running decoding on data tensor given decoding algorithm,
             % number of neurons, number of trials to use (per direction of
             % motion), and whether or not to shuffle the data after
@@ -237,6 +237,12 @@ classdef DecodeTensor < handle
             % number of trials [of each direction] to use for decoding) →
             % (mean decoding error, mean squared decoding error, ...
             % predicted bins, correct bins)
+            if ~exist('pls_dims', 'var')
+                pls_dims = -1;
+                stats = [];
+            elseif pls_dims < 0
+                stats = [];
+            end
             
             %Cutting down the data to a requested number of neurons &
             %number of trials
@@ -254,8 +260,17 @@ classdef DecodeTensor < handle
             
             %Converting tensors to data matrix for supervised learning
             %problem
-            [sup_X1, sup_ks1] = DecodeTensor.tensor2dataset(T1, d1);
-            [sup_X2, sup_ks2] = DecodeTensor.tensor2dataset(T2, d2);
+            [sup_X1, sup_ks1] = DecodeTensor.tensor2dataset(T1, d1);%%%blorgg
+            [sup_X2, sup_ks2] = DecodeTensor.tensor2dataset(T2, d2);%%%blorgg
+            if pls_dims > 0
+                len1 = numel(sup_ks1); len2 = numel(sup_ks2);
+                X = [sup_X1 ; sup_X2]; ks = [sup_ks1 ; sup_ks2];
+                %ks_place = ceil(ks/2); ks_dir = mod(ks,2);
+                [XS, stats, origin] = Utils.pls_short(X, [ceil(ks/2), mod(ks,2)], pls_dims);
+                X_r = XS(:,1:pls_dims);
+                sup_X1 = X_r(1:len1,:);
+                sup_X2 = X_r(len1+1:len1+len2,:);
+            end
             
             %Error measurement functions. @(k)ceil(k/2) throws away
             %direction information.
@@ -297,7 +312,17 @@ classdef DecodeTensor < handle
             end
             [tot_X, tot_ks] = DecodeTensor.tensor2dataset(data_tensor, tr_dir);
             assert(isequal(ks(:), tot_ks(:)));%%Sanity check
-            if nargout == 5
+            if pls_dims > 0
+                %len1 = numel(sup_ks1); len2 = numel(sup_ks2);
+                %X = [sup_X1 ; sup_X2]; ks = [sup_ks1 ; sup_ks2];
+                %ks_place = ceil(ks/2); ks_dir = mod(ks,2);
+                [XS, stats, origin] = Utils.pls_short(tot_X, [ceil(tot_ks/2), mod(tot_ks,2)], pls_dims);
+                X_r = XS(:,1:pls_dims);
+                tot_X = X_r;
+                %sup_X1 = X_r(1:len1,:);
+                %sup_X2 = X_r(len1+1:len1+len2,:);
+            end
+            if nargout > 4
                 model = alg.train(tot_X, tot_ks);
             end
         end
@@ -1172,7 +1197,12 @@ classdef DecodeTensor < handle
     
     methods
         function o = DecodeTensor(dispatch_index, neural_data_type, my_opt)
-            [o.source_path, o.mouse_name] = DecodeTensor.default_datasets(dispatch_index);
+            if isnumeric(dispatch_index)
+                [o.source_path, o.mouse_name] = DecodeTensor.default_datasets(dispatch_index);
+            else
+                o.source_path = dispatch_index{1};
+                o.mouse_name = dispatch_index{2};
+            end
             if ~exist('my_opt', 'var')
                 o.opt = DecodeTensor.default_opt;
                 if ~exist('first_half', 'var')
@@ -1207,6 +1237,15 @@ classdef DecodeTensor < handle
             end
             [me, mse, ps, ks, model] = DecodeTensor.decode_tensor(o.data_tensor, o.tr_dir,...
                 o.opt.bin_width, alg, shuf, num_neurons, num_trials);
+        end
+        
+        function [me, mse, ps, ks, model, stats] = PLS_decode(o, pls_dims, shuf, num_neurons, num_trials, alg)
+            if ~exist('alg', 'var')
+                alg = my_algs('ecoclin');
+            end
+            %%%blorgg
+            [me, mse, ps, ks, model, stats] = DecodeTensor.decode_tensor(o.data_tensor, o.tr_dir,...
+                o.opt.bin_width, alg, shuf, num_neurons, num_trials, pls_dims);
         end
         
         function sig = place_sig(o)
