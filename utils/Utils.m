@@ -316,5 +316,42 @@ classdef Utils %Common utilities for dealing with neural data
             integer_array = integer_array - min(integer_array) + 1;
             res = l_(integer_array, :);
         end
+        
+        function [I_bc, VarI_bc, I_bc_shuf] = linear_fisher_information(data_tensor, theta)
+            %data_tensor: array of size N x K x T, signifying neurons,
+            % place bins, and trials
+            %theta: array of size 1 x K denoting the place value in cm of each
+            % place bin
+            %input should be unidirectional, unshuffled
+            %implementing https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1004218#pcbi.1004218.e036
+            [N, K, T] = size(data_tensor);
+            mu = mean(data_tensor, 3); %size N x K x 1
+            dmu = diff(mu, 1, 2); %size N x K-1 x 1
+            dtheta = diff(theta, 1, 2); %size 1 x K-1
+            dmudtheta = dmu ./ dtheta; %size N x K-1 x 1
+            S = zeros(N, N, K);
+            for i_k = 1:K
+                data_slice = squeeze(data_tensor(:, i_k, :)).'; %size T x N
+                S(:, :, i_k) = cov(data_slice);
+            end
+            S_pooled = zeros(N, N, K-1);
+            I_bc = zeros(1, K-1);
+            VarI_bc = zeros(1, K-1);
+            I_bc_shuf = zeros(1, K-1);
+            for i_k = 1:K-1
+                S_pooled(:,:,i_k) = (S(:,:,i_k) + S(:,:,i_k+1))/2;
+                
+                I_bc(i_k) = dmudtheta(:,i_k).' * pinv(S_pooled(:,:,i_k)) * dmudtheta(:,i_k) ...
+                    * (2*T - N - 3)/(2*T - 2) - 2*N/(T*dtheta(i_k)^2);
+                VarI_bc(i_k) = 2*I_bc(i_k)^2/(2*T - N - 5)*...
+                    (1 + 4*(2*T-3)/(T*I_bc(i_k)*dtheta(i_k)^2) + ...
+                    4*N*(2*T-3)/(T^2*I_bc(i_k)^2*dtheta(i_k)^4));
+                
+                I_bc_shuf(i_k) = sum(dmudtheta(:,i_k).^2./diag(S_pooled(:,:,i_k)))*(T-2)/(T-1)-2*N/(T*dtheta(i_k)^2);
+                %%TODO add diag case, requires shuffle, more complicated
+            end
+            
+        
+        end
     end
 end

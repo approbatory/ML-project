@@ -571,6 +571,19 @@ ylabel(sprintf('\\Delta1/MSE\nin units of cells'));
 colormap lines;
 figure_format;
 print_svg('all_sessions_regression_line_RMS_noise_corr');
+%% trying other regressions
+figure; 
+y_values = 1 - mse_s_(safe_filter)./mse_(safe_filter);
+%y_values = num_neurons(safe_filter);
+scatter(num_neurons(safe_filter), y_values, 4, categorical(session_mouse_safe), 'filled');
+[fitresult, gof] = fit(num_neurons(safe_filter).', y_values.', 'poly1');
+hold on;
+plot(fitresult, 'k'); legend off
+xlabel(sprintf('Num neurons'));
+ylabel(sprintf('Ratio of MSE shuf/shuf'));
+%ylabel 'Num neurons'
+text(300, 1, sprintf('adj. R^2=%.2f', gof.adjrsquare));
+
 %%
 num_sess = numel(sessions);
 v_thresh = [0.5 1 1.5 2 2.5 3 3.5 4 4.5 5];
