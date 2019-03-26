@@ -25,7 +25,7 @@ for tr_i = 1:numel(tr_start)
     ks_tr{tr_i} = ks(s:e);
 end
 
-n_reps = 1;
+n_reps = 20;
 %mse_whole_tr = zeros(n_reps, num_trials);
 %mse_s_whole_tr = zeros(n_reps, num_trials);
 %mse_d_whole_tr = zeros(n_reps, num_trials);
@@ -113,12 +113,12 @@ ylabel 'Mean trial error (cm)'
 title(sprintf('Mouse2022: rawTraces, trial-level decoding,\nshowing median reflines'));
 %%
 figure;
-t_time = ((1:numel(cell2mat(ks_tr_test))) - 1000)/20 - 28; %20Hz
+t_time = ((1:numel(cell2mat(ks_tr_test))) - 1000)/20 - 28 - 64.45; %20Hz
 plot(t_time, (ceil(cell2mat(ks_tr_test)/2)-0.5)*5.9, 'k'); hold on;
 plot(t_time, (ceil(cell2mat(ps_tr)/2)-0.5)*5.9, 'b');
 plot(t_time, (ceil(cell2mat(ps_s_tr)/2)-0.5)*5.9, 'r');
 %plot(t_time, (ceil(cell2mat(ps_d_tr)/2)-0.5)*5.9, 'm');
-trial_marks = (cumsum(cellfun(@(x)size(x,1), ks_tr_test)) - 1000)/20 - 28; %20Hz
+trial_marks = (cumsum(cellfun(@(x)size(x,1), ks_tr_test)) - 1000)/20 - 28 - 64.45; %20Hz
 for i = 1:numel(trial_marks)
     m = trial_marks(i);
     line([m m], ylim, 'Color', 'black', 'LineStyle', '--');

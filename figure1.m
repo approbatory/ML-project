@@ -156,13 +156,13 @@ DecodingPlotGenerator.errors_plotter(neuron_nums,imse_means,imse_errbs, 'unshuff
 xlabel 'Number of cells'
 ylabel '1/MSE (cm^{-2})'
 xlim([0 400]);
-text(10, 0.75/5.9, 'Unshuffled', 'Color', 'blue');
-text(10, 0.9/5.9, 'Shuffled', 'Color', 'red');
+text(10, 0.085, 'Unshuffled', 'Color', 'blue');
+text(10, 0.1, 'Shuffled', 'Color', 'red');
 figure_format;
 print_svg(name);
 conn.close;
 
-%% panel: decorrelation, pooled on all mice
+%% panel: decorrelation, pooled on all mice Figure1g
 % and normed to 1 on the imse perf at 
 % n_cells = 180 for shuffled
 name = 'decorrelation_pooled_normed';
@@ -207,15 +207,15 @@ lookup_at_value = @(val, val_col, res_col) cell2mat(...
 
 m_at_n = @(n) mean(lookup_at_value(n, nP, mP_normed));
 e_at_n = @(n) sqrt(var(lookup_at_value(n, nP, mP_normed)) +...
-    mean(lookup_at_value(n, nP, eP_normed).^2));
+    0.*mean(lookup_at_value(n, nP, eP_normed).^2));
 
 m_at_n_s = @(n) mean(lookup_at_value(n, nPs, mPs_normed));
 e_at_n_s = @(n) sqrt(var(lookup_at_value(n, nPs, mPs_normed)) +...
-    mean(lookup_at_value(n, nPs, ePs_normed).^2));
+    0.*mean(lookup_at_value(n, nPs, ePs_normed).^2));
 
 m_at_n_d = @(n) mean(lookup_at_value(n, nPd, mPd_normed));
 e_at_n_d = @(n) sqrt(var(lookup_at_value(n, nPd, mPd_normed)) +...
-    mean(lookup_at_value(n, nPd, ePd_normed).^2));
+    0.*mean(lookup_at_value(n, nPd, ePd_normed).^2));
 
 figure; hold on;
 nn = [1 (30:30:500)];
@@ -254,13 +254,13 @@ text(10, 420/2.5, 'Diagonal', 'Color', 'magenta');
 figure_format; name = 'fulldiagonal_pooled_normed';
 print_svg(name);
 conn.close;
-%%
+%% Figure1i
 figure;
 full_gain_m = cellfun(@(x,y)x-y, mP_normed, mPd_normed, 'UniformOutput', false);
 full_gain_e = cellfun(@(x,y)sqrt(x.^2+y.^2), eP_normed, ePd_normed, 'UniformOutput', false);
 m_at_n_gain = @(n) mean(lookup_at_value(n, nPd, full_gain_m));
 e_at_n_gain = @(n) sqrt(var(lookup_at_value(n, nPd, full_gain_m)) +...
-    mean(lookup_at_value(n, nPd, full_gain_e).^2));
+    0.*mean(lookup_at_value(n, nPd, full_gain_e).^2));
 
 DecodingPlotGenerator.errors_plotter(nn, arrayfun(m_at_n_gain, nn), arrayfun(e_at_n_gain, nn),...
     'diff');
@@ -490,7 +490,7 @@ ylabel '\Delta Freq. / num. samples'
 figure_format;
 print_svg(name);
 
-%% Panel e : change in std of active cells dists (+sign test)
+%% Panel e : change in std of active cells dists (+sign test) Figure1c
 name = 'change_in_std_pooled';
 clear h p
 corr_effect = cell(12,1);
@@ -545,7 +545,8 @@ if false
     text(1.5, 3.5, '***', 'HorizontalAlignment', 'center');
     figure_format;
 end
-plot(ones(1,12), stdev_unshuffled - stdev_shuffled, 'k.');
+plot(ones(1,12) + randn(1,12)*0.2, stdev_unshuffled - stdev_shuffled, 'k.');
+xlim([0 2]);
 set(gca, 'XTick', 1);
 set(gca, 'XTickLabel', {});
 ylabel(sprintf('\\Delta\\sigma of num.\nactive cells'));
@@ -561,8 +562,9 @@ else
 end
 print_svg(name);
 
-%% Panel comparing decoding performance for shuf/unshuf, shown on example trajectory
-decode_obj = DecodeTensor(4, 'rawTraces', true); %only use first half of session
+%% Panel comparing decoding performance for shuf/unshuf, shown on example trajectory Figure1d
+opt = DecodeTensor.default_opt; opt.first_half = true;
+decode_obj = DecodeTensor(4, 'rawTraces', opt); %only use first half of session
 [me, mse, ps, ks, model] = decode_obj.basic_decode(false, [], []);
 [me_s, mse_s, ps_s, ks_s, model_s] = decode_obj.basic_decode(true, [], []);
 
@@ -625,11 +627,11 @@ ps_s_from_trials = mat2cell(model_s.predict(X_s_concat), used_trial_lengths);
 %end
 %%
 f = figure;
-xl_ = [0 3];
+xl_ = [0 11];
 %ax1 = subplot(2,1,1);
-time = ((1:numel(ks)) - 0)/20;
-plot(time, (ceil(ks/2) - 0.5) * opt.bin_width, '-k'); hold on;
-plot(time, (ceil(ps/2) - 0.5) * opt.bin_width, '-b'); 
+time = ((1:numel(ks_cut)) - 6850)/20;
+plot(time, (ceil(ks_cut/2) - 0.5) * opt.bin_width, '-k'); hold on;
+plot(time, (ceil(ps_cut/2) - 0.5) * opt.bin_width, '-b'); 
 xlim(xl_);
 %ylim([1 20]);
 %set(gca, 'XTick', []);
@@ -640,8 +642,8 @@ xlabel 'Time (s)';
 
 %ax2 = subplot(2,1,2);
 hold on;
-plot(time, (ceil(ks/2) - 0.5) * opt.bin_width, '-k'); hold on;
-plot(time, (ceil(ps_s/2) - 0.5) * opt.bin_width, '-r'); 
+plot(time, (ceil(ks_cut/2) - 0.5) * opt.bin_width, '-k'); hold on;
+plot(time, (ceil(ps_cut_s/2) - 0.5) * opt.bin_width, '-r'); 
 %xlim([1440 1700]);
 xlim(xl_);
 %ylim([1 20]);
@@ -650,7 +652,7 @@ xlim(xl_);
 %title 'Decoding from shuffled data'
 %ylabel 'Position (cm)';
 
-%%figure_format('boxsize', [0.8 0.7]*1.05); box on;
+figure_format('boxsize', [0.8 0.7]*1.05); box on;
 
 % %
 % f.Units = 'inches';
@@ -667,8 +669,9 @@ xlim(xl_);
 % 
 
 %%%print_svg('decode_demo_half_lap');
+print_svg('decode_laps_demo');
 
-%% raw trajectory demo
+%% raw trajectory demo Figure1a
 figure; 
 time = ((1:numel(o.data.y.raw.full)) - 26000)/20;
 plot(time, 118*normalize(o.data.y.raw.full, 'range'), 'k');

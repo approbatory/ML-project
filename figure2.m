@@ -168,16 +168,18 @@ res = DecodeTensor.noise_properties(T, d, true);
 [total_neurons, n_bins, n_trials] = size(T);
 %%
 figure;%TODO add errorbars/shadedErrorBars from SEM of mean op
-s = cell2mat(res.el_pre(:)).^2;
-m = mean(s);
-e = std(s) ./ sqrt(size(s,1));
-shadedErrorBar(1:total_neurons, m, e.*norminv((1+0.95)/2), 'lineprops', 'b');
-set(gca, 'XScale', 'log'); set(gca, 'YScale', 'log');
+s = cell2mat(reshape(res.el_pre',[],1)).^2;
+%m = mean(s);
+%e = std(s) ./ sqrt(size(s,1));
+%shadedErrorBar(1:total_neurons, m, e.*norminv((1+0.95)/2), 'lineprops', 'b');
+Utils.neuseries(1:total_neurons, s, 'b');
+set(gca, 'XScale', 'log'); %set(gca, 'YScale', 'log');
 hold on;
-s = cell2mat(res.el_pre_s(:)).^2;
-m = mean(s);
-e = std(s) ./ sqrt(size(s,1));
-shadedErrorBar(1:total_neurons, m, e.*norminv((1+0.95)/2), 'lineprops', 'r');
+s_s = cell2mat(reshape(res.el_pre_s',[],1)).^2;
+%m = mean(s);
+%e = std(s) ./ sqrt(size(s,1));
+%shadedErrorBar(1:total_neurons, m, e.*norminv((1+0.95)/2), 'lineprops', 'r');
+Utils.neuseries(1:total_neurons, s_s, 'r');
 xlabel 'Noise PC index'
 ylabel(sprintf('Signal direction\nin PC basis\n(squared)'))
 l_ = refline(0, 1./total_neurons);
@@ -185,8 +187,8 @@ l_.Color = 'k';
 xlim([1 total_neurons]);
 set(gca, 'YTick', [1e-4, 1./total_neurons, 1e-2]);
 set(gca, 'YTickLabel', {'10^{-4}', '1/n', '10^{-2}'});
-figure_format;
-print_svg('signal_pc_loadings');
+%figure_format;
+%print_svg('signal_pc_loadings');
 %%
 figure;
 n = 1:n_trials/2;

@@ -353,5 +353,12 @@ classdef Utils %Common utilities for dealing with neural data
             
         
         end
+        
+        function neuseries(n, s, c)
+            m = mean(s);
+            e = std(s) ./ sqrt(size(s,1)) .*norminv((1+0.95)/2);
+            %e = std(s);
+            shadedErrorBar(n, m, e, 'lineprops', c);
+        end
     end
 end

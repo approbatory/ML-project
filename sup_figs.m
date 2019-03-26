@@ -501,7 +501,7 @@ sh_by_unsh = me_;
 res = cell(1, num_sess);
 time_taken = me_;
 %%
-parfor s_i = 1:num_sess
+for s_i = 1:num_sess
     my_timer = tic;
     try
         session_path = sessions{s_i};
@@ -528,7 +528,7 @@ parfor s_i = 1:num_sess
         shuf_advantage(s_i) = nan;
         sh_by_unsh(s_i) = nan;
         fprintf('ERROR on session %d/%d:\tneu:%d tr:%d time taken: %.2fs\n',...
-            s_i, num_sess, num_neurons(s_i), num_trials(s_i), toc(my_timer));
+            s_i, num_sess, num_neurons(s_i), num_trials_(s_i), toc(my_timer));
         disp(e);
     end
 end
@@ -540,14 +540,14 @@ for s_i = 1:num_sess
     end
 end
 %%
-safe_filter = ~isnan(sh_by_unsh) & (num_trials_ > 50) & (num_neurons > 50) & (me_ < 12) & (me_s_ < 12);
+safe_filter = ~isnan(sh_by_unsh(:)) & ~isnan(shuf_advantage(:)) & (num_trials_(:) > 50) & (num_neurons(:) > 50) & (me_(:) < 12) & (me_s_(:) < 12);
 sh_by_unsh_safe = sh_by_unsh(safe_filter);
 shuf_advantage_safe = shuf_advantage(safe_filter);
 session_mouse_safe = session_mouse(safe_filter);
 
 figure;
 scatter(sh_by_unsh_safe, shuf_advantage_safe, 4, categorical(session_mouse_safe), 'filled');
-[fitresult, gof] = fit(sh_by_unsh_safe.', shuf_advantage_safe.', 'poly1');
+[fitresult, gof] = fit(sh_by_unsh_safe(:), shuf_advantage_safe(:), 'poly1');
 hold on; 
 plot(fitresult, 'k'); legend off
 text(6.5, 0, sprintf('adj. R^2=%.2f', gof.adjrsquare));
@@ -583,6 +583,22 @@ xlabel(sprintf('Num neurons'));
 ylabel(sprintf('Ratio of MSE shuf/shuf'));
 %ylabel 'Num neurons'
 text(300, 1, sprintf('adj. R^2=%.2f', gof.adjrsquare));
+%% signal direction vs noise angles, over ~150 sessions
+res_safe = res(safe_filter);
+for i = 1:numel(res_safe)
+    my_res = res_safe{i};
+    s = cell2mat(reshape(my_res.el_pre',[],1)).^2;
+    s_s = cell2mat(reshape(my_res.el_pre_s',[],1)).^2;
+    principal_signal_angles(:,i) = acosd(sqrt(s(1:19,50)));
+    principal_signal_angles_s(:,i) = acosd(sqrt(s_s(1:19,50)));
+end
+%% TODO change the number above to select PC dimension (50 -> 1)
+figure;
+Utils.neuseries(1:19, principal_signal_angles', 'b');
+hold on;
+Utils.neuseries(1:19, principal_signal_angles_s', 'r');
+xlabel 'Rightward place bin'
+ylabel(sprintf('Angle between principal noise\n& signal direction (degrees)'));
 
 %%
 num_sess = numel(sessions);
