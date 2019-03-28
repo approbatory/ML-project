@@ -359,6 +359,7 @@ classdef Utils %Common utilities for dealing with neural data
             e = std(s) ./ sqrt(size(s,1)) .*norminv((1+0.95)/2);
             %e = std(s);
             shadedErrorBar(n, m, e, 'lineprops', c);
+            %errorbar(n, m, e, c);
         end
     end
 end

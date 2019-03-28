@@ -589,17 +589,133 @@ for i = 1:numel(res_safe)
     my_res = res_safe{i};
     s = cell2mat(reshape(my_res.el_pre',[],1)).^2;
     s_s = cell2mat(reshape(my_res.el_pre_s',[],1)).^2;
-    principal_signal_angles(:,i) = acosd(sqrt(s(1:19,50)));
-    principal_signal_angles_s(:,i) = acosd(sqrt(s_s(1:19,50)));
+    sig_noise(:,i) = cell2mat(reshape(my_res.nd_pre',[],1));
+    sig_noise_s(:,i) = cell2mat(reshape(my_res.nd_pre_s',[],1));
+    rnd_noise(:,i) = cell2mat(reshape(my_res.nd_rnd',[],1));
+    rnd_noise_s(:,i) = cell2mat(reshape(my_res.nd_rnd_s',[],1));
+    
+    principal_signal_angles(:,i) = acosd(sqrt(s(1:38,1)));
+    principal_signal_angles_s(:,i) = acosd(sqrt(s_s(1:38,1)));
+    median_loadings(:, i) = median(s(:,1:50));
+    median_loadings_s(:, i) = median(s_s(:,1:50));
 end
 %% TODO change the number above to select PC dimension (50 -> 1)
 figure;
-Utils.neuseries(1:19, principal_signal_angles', 'b');
+bin_labels = [[num2str((1:19)'), repmat('R',19,1)]; [num2str((1:19)'), repmat('L',19,1)]];
+subplot(2,1,1);
+boxplot(principal_signal_angles', bin_labels);
+ylim([40 90]);
+title('unshuffled');
+%Utils.neuseries(1:19, principal_signal_angles', 'b');
 hold on;
-Utils.neuseries(1:19, principal_signal_angles_s', 'r');
 xlabel 'Rightward place bin'
 ylabel(sprintf('Angle between principal noise\n& signal direction (degrees)'));
+subplot(2,1,2);
+%Utils.neuseries(1:19, principal_signal_angles_s', 'r');
+boxplot(principal_signal_angles_s', bin_labels);
+title('shuffled');
+ylim([40 90]);
+xlabel 'Rightward place bin'
+ylabel(sprintf('Angle between principal noise\n& signal direction (degrees)'));
+%% median loadings per PC, showing mean +- sem thereof
+figure;
+Utils.neuseries(1:50, median_loadings', 'b');
+hold on;
+Utils.neuseries(1:50, median_loadings_s', 'r');
+xlabel 'Noise PC index'
+ylabel(sprintf('Median signal\ndirection loadings\n(squared)'));
+set(gca, 'YScale', 'log'); set(gca, 'XScale', 'log');
+xlim([1 50]);
+figure_format;
+print_svg('signal_pc_loadings_149');
+%% boxplots of median noise in the signal direction ratios (median over bins)
+figure;
+boxplot([median(sig_noise./sig_noise_s)', median(rnd_noise./rnd_noise_s)'], {'Signal', 'Random'}, 'outliersize', 1);
+ylabel(sprintf('Unshuf./shuf. noise\nvariance ratio'));
+l_ = refline([0 1]); l_.Color = 'k';
+figure_format;
+print_svg('noise_attenuation_boxplot_149');
+%% inset of random boxplot
+figure; 
+boxplot(median(rnd_noise./rnd_noise_s)', {'Random'}, 'outliersize', 1);
+l_ = refline([0 1]); l_.Color = 'k';
+figure_format('boxsize', [0.8125 0.585].*0.98/2);
+print_svg('noise_attenuation_boxplot_149_inset');
+%% decoding advantage / signal direction variance scatterplot + numneurons control
+num_neuron_limit = 200;
+num_trials_limit = 50;
+for s_i = 155:num_sess
+    my_timer = tic;
+    try
+        session_path = sessions{s_i};
+        my_mouse = session_mouse{s_i};
+        o = DecodeTensor({session_path, my_mouse});
+        [ctrl_num_neurons(s_i), ctrl_n_bins(s_i), ~] = size(o.data_tensor);
+        ctrl_n_trials(s_i) = min(sum(o.tr_dir == 1), sum(o.tr_dir == -1));
+        if (ctrl_num_neurons(s_i) < num_neuron_limit) || (ctrl_n_trials(s_i) < num_trials_limit)
+            ctrl_shuf_advantage(s_i) = nan;
+            ctrl_sh_by_unsh(s_i) = nan;
+            ctrl_rms_noise_corr(s_i) = nan;
+            continue; %ONLY USE 200n100t
+        end
+        [ctrl_me_(s_i), ctrl_mse_(s_i), ~, ~] = o.basic_decode(false, num_neuron_limit, num_trials_limit);
+        [ctrl_me_s_(s_i), ctrl_mse_s_(s_i), ~, ~] = o.basic_decode(true, num_neuron_limit, num_trials_limit);
+        
+        ctrl_shuf_advantage(s_i) = ((1./ctrl_mse_s_(s_i)) - (1./ctrl_mse_(s_i))) .* num_neuron_limit .* ctrl_mse_s_(s_i);
+        
+        [ctrl_data_tensor, ctrl_tr_dir] = DecodeTensor.cut_tensor(o.data_tensor, o.tr_dir, num_neuron_limit, num_trials_limit);
+        ctrl_res{s_i} = DecodeTensor.noise_properties(ctrl_data_tensor, ctrl_tr_dir, true); %true for using_corr
+        ctrl_sh_by_unsh(s_i) = mean(cell2mat(ctrl_res{s_i}.nd_pre(:)) ./ cell2mat(ctrl_res{s_i}.nd_pre_s(:)));
+        ctrl_rms_noise_corr(s_i) = ctrl_res{s_i}.RMS_noise_corr;
+        %rms_noise_corr_shuf(s_i)
+        ctrl_time_taken(s_i) = toc(my_timer);
+        fprintf('Done session %d/%d: shuf_advantage: %.2f\tsh_by_unsh: %.2f\tin time %.2fs\n',...
+            s_i, num_sess, ctrl_shuf_advantage(s_i), ctrl_sh_by_unsh(s_i), ctrl_time_taken(s_i));
+        %loop_record(s_i) = struct('session_path', session_path, 'my_mouse', my_mouse,...
+        %    'mean_err', me_, 'MSE', mse_, 'mean_err_s', me_s_, 'MSE_s', mse_s_',...
+        %    'num_neurons', num_neurons, 'num_trials', num_trials_, 'shuf_advantage', shuf_advantage(s_i),...
+        %    'res_geometric', res, 'sh_by_unsh', sh_by_unsh(s_i), 'time_taken', time_taken);
+    catch e
+        ctrl_shuf_advantage(s_i) = nan;
+        ctrl_sh_by_unsh(s_i) = nan;
+        ctrl_rms_noise_corr(s_i) = nan;
+        fprintf('ERROR on session %d/%d:\tneu:%d tr:%d time taken: %.2fs\n',...
+            s_i, num_sess, ctrl_num_neurons(s_i), ctrl_n_trials(s_i), toc(my_timer));
+        disp(e); %TODO run it
+    end
+end
+%%
+ctrl_safe_filter = ~isnan(ctrl_sh_by_unsh(:)) & ~isnan(ctrl_shuf_advantage(:)) & (ctrl_n_trials(:) > num_trials_limit) & (ctrl_num_neurons(:) > num_neuron_limit) & (ctrl_me_(:) < 12) & (ctrl_me_s_(:) < 12);
+ctrl_sh_by_unsh_safe = ctrl_sh_by_unsh(ctrl_safe_filter);
+ctrl_shuf_advantage_safe = ctrl_shuf_advantage(ctrl_safe_filter);
+ctrl_session_mouse_safe = session_mouse(ctrl_safe_filter);
 
+figure;
+scatter(ctrl_sh_by_unsh_safe, ctrl_shuf_advantage_safe, 4, categorical(ctrl_session_mouse_safe), 'filled');
+[fitresult, gof] = fit(ctrl_sh_by_unsh_safe(:), ctrl_shuf_advantage_safe(:), 'poly1');
+hold on; 
+plot(fitresult, 'k'); legend off
+text(4, 0, sprintf('adj. R^2=%.2f', gof.adjrsquare));
+xlabel(sprintf('Unshuf./Shuf. noise\nvariance ratio (ctrl)'));
+ylabel(sprintf('\\Delta1/MSE\nin units of cells (ctrl)'));
+colormap lines;
+figure_format;
+print_svg('ctrl_all_sessions_regression_line');
+%%
+ctrl_rms_noise_corr_safe = ctrl_rms_noise_corr(ctrl_safe_filter);
+%rms_noise_corr_shuf_safe = rms_noise_corr_shuf(safe_filter);
+%noise_corr_diff = sqrt(rms_noise_corr_safe.^2 - rms_noise_corr_shuf_safe.^2);
+figure;
+scatter(ctrl_rms_noise_corr_safe, ctrl_shuf_advantage_safe, 4, categorical(ctrl_session_mouse_safe), 'filled');
+[fitresult, gof] = fit(ctrl_rms_noise_corr_safe.', ctrl_shuf_advantage_safe.', 'poly1');
+hold on; 
+plot(fitresult, 'k'); legend off
+text(0.25, 0, sprintf('adj. R^2=%.2f', gof.adjrsquare));
+xlabel(sprintf('RMS noise correlation (ctrl)'));
+ylabel(sprintf('\\Delta1/MSE\nin units of cells (ctrl)'));
+colormap lines;
+figure_format;
+print_svg('ctrl_all_sessions_regression_line_RMS_noise_corr');
 %%
 num_sess = numel(sessions);
 v_thresh = [0.5 1 1.5 2 2.5 3 3.5 4 4.5 5];
