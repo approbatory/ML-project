@@ -1,3 +1,7 @@
+function validating_bin_number(random_str)
+my_rand_seed = str2double(random_str);
+rng(my_rand_seed);
+fprintf('random seed %d\n\n', my_rand_seed);
 total_ticker = tic;
 load('../linear_track/Mouse2022/Mouse-2022-20150326-linear-track/Mouse-2022-20150326_093722-linear-track-TracesAndEvents.mat');
 %%
@@ -110,3 +114,4 @@ end
 
 save(sprintf('validating_bin_number_record_%d.mat', randi(1e9)), 'nb_list', 'me_mean_tr', 'mse_mean_tr');
 toc(total_ticker);
+exit;
