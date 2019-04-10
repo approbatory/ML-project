@@ -9,6 +9,7 @@ X_full = X_bin_full_padded;
 y_full = tracesEvents.position(91:end,1);
 %%
 opt = DecodeTensor.default_opt;
+opt.n_bins = 20; %CHANGE HERE IN LOOP
 [~,~,tr_start,tr_end,~,~,ks] = DecodeTensor.new_sel(y_full, opt);
 num_trials = numel(tr_start);
 
@@ -25,7 +26,7 @@ for tr_i = 1:numel(tr_start)
     ks_tr{tr_i} = ks(s:e);
 end
 
-n_reps = 20;
+n_reps = 1;
 %mse_whole_tr = zeros(n_reps, num_trials);
 %mse_s_whole_tr = zeros(n_reps, num_trials);
 %mse_d_whole_tr = zeros(n_reps, num_trials);
@@ -83,7 +84,7 @@ for rep = 1:n_reps
     fprintf('Done rep %d/%d, in time %.2f s\n', rep, n_reps, n_seconds);
 end
 
-%
+%%
 mse_whole_tr = cell2mat(mse_whole_tr');
 mse_s_whole_tr = cell2mat(mse_s_whole_tr');
 mse_d_whole_tr = cell2mat(mse_d_whole_tr');
@@ -113,7 +114,7 @@ ylabel 'Mean trial error (cm)'
 title(sprintf('Mouse2022: rawTraces, trial-level decoding,\nshowing median reflines'));
 %%
 figure;
-t_time = ((1:numel(cell2mat(ks_tr_test))) - 1000)/20 - 28 - 64.45; %20Hz
+t_time = ((1:numel(cell2mat(ks_tr_test))) - 10774/2)/20 - 42; %- 28 - 64.45 - 135; %20Hz
 plot(t_time, (ceil(cell2mat(ks_tr_test)/2)-0.5)*5.9, 'k'); hold on;
 plot(t_time, (ceil(cell2mat(ps_tr)/2)-0.5)*5.9, 'b');
 plot(t_time, (ceil(cell2mat(ps_s_tr)/2)-0.5)*5.9, 'r');

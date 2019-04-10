@@ -149,6 +149,7 @@ classdef DecodeTensor < handle
             opt.d_trials = 30;
             opt.first_half = false;
             opt.pad_seconds = 0.8;
+            opt.discard_incomplete_trials = true;
         end
         
         function [source_path, mouse_name] = default_datasets(index)
@@ -445,18 +446,22 @@ classdef DecodeTensor < handle
             
             %if a trial does not contain a sample from all bins, discard
             %the trial
-            keep_trial = true(size(trial_start));
-            for tr_i = 1:numel(trial_start)
-                bins_present = track_bins(trial_start(tr_i):trial_end(tr_i));
-                for b = 1:n_bins
-                    if sum(bins_present == b) == 0
-                        keep_trial(tr_i) = false;
+            if opt.discard_incomplete_trials
+                keep_trial = true(size(trial_start));
+                for tr_i = 1:numel(trial_start)
+                    bins_present = track_bins(trial_start(tr_i):trial_end(tr_i));
+                    for b = 1:n_bins
+                        if sum(bins_present == b) == 0
+                            keep_trial(tr_i) = false;
+                        end
                     end
                 end
+                trial_start = trial_start(keep_trial);
+                trial_end = trial_end(keep_trial);
+                trial_direction = trial_direction(keep_trial);
+            else
+                keep_trial = true(size(trial_start));
             end
-            trial_start = trial_start(keep_trial);
-            trial_end = trial_end(keep_trial);
-            trial_direction = trial_direction(keep_trial);
             fprintf('Total trials: %d\tThrowing away %d\tkeeping %d\n', numel(keep_trial), sum(~keep_trial), sum(keep_trial));
         end
         
@@ -587,7 +592,7 @@ classdef DecodeTensor < handle
             end
         end
         
-        function [T_cut, d_cut] = cut_tensor(data_tensor, tr_dir, num_neurons, num_trials)
+        function [T_cut, d_cut, neuron_subset, total_trials_subset] = cut_tensor(data_tensor, tr_dir, num_neurons, num_trials)
             %%Slicing the tensor into a particular number of neurons or
             %%number of trials:
             % In the analysis we often want to compare decoding
@@ -614,21 +619,38 @@ classdef DecodeTensor < handle
             if ~exist('num_neurons', 'var') || isempty(num_neurons)
                 num_neurons = tot_neurons;
             end
-            assert(num_neurons <= tot_neurons, 'The size of the subset of neurons must be <= the total recorded neurons');
+            if islogical(num_neurons)
+                assert(length(num_neurons) == tot_neurons, 'The size of the subset of neurons must be <= the total recorded neurons');
+            else
+                assert(num_neurons <= tot_neurons, 'The size of the subset of neurons must be <= the total recorded neurons');
+            end
             num_right_trials = sum(tr_dir == 1);
             num_left_trials = sum(tr_dir == -1);
             if ~exist('num_trials', 'var') || isempty(num_trials)
                 num_trials = min(num_right_trials, num_left_trials);
             end
-            assert(num_trials <= min(num_right_trials, num_left_trials),...
-                'The size of the subset of trials must be <= the total recorded trials');
+            if islogical(num_trials)
+                assert(length(num_trials) == length(tr_dir),...
+                    'The size of the subset of trials must be <= the total recorded trials');
+            else
+                assert(num_trials <= min(num_right_trials, num_left_trials),...
+                    'The size of the subset of trials must be <= the total recorded trials');
+            end
             
-            neuron_subset = randperm(tot_neurons) <= num_neurons;
+            if ~islogical(num_neurons)
+                neuron_subset = randperm(tot_neurons) <= num_neurons;
+            else
+                neuron_subset = num_neurons;
+            end
             
-            right_trials_subset = randperm(num_right_trials) <= num_trials;
-            left_trials_subset = randperm(num_left_trials) <= num_trials;
-            total_trials_subset(tr_dir == 1) = right_trials_subset;
-            total_trials_subset(tr_dir ==-1) = left_trials_subset;
+            if ~islogical(num_trials)
+                right_trials_subset = randperm(num_right_trials) <= num_trials;
+                left_trials_subset = randperm(num_left_trials) <= num_trials;
+                total_trials_subset(tr_dir == 1) = right_trials_subset;
+                total_trials_subset(tr_dir ==-1) = left_trials_subset;
+            else
+                total_trials_subset = num_trials;
+            end
             
             T_cut = data_tensor(neuron_subset,:,total_trials_subset);
             d_cut = tr_dir(total_trials_subset);

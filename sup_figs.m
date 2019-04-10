@@ -4,7 +4,7 @@
 %trials declared:
 
 while true
-    sessions = {...
+    sessions_all = {...
         '../linear_track/Mouse2025/Mouse-2025-20150307-linear-track/Mouse-2025-20150307_104428-linear-track-TracesAndEvents.mat',...
         '../linear_track/Mouse2025/Mouse-2025-20150228-linear-track/Mouse-2025-20150228_160317-linear-track-TracesAndEvents.mat',...
         '../linear_track/Mouse2025/Mouse-2025-20150321-linear-track/Mouse-2025-20150321_134149-linear-track-TracesAndEvents.mat',...
@@ -245,7 +245,7 @@ while true
         '../linear_track/Mouse2026/Mouse-2026-20150228-linear-track/Mouse-2026-20150228_110319-linear-track-TracesAndEvents.mat',...
         '../linear_track/Mouse2026/Mouse-2026-20150228-linear-track/Mouse-2026-20150228_162802-linear-track-TracesAndEvents.mat',...
         '../linear_track/Mouse2026/Mouse-2026-20150317-linear-track/Mouse-2026-20150317_094553-linear-track-TracesAndEvents.mat'};
-    session_mouse = {...
+    session_mouse_all = {...
         'Mouse2025',...
         'Mouse2025',...
         'Mouse2025',...
@@ -489,6 +489,15 @@ while true
     break;
 end
 
+sessions = {'../linear_track/Mouse2019/Mouse-2019-20150311-linear-track/Mouse-2019-20150311_101049-linear-track-TracesAndEvents.mat',...
+    '../linear_track/Mouse2021/Mouse-2021-20150326-linear-track/Mouse-2021-20150326_085536-linear-track-TracesAndEvents.mat',...
+    '../linear_track/Mouse2022/Mouse-2022-20150326-linear-track/Mouse-2022-20150326_093722-linear-track-TracesAndEvents.mat',...
+    '../linear_track/Mouse2028/Mouse-2028-20150327-linear-track/Mouse-2028-20150327_105544-linear-track-TracesAndEvents.mat',...
+    '../linear_track/Mouse2025/Mouse-2025-20150303-linear-track/Mouse-2025-20150303_091715-linear-track-TracesAndEvents.mat',...
+    '../linear_track/Mouse2024/Mouse-2024-20150311-linear-track/Mouse-2024-20150311_073912-linear-track-TracesAndEvents.mat'};
+sessions_mouse = {'Mouse2019', 'Mouse2021', 'Mouse2022',...
+    'Mouse2028', 'Mouse2025', 'Mouse2024'};
+
 num_sess = numel(sessions);
 me_ = zeros(1, num_sess);
 mse_ = me_;
@@ -555,7 +564,7 @@ xlabel(sprintf('Unshuf./Shuf. noise\nvariance ratio'));
 ylabel(sprintf('\\Delta1/MSE\nin units of cells'));
 colormap lines;
 figure_format;
-print_svg('all_sessions_regression_line');
+%print_svg('all_sessions_regression_line');
 %%
 rms_noise_corr_safe = rms_noise_corr(safe_filter);
 rms_noise_corr_shuf_safe = rms_noise_corr_shuf(safe_filter);
@@ -570,7 +579,7 @@ xlabel(sprintf('RMS noise correlation'));
 ylabel(sprintf('\\Delta1/MSE\nin units of cells'));
 colormap lines;
 figure_format;
-print_svg('all_sessions_regression_line_RMS_noise_corr');
+%print_svg('all_sessions_regression_line_RMS_noise_corr');
 %% trying other regressions
 figure; 
 y_values = 1 - mse_s_(safe_filter)./mse_(safe_filter);
@@ -626,21 +635,34 @@ xlabel 'Noise PC index'
 ylabel(sprintf('Median signal\ndirection loadings\n(squared)'));
 set(gca, 'YScale', 'log'); set(gca, 'XScale', 'log');
 xlim([1 50]);
+ylim([3e-4 7e-2]);
+set(gca, 'YTick', [1e-3 1e-2])
 figure_format;
-print_svg('signal_pc_loadings_149');
+print_svg('signal_pc_loadings_6');
 %% boxplots of median noise in the signal direction ratios (median over bins)
 figure;
 boxplot([median(sig_noise./sig_noise_s)', median(rnd_noise./rnd_noise_s)'], {'Signal', 'Random'}, 'outliersize', 1);
 ylabel(sprintf('Unshuf./shuf. noise\nvariance ratio'));
 l_ = refline([0 1]); l_.Color = 'k';
 figure_format;
-print_svg('noise_attenuation_boxplot_149');
+print_svg('noise_attenuation_boxplot_6');
 %% inset of random boxplot
 figure; 
 boxplot(median(rnd_noise./rnd_noise_s)', {'Random'}, 'outliersize', 1);
 l_ = refline([0 1]); l_.Color = 'k';
 figure_format('boxsize', [0.8125 0.585].*0.98/2);
-print_svg('noise_attenuation_boxplot_149_inset');
+print_svg('noise_attenuation_boxplot_6_inset');
+%% ball and stick plot for sig_noise and sig_noise_s
+figure;
+plot([median(sig_noise) ; median(sig_noise_s)], '-k.');
+xlim([0.5 2.5]);
+ylim([0 Inf]);
+set(gca, 'XTick', [1 2]);
+set(gca, 'XTickLabel', {'Unshuffled', 'Shuffled'});
+ylabel(sprintf('Noise in\nsignal direction'));
+l_ = refline(0,1); l_.Color = 'k';
+figure_format;
+print_svg('noise_attenuation_stickplot_6');
 %% decoding advantage / signal direction variance scatterplot + numneurons control
 num_neuron_limit = 200;
 num_trials_limit = 50;
@@ -658,12 +680,16 @@ for s_i = 155:num_sess
             ctrl_rms_noise_corr(s_i) = nan;
             continue; %ONLY USE 200n100t
         end
-        [ctrl_me_(s_i), ctrl_mse_(s_i), ~, ~] = o.basic_decode(false, num_neuron_limit, num_trials_limit);
-        [ctrl_me_s_(s_i), ctrl_mse_s_(s_i), ~, ~] = o.basic_decode(true, num_neuron_limit, num_trials_limit);
+        %PLAN: cut the tensor once, just to get neuron & trial subsets,
+        %then use them for all the calculations.
+        [ctrl_data_tensor, ctrl_tr_dir, ctrl_neuron_subset, ctrl_trial_subset] = DecodeTensor.cut_tensor(o.data_tensor, o.tr_dir, num_neuron_limit, num_trials_limit); %%TODO: choose SAME specific permutations
+        
+        [ctrl_me_(s_i), ctrl_mse_(s_i), ~, ~] = o.basic_decode(false, ctrl_neuron_subset, ctrl_trial_subset); %TODO: choose specific permutations
+        [ctrl_me_s_(s_i), ctrl_mse_s_(s_i), ~, ~] = o.basic_decode(true, ctrl_neuron_subset, ctrl_trial_subset); %%TODO: choose SAME specific permutations
         
         ctrl_shuf_advantage(s_i) = ((1./ctrl_mse_s_(s_i)) - (1./ctrl_mse_(s_i))) .* num_neuron_limit .* ctrl_mse_s_(s_i);
         
-        [ctrl_data_tensor, ctrl_tr_dir] = DecodeTensor.cut_tensor(o.data_tensor, o.tr_dir, num_neuron_limit, num_trials_limit);
+        
         ctrl_res{s_i} = DecodeTensor.noise_properties(ctrl_data_tensor, ctrl_tr_dir, true); %true for using_corr
         ctrl_sh_by_unsh(s_i) = mean(cell2mat(ctrl_res{s_i}.nd_pre(:)) ./ cell2mat(ctrl_res{s_i}.nd_pre_s(:)));
         ctrl_rms_noise_corr(s_i) = ctrl_res{s_i}.RMS_noise_corr;
@@ -679,8 +705,9 @@ for s_i = 155:num_sess
         ctrl_shuf_advantage(s_i) = nan;
         ctrl_sh_by_unsh(s_i) = nan;
         ctrl_rms_noise_corr(s_i) = nan;
-        fprintf('ERROR on session %d/%d:\tneu:%d tr:%d time taken: %.2fs\n',...
-            s_i, num_sess, ctrl_num_neurons(s_i), ctrl_n_trials(s_i), toc(my_timer));
+        fprintf('ERROR on session %d/%d\n', s_i, num_sess);
+        %fprintf('ERROR on session %d/%d:\tneu:%d tr:%d time taken: %.2fs\n',...
+        %    s_i, num_sess, ctrl_num_neurons(s_i), ctrl_n_trials(s_i), toc(my_timer));
         disp(e); %TODO run it
     end
 end

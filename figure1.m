@@ -339,29 +339,47 @@ dbfile = 'decoding.db';
 
 conn = sqlite(dbfile); %remember to close it
 %Took out Mouse2010, it has terrible cells&trials, no estimate of N
-mouse_list = {'Mouse2012',...
-    'Mouse2023','Mouse2026',...
-    'Mouse2019','Mouse2028',...
-    'Mouse2024','Mouse2022'};
+%mouse_list = {'Mouse2012',...
+%    'Mouse2023','Mouse2026',...
+%    'Mouse2019','Mouse2028',...
+%    'Mouse2024','Mouse2022'};
+mouse_list = {'Mouse2019', 'Mouse2021', 'Mouse2022',...
+    'Mouse2028', 'Mouse2025', 'Mouse2024'};
 clear n m ns ms
 for m_i = 1:numel(mouse_list)
     [n{m_i},m{m_i},~, data_size(m_i)] = DecodingPlotGenerator.get_errors('NumNeurons', conn, ...
         mouse_list{m_i}, 'unshuffled', 'IMSE', 'max');
     [ns{m_i},ms{m_i},~, data_size_s(m_i)] = DecodingPlotGenerator.get_errors('NumNeurons', conn, ...
         mouse_list{m_i}, 'shuffled', 'IMSE', 'max');
+    [nd{m_i},md{m_i},~, data_size_d(m_i)] = DecodingPlotGenerator.get_errors('NumNeurons', conn, ...
+        mouse_list{m_i}, 'diagonal', 'IMSE', 'max');
 
     [fitresult, gof] = createFit_infoSaturation(n{m_i}, m{m_i});
     N_fit_value(m_i) = fitresult.N;
+    I0_fit_value(m_i) = fitresult.I_0;
     confidence_intervals = confint(fitresult);
     N_lower(m_i) = confidence_intervals(1,2) - N_fit_value(m_i);
     N_upper(m_i) = confidence_intervals(2,2) - N_fit_value(m_i);
+    I0_lower(m_i) = confidence_intervals(1,1) - I0_fit_value(m_i);
+    I0_upper(m_i) = confidence_intervals(2,1) - I0_fit_value(m_i);
     
     [fitresult_s, gof_s] = createFit_infoSaturation(ns{m_i}, ms{m_i});
     N_fit_value_s(m_i) = fitresult_s.N;
+    I0_fit_value_s(m_i) = fitresult_s.I_0;
     confidence_intervals_s = confint(fitresult_s);
     N_lower_s(m_i) = confidence_intervals_s(1,2) - N_fit_value_s(m_i);
     N_upper_s(m_i) = confidence_intervals_s(2,2) - N_fit_value_s(m_i);
+    I0_lower_s(m_i) = confidence_intervals_s(1,1) - I0_fit_value_s(m_i);
+    I0_upper_s(m_i) = confidence_intervals_s(2,1) - I0_fit_value_s(m_i);
     
+    [fitresult_d, gof_d] = createFit_infoSaturation(nd{m_i}, md{m_i});
+    N_fit_value_d(m_i) = fitresult_d.N;
+    I0_fit_value_d(m_i) = fitresult_d.I_0;
+    confidence_intervals_d = confint(fitresult_d);
+    N_lower_d(m_i) = confidence_intervals_d(1,2) - N_fit_value_d(m_i);
+    N_upper_d(m_i) = confidence_intervals_d(2,2) - N_fit_value_d(m_i);
+    I0_lower_d(m_i) = confidence_intervals_d(1,1) - I0_fit_value_d(m_i);
+    I0_upper_d(m_i) = confidence_intervals_d(2,1) - I0_fit_value_d(m_i);
 end
 %
 assert(isequal(n,ns));
@@ -388,7 +406,81 @@ set(gca, 'YMinorTick', 'off');
 figure_format;
 print_svg(name);
 conn.close;
+%% ball and sticks plot for N
+figure;
+errorbar([1 1 1 1 1 1; 2 2 2 2 2 2] + randn(2,6)*0.05, [N_fit_value; N_fit_value_s], [N_lower ; N_lower_s], [N_upper ; N_upper_s], '-', 'Capsize', 3);
+set(gca, 'YScale', 'log');
+xlim([0.5 2.5]);
+ylim([-Inf Inf]);
+set(gca, 'YTick', [100 1000 10000]);
+set(gca, 'XTick', [1 2]);
+set(gca, 'XTickLabel', {'Unshuffled', 'Shuffled'});
+ylabel(sprintf('N parameter fit\n(neurons)'));
+p_N_fit = signrank(N_fit_value, N_fit_value_s);
+if p_N_fit < 0.05
+    text(1.4, 2000, '*');
+else
+    text(1.4, 2000, 'n.s.');
+end
+figure_format;
+print_svg('N_fit_ballsticks_6');
+%% ball and sticks plot for I0
+figure;
+unit_factor = 1000;
+errorbar([1 1 1 1 1 1; 2 2 2 2 2 2] + randn(2,6)*0.05, unit_factor.*[I0_fit_value; I0_fit_value_s], unit_factor.*[I0_lower ; I0_lower_s], unit_factor.*[I0_upper ; I0_upper_s], '-', 'Capsize', 3);
+%set(gca, 'YScale', 'log');
+xlim([0.5 2.5]);
+%ylim([-Inf Inf]);
+%set(gca, 'YTick', [100 1000 10000]);
+set(gca, 'XTick', [1 2]);
+set(gca, 'XTickLabel', {'Unshuffled', 'Shuffled'});
+ylabel(sprintf('I_0 parameter fit\n(cm^{-2}kiloneuron^{-1})'));
+p_I0_fit = signrank(I0_fit_value, I0_fit_value_s);
+if p_I0_fit < 0.05
+    text(1.4, 0.9, '*');
+else
+    text(1.4, 0.9, 'n.s.');
+end
+figure_format;
+print_svg('I0_fit_ballsticks_6');
 
+%% ball and sticks plot for N, full vs diagonal
+figure;
+errorbar([1 1 1 1 1 1; 2 2 2 2 2 2] + randn(2,6)*0.05, [N_fit_value; N_fit_value_d], [N_lower ; N_lower_d], [N_upper ; N_upper_d], '-', 'Capsize', 3);
+%set(gca, 'YScale', 'log');
+xlim([0.5 2.5]);
+ylim([-Inf Inf]);
+%set(gca, 'YTick', [100 1000 10000]);
+set(gca, 'XTick', [1 2]);
+set(gca, 'XTickLabel', {'Full', 'Diagonal'});
+ylabel(sprintf('N parameter fit\n(neurons)'));
+p_N_fit = signrank(N_fit_value, N_fit_value_d);
+if p_N_fit < 0.05
+    text(1.4, 300, '*');
+else
+    text(1.4, 300, 'n.s.');
+end
+figure_format;
+print_svg('N_fit_ballsticks_6_full_vs_diagonal');
+%% ball and sticks plot for I0
+figure;
+unit_factor = 1000;
+errorbar([1 1 1 1 1 1; 2 2 2 2 2 2] + randn(2,6)*0.05, unit_factor.*[I0_fit_value; I0_fit_value_d], unit_factor.*[I0_lower ; I0_lower_d], unit_factor.*[I0_upper ; I0_upper_d], '-', 'Capsize', 3);
+%set(gca, 'YScale', 'log');
+xlim([0.5 2.5]);
+%ylim([-Inf Inf]);
+%set(gca, 'YTick', [100 1000 10000]);
+set(gca, 'XTick', [1 2]);
+set(gca, 'XTickLabel', {'Full', 'Diagonal'});
+ylabel(sprintf('I_0 parameter fit\n(cm^{-2}kiloneuron^{-1})'));
+p_I0_fit = signrank(I0_fit_value, I0_fit_value_d);
+if p_I0_fit < 0.05
+    text(1.4, 0.9, '*');
+else
+    text(1.4, 0.9, 'n.s.');
+end
+figure_format;
+print_svg('I0_fit_ballsticks_6_full_vs_diagonal');
 %% Panel d: The effect of correlations on total neuron's activity
 % Using event detected neural traces, the distribution of 
 [source_path, mouse_name] = DecodeTensor.default_datasets(4);
@@ -441,10 +533,11 @@ print_svg(name);
 %% Panel e_OLD: effect of correlations on total neuron's activity: pooled over 12 mice
 name = 'total_activity_change_pooled';
 clear h p
-corr_effect = cell(12,1);
-num_samples = zeros(12,1);
-for m_i = 1:12
-    [source_path, mouse_name] = DecodeTensor.default_datasets(m_i);
+corr_effect = cell(6,1);
+num_samples = zeros(6,1);
+indices_list = [3 12 4 8 9 6];
+for m_i = 1:6
+    [source_path, mouse_name] = DecodeTensor.default_datasets(indices_list(m_i));
     opt = DecodeTensor.default_opt; opt.first_half = false;
     opt.neural_data_type = 'FST_events';%'spikeDeconv';%'FST_events';
     opt.restrict_trials = -1;
@@ -493,13 +586,14 @@ print_svg(name);
 %% Panel e : change in std of active cells dists (+sign test) Figure1c
 name = 'change_in_std_pooled';
 clear h p
-corr_effect = cell(12,1);
-num_samples = zeros(12,1);
-num_total_cells = zeros(1,12);
-stdev_unshuffled = zeros(1,12);
-stdev_shuffled = zeros(1,12);
-for m_i = 1:12
-    [source_path, mouse_name] = DecodeTensor.default_datasets(m_i);
+corr_effect = cell(6,1);
+num_samples = zeros(6,1);
+num_total_cells = zeros(1,6);
+stdev_unshuffled = zeros(1,6);
+stdev_shuffled = zeros(1,6);
+indices_list = [3 12 4 8 9 6];
+for m_i = 1:6 % zugi
+    [source_path, mouse_name] = DecodeTensor.default_datasets(indices_list(m_i));
     opt = DecodeTensor.default_opt; opt.first_half = false;
     opt.neural_data_type = 'FST_events';%'spikeDeconv';%'FST_events';
     opt.restrict_trials = -1;
@@ -545,7 +639,7 @@ if false
     text(1.5, 3.5, '***', 'HorizontalAlignment', 'center');
     figure_format;
 end
-plot(ones(1,12) + randn(1,12)*0.2, stdev_unshuffled - stdev_shuffled, 'k.');
+plot(ones(1,6) + randn(1,6)*0.2, stdev_unshuffled - stdev_shuffled, 'k.');
 xlim([0 2]);
 set(gca, 'XTick', 1);
 set(gca, 'XTickLabel', {});
@@ -553,7 +647,7 @@ ylabel(sprintf('\\Delta\\sigma of num.\nactive cells'));
 ylim([0 0.5]);
 xlabel('Unshuffled - Shuffled');
 %sigstar({{'Unshuffled', 'Shuffled'}}, p_sign);
-text(1, 0.475, '***', 'HorizontalAlignment', 'center');
+text(1, 0.475, '*', 'HorizontalAlignment', 'center');
 figure_format;
 if p_sign < 0.05
     fprintf('Sign test significant, p=%e\n', p_sign);
