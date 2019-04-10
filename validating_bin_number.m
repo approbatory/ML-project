@@ -2,6 +2,7 @@ function validating_bin_number(random_str)
 my_rand_seed = str2double(random_str);
 rng(my_rand_seed);
 fprintf('random seed %d\n\n', my_rand_seed);
+addpath utils decoding
 total_ticker = tic;
 load('../linear_track/Mouse2022/Mouse-2022-20150326-linear-track/Mouse-2022-20150326_093722-linear-track-TracesAndEvents.mat');
 %%
