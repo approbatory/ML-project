@@ -7,10 +7,10 @@ total_ticker = tic;
 load('../linear_track/Mouse2022/Mouse-2022-20150326-linear-track/Mouse-2022-20150326_093722-linear-track-TracesAndEvents.mat');
 %%
 X_full = tracesEvents.rawTraces(91:end,:);
-%X_spike_full = tracesEvents.spikeDeconv(91:end,:);
-%X_bin_full = Utils.event_detection(X_full);
-%X_bin_full_padded = conv2(X_bin_full, ones(0.8*20,1), 'full');
-%X_bin_full_padded = X_bin_full_padded(1:size(X_full,1),:);
+X_spike_full = tracesEvents.spikeDeconv(91:end,:);
+X_bin_full = Utils.event_detection(X_full);
+X_bin_full_padded = conv2(X_bin_full, ones(0.8*20,1), 'full');
+X_bin_full_padded = X_bin_full_padded(1:size(X_full,1),:);
 %X_full = X_bin_full_padded;
 y_full = tracesEvents.position(91:end,1);
 %%
@@ -115,4 +115,17 @@ end
 
 save(sprintf('validating_bin_number_record_%d.mat', randi(1e9)), 'nb_list', 'me_mean_tr', 'mse_mean_tr');
 toc(total_ticker);
-exit;
+%exit;
+
+%%
+S = dir('validating*mat');
+me_mean_tr_agg = zeros(numel(S), numel(nb_list));
+mse_mean_tr_agg = zeros(numel(S), numel(nb_list));
+for s_i = 1:numel(S)
+    l = load(S(s_i).name);
+    me_mean_tr_agg(s_i, :) = l.me_mean_tr;
+    mse_mean_tr_agg(s_i, :) = l.mse_mean_tr;
+end
+%%
+figure;
+shadedErrorBar(nb_list, 1./mse_mean_tr_agg, {@mean, @(x)std(x)./sqrt(size(x,1))}, 'lineprops', 'b');

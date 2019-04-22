@@ -1287,5 +1287,9 @@ classdef DecodeTensor < handle
         function n = n_one_dir_trials(o)
             n = floor(size(o.data_tensor,3)/2);
         end
+        
+        function [X, ks] = get_dataset(o)
+            [X, ks] = DecodeTensor.tensor2dataset(o.data_tensor, o.tr_dir);
+        end
     end
 end
