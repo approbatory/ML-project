@@ -1,16 +1,20 @@
 classdef DecodeTensor < handle
     methods(Static) %higher level functions, collecting data
-        function dispatch(dispatch_index, padded)
+        function dispatch(dispatch_index, padded, distance_cutoff)
             %Dispatching decoding as a function of number of cells using
             %default options
             if ~exist('padded', 'var')
                 padded = false;
+            end
+            if ~exist('distance_cutoff', 'var')
+                distance_cutoff = 0;
             end
             [source_path, mouse_name] = DecodeTensor.default_datasets(dispatch_index);
             opt = DecodeTensor.default_opt;
             if padded
                 opt.neural_data_type = 'FST_padded';
             end
+            opt.restrict_cell_distance = distance_cutoff; %e.g. 15
             DecodeTensor.decode_series(source_path, mouse_name, opt);
         end
         
@@ -37,13 +41,27 @@ classdef DecodeTensor < handle
             % they are not entered in this function to allow this function
             % to run in parallel with itself.
             %table_name = 'decoding';
-            %field_names = {'Mouse', 'Setting', 'NumNeurons', 'DataSize', 'MeanErrors', 'MSE'};
+            %field_names = {'Mouse', 'SessionID', 'Setting', 'NumNeurons', 'DataSize', 'MinDist', 'MeanErrors', 'MSE', 'SampleID'};
             
             %Load the data tensor and the direction of motion labels for
             %each trial.
-            [data_tensor, tr_dir] = DecodeTensor.tensor_loader(source_path, mouse_id, opt);
+            session_id = regexp(source_path, '_([0-9]|&)+-', 'match');
+            session_id = session_id{1}(2:end-1);
+            if opt.restrict_cell_distance == 0
+                [data_tensor, tr_dir] = DecodeTensor.tensor_loader(source_path, mouse_id, opt);
             
-            num_neurons = size(data_tensor, 1);
+                num_neurons = size(data_tensor, 1);
+            else
+                [data_tensor, tr_dir, cell_coords] = DecodeTensor.tensor_loader(source_path, mouse_id, opt);
+                %f_dmat = @(v) sqrt((v(:,1)-v(:,1)').^2 + (v(:,2)-v(:,2)').^ 2);
+                %d_mat = f_dmat(cell_coords);
+                %remainers = cell_distance_filter(d_mat, opt.restrict_cell_distance);
+                remainers = ising_distance_constraint(cell_coords, opt.restrict_cell_distance);
+                num_neurons = sum(remainers);
+                fprintf('restricting cell distance to %d px, %d / %d cells remain\n', ...
+                    opt.restrict_cell_distance, num_neurons, length(remainers));
+                data_tensor = data_tensor(remainers,:,:);
+            end
             %If the caller requests to limit the number of trials used for
             %decoding then first check if there are enough trials
             %available, otherwise use the maximal number of trials such
@@ -89,23 +107,24 @@ classdef DecodeTensor < handle
             %database.
             db_queue = cell(numel(neuron_series),3);
             for i = numel(neuron_series):-1:1
+                sample_id = randi(2^16);
                 n_neu = neuron_series(i);
                 [mean_err, MSE] = DecodeTensor.decode_tensor(data_tensor, tr_dir, opt.bin_width, alg, false,...
                     n_neu, num_trials);
                 db_queue{i,1} = ...
-                    {mouse_id, 'unshuffled', n_neu, num_trials, mean_err, MSE};
+                    {mouse_id, session_id, 'unshuffled', n_neu, num_trials, opt.restrict_cell_distance, mean_err, MSE, sample_id};
                 fprintf('n_neu=%d\tmean_err = %.2f\n', n_neu, mean_err);
                 
                 [mean_err_s, MSE_s] = DecodeTensor.decode_tensor(data_tensor, tr_dir, opt.bin_width, alg, true,...
                     n_neu, num_trials);
                 db_queue{i,2} = ...
-                    {mouse_id, 'shuffled', n_neu, num_trials, mean_err_s, MSE_s};
+                    {mouse_id, session_id, 'shuffled', n_neu, num_trials, opt.restrict_cell_distance, mean_err_s, MSE_s, sample_id};
                 fprintf('n_neu=%d\tmean_err_s = %.2f\n', n_neu, mean_err_s);
                 
                 [mean_err_d, MSE_d] = DecodeTensor.decode_tensor(data_tensor, tr_dir, opt.bin_width, alg_diag, false,...
                     n_neu, num_trials);
                 db_queue{i,3} = ...
-                    {mouse_id, 'diagonal', n_neu, num_trials, mean_err_d, MSE_d};
+                    {mouse_id, session_id, 'diagonal', n_neu, num_trials, opt.restrict_cell_distance, mean_err_d, MSE_d, sample_id};
                 fprintf('n_neu=%d\tmean_err_d = %.2f\n\n', n_neu, mean_err_d);
             end
             
@@ -150,6 +169,7 @@ classdef DecodeTensor < handle
             opt.first_half = false;
             opt.pad_seconds = 0.8;
             opt.discard_incomplete_trials = true;
+            opt.restrict_cell_distance = 0;
         end
         
         function [source_path, mouse_name] = default_datasets(index)
@@ -177,7 +197,7 @@ classdef DecodeTensor < handle
             mouse_name = mouse_names{index};
         end
         
-        function [T, d] = tensor_loader(source_path, mouse_id, opt)
+        function [T, d, cell_coords] = tensor_loader(source_path, mouse_id, opt)
             %%Load data tensor from file, from path and name of the mouse
             % uses opt struct for options
             % opt.neural_data_type = 'rawTraces' OR 'rawProbs' OR
@@ -219,6 +239,10 @@ classdef DecodeTensor < handle
             [~, ~, tr_s, tr_e, tr_dir, tr_bins, ~] = DecodeTensor.new_sel(track_coord, opt);
             data_tensor = DecodeTensor.construct_tensor(X, tr_bins, opt.n_bins, tr_s, tr_e);
             T = data_tensor; d = tr_dir;
+            if nargout == 3
+                cell_coords = tracesEvents.cellAnatomicLocat;
+                assert(size(cell_coords,1) == size(T,1), 'mismatch between cell coord numbers and number of traces');
+            end
         end
         function [mean_err, MSE, ps, ks, model, stats] = decode_tensor(data_tensor, tr_dir,...
                 binsize, alg, shuf, num_neurons, num_trials, pls_dims)
@@ -799,13 +823,28 @@ classdef DecodeTensor < handle
             % they are not entered in this function to allow this function
             % to run in parallel with itself.
             %table_name = 'decoding';
-            %field_names = {'Mouse', 'Setting', 'NumNeurons', 'DataSize', 'MeanErrors', 'MSE'};
+            %field_names = {'Mouse', 'SessionID', 'Setting', 'NumNeurons', 'DataSize', 'MinDist', 'MeanErrors', 'MSE', 'SampleID'};
             
             %Load the data tensor and the direction of motion labels for
             %each trial.
-            [data_tensor, tr_dir] = DecodeTensor.tensor_loader(source_path, mouse_id, opt);
+            session_id = regexp(source_path, '_([0-9]|&)+-', 'match');
+            session_id = session_id{1}(2:end-1);
             
-            num_neurons = size(data_tensor, 1);
+            if opt.restrict_cell_distance == 0
+                [data_tensor, tr_dir] = DecodeTensor.tensor_loader(source_path, mouse_id, opt);
+            
+                num_neurons = size(data_tensor, 1);
+            else
+                [data_tensor, tr_dir, cell_coords] = DecodeTensor.tensor_loader(source_path, mouse_id, opt);
+                %f_dmat = @(v) sqrt((v(:,1)-v(:,1)').^2 + (v(:,2)-v(:,2)').^ 2);
+                %d_mat = f_dmat(cell_coords);
+                %remainers = cell_distance_filter(d_mat, opt.restrict_cell_distance);
+                remainers = ising_distance_constraint(cell_coords, opt.restrict_cell_distance);
+                num_neurons = sum(remainers);
+                fprintf('restricting cell distance to %d px, %d / %d cells remain\n', ...
+                    opt.restrict_cell_distance, num_neurons, length(remainers));
+                data_tensor = data_tensor(remainers,:,:);
+            end
             num_trials = min(sum(tr_dir == 1), sum(tr_dir == -1));
             %If the caller requests to limit the number of trials used for
             %decoding then first check if there are enough trials
@@ -852,23 +891,24 @@ classdef DecodeTensor < handle
             %database.
             db_queue = cell(numel(trials_series),3);
             for i = 1:numel(trials_series)
+                sample_id = randi(2^16);
                 n_tri = trials_series(i);
                 [mean_err, MSE] = DecodeTensor.decode_tensor(data_tensor, tr_dir, opt.bin_width, alg, false,...
                     num_neurons, n_tri);
                 db_queue{i,1} = ...
-                    {mouse_id, 'unshuffled', num_neurons, n_tri, mean_err, MSE};
+                    {mouse_id, session_id, 'unshuffled', num_neurons, n_tri, opt.restrict_cell_distance, mean_err, MSE, sample_id};
                 fprintf('n_tri=%d\tmean_err = %.2f\n', n_tri, mean_err);
                 
                 [mean_err_s, MSE_s] = DecodeTensor.decode_tensor(data_tensor, tr_dir, opt.bin_width, alg, true,...
                     num_neurons, n_tri);
                 db_queue{i,2} = ...
-                    {mouse_id, 'shuffled', num_neurons, n_tri, mean_err_s, MSE_s};
+                    {mouse_id, session_id, 'shuffled', num_neurons, n_tri, opt.restrict_cell_distance, mean_err_s, MSE_s, sample_id};
                 fprintf('n_tri=%d\tmean_err_s = %.2f\n', n_tri, mean_err_s);
                 
                 [mean_err_d, MSE_d] = DecodeTensor.decode_tensor(data_tensor, tr_dir, opt.bin_width, alg_diag, false,...
                     num_neurons, n_tri);
                 db_queue{i,3} = ...
-                    {mouse_id, 'diagonal', num_neurons, n_tri, mean_err_d, MSE_d};
+                    {mouse_id, session_id, 'diagonal', num_neurons, n_tri, opt.restrict_cell_distance, mean_err_d, MSE_d, sample_id};
                 fprintf('n_tri=%d\tmean_err_d = %.2f\n\n', n_tri, mean_err_d);
             end
             
@@ -878,12 +918,22 @@ classdef DecodeTensor < handle
             save(sprintf('records/decoding_record_datasize_%s.mat', timestring), 'db_queue');
         end
         
-        function dispatch_datasize(dispatch_index)
+        function dispatch_datasize(dispatch_index, padded, distance_cutoff)
             %Dispatching decoding as a function of number of cells using
             %default options
+            if ~exist('padded', 'var')
+                padded = false;
+            end
+            if ~exist('distance_cutoff', 'var')
+                distance_cutoff = 0;
+            end
             [source_path, mouse_name] = DecodeTensor.default_datasets(dispatch_index);
-            DecodeTensor.decode_datasize_series(source_path, mouse_name,...
-                DecodeTensor.default_opt);
+            opt = DecodeTensor.default_opt;
+            if padded
+                opt.neural_data_type = 'FST_padded';
+            end
+            opt.restrict_cell_distance = distance_cutoff; %e.g. 15
+            DecodeTensor.decode_datasize_series(source_path, mouse_name, opt);
         end
         
         function aggregate_pairwise_results
@@ -900,20 +950,21 @@ classdef DecodeTensor < handle
             p.addParameter('save_dir', 'records', @ischar);
             p.addParameter('table_name', 'decoding', @ischar);
             p.addParameter('db_file', 'decoding.db', @ischar);
-            p.addParameter('field_names', {'Mouse', 'Setting', 'NumNeurons', 'DataSize', 'MeanErrors', 'MSE'}, @iscell);
-            p.addParameter('create_command', 'CREATE TABLE decoding(Mouse text, Setting text, NumNeurons int, DataSize int, MeanErrors real, MSE real);', @ischar);
+            %p.addParameter('field_names', {'Mouse', 'Setting', 'NumNeurons', 'DataSize', 'MeanErrors', 'MSE'}, @iscell);
+            p.addParameter('field_names', {'Mouse', 'SessionID', 'Setting', 'NumNeurons', 'DataSize', 'MinDist', 'MeanErrors', 'MSE', 'SampleID'}, @iscell);
+            p.addParameter('create_command', 'CREATE TABLE decoding(Mouse text, SessionID text, Setting text, NumNeurons int, DataSize int, MinDist real, MeanErrors real, MSE real, SampleID int);', @ischar);
             p.addParameter('save_varname', 'db_queue', @ischar);
             p.parse(varargin{:});
             
             
             table_name = p.Results.table_name;
-            field_names = p.Results.field_names;%{'Mouse', 'Setting', 'NumNeurons', 'DataSize', 'MeanErrors', 'MSE'};
+            field_names = p.Results.field_names;%{'Mouse', 'SessionID', 'Setting', 'NumNeurons', 'DataSize', 'MinDist', 'MeanErrors', 'MSE', 'SampleID'};
             S = dir(p.Results.save_dir);
             dbfile = p.Results.db_file;
             if ~exist(dbfile, 'file')
                 conn = sqlite(dbfile, 'create');
                 cleaner = onCleanup(@()conn.close);
-                %conn.exec('CREATE TABLE decoding(Mouse text, Setting text, NumNeurons int, DataSize int, MeanErrors real, MSE real);');
+                %conn.exec('CREATE TABLE decoding(Mouse text, SessionID text, Setting text, NumNeurons int, DataSize int, MinDist real, MeanErrors real, MSE real, SampleID int);');
                 conn.exec(p.Results.create_command);
             else
                 conn = sqlite(dbfile);

@@ -17,3 +17,9 @@ while true
     end
 end
 end
+
+%%USE MCMC with gibbs sampling to select a UNIQUELY SIZED subset that
+%%satisfies the distance requirement and has the maximal allowed number of
+%%cells, i.e., minimizes Sum_i -s_i + J*Sum_j s_i*s_j*I[dist(i,j) > d & dist(i,j) ~= 0]
+%%simple ising model s_i s_j A_ij = s_i A_ij s_j = s' * A * s
+%%and J >> 1
