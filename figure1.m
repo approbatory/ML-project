@@ -483,7 +483,7 @@ figure_format;
 print_svg('I0_fit_ballsticks_6_full_vs_diagonal');
 %% Panel d: The effect of correlations on total neuron's activity
 % Using event detected neural traces, the distribution of 
-[source_path, mouse_name] = DecodeTensor.default_datasets(4);
+[source_path, mouse_name] = DecodeTensor.default_datasets(6);
 opt = DecodeTensor.default_opt;
 opt.neural_data_type = 'FST_events';%'spikeDeconv';%'FST_events';
 opt.restrict_trials = -1;
@@ -503,6 +503,8 @@ text(7, 1500, 'Unshuffled', 'Color', 'blue');
 text(7, 1100, 'Shuffled', 'Color', 'red');
 xlabel 'Number of active cells'
 ylabel 'Frequency'
+set(gca, 'YScale', 'log');
+ylim([1e1 Inf]);
 figure_format;
 [h,p] = kstest2(sum(X,2), sum(X_shuf,2));
 if h
