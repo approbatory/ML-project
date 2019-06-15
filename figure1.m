@@ -12,7 +12,7 @@ print_svg = @(name) print('-dsvg', fullfile(svg_save_dir, [name '.svg']));
 name = 'decorrelation_Mouse2022_24_28';
 figure;
 
-dbfile = 'decoding.db';
+dbfile = 'decoding_with_mindist.db';
 
 conn = sqlite(dbfile); %remember to close it
 %DecodingPlotGenerator.plot_mice(conn, {'Mouse2022'}, 'shuffled', 'NumNeurons', 'IMSE', 'max');
@@ -40,25 +40,30 @@ print_svg(name);
 %body
 conn.close;
 %% confusion mat %%TODO
-for i = 1:12
-D_T = DecodeTensor(i, 'rawTraces');
-
-[~, ~, ps, ks, ~] = D_T.basic_decode(false, [], []);
-[~, ~, ps_s, ks_s, ~] = D_T.basic_decode(true, [], []);
-
-ps = ceil(ps/2);
-ks = ceil(ks/2);
-ps_s = ceil(ps_s/2);
-ks_s = ceil(ks_s/2);
-
-num_trials(i) = 2*D_T.n_one_dir_trials;
-C = confusionmat(ks, ps); %./ (2*D_T.n_one_dir_trials);
-C_s = confusionmat(ks_s, ps_s);% ./ (2*D_T.n_one_dir_trials);
-C_perfect = confusionmat(ks_s, ks);% ./ (2*D_T.n_one_dir_trials);
-CDiff(:,:,i) = C_s - C;
-CsC = (C_s - C)./C;
-CsC(isnan(CsC)) = 0;
-disp(i);
+parfor i = 1:10
+    D_T = DecodeTensor(i, 'rawTraces');
+    
+    [~, ~, ps, ks, ~] = D_T.basic_decode(false, [], []);
+    [~, ~, ps_s, ks_s, ~] = D_T.basic_decode(true, [], []);
+    
+    %ps = ceil(ps/2);
+    %ks = ceil(ks/2);
+    %ps_s = ceil(ps_s/2);
+    %ks_s = ceil(ks_s/2);
+    remapper = reshape([(1:20)',(21:40)']', 1, []);
+    ps = remapper(ps);
+    ks = remapper(ks);
+    ps_s = remapper(ps_s);
+    ks_s = remapper(ks_s);
+    
+    num_trials(i) = 2*D_T.n_one_dir_trials;
+    C = confusionmat(ks, ps); %./ (2*D_T.n_one_dir_trials);
+    C_s = confusionmat(ks_s, ps_s);% ./ (2*D_T.n_one_dir_trials);
+    C_perfect = confusionmat(ks_s, ks);% ./ (2*D_T.n_one_dir_trials);
+    CDiff(:,:,i) = C_s - C;
+    CsC = (C_s - C)./C;
+    CsC(isnan(CsC)) = 0;
+    disp(i);
 end
 %%
 figure;
@@ -70,9 +75,13 @@ colormap(bluewhitered);
 xlabel 'Predicted bin'
 ylabel 'Correct bin'
 axis equal;
-xlim([0.5 20.5]); ylim([0.5 20.5]);
+xlim([0.5 40.5]); ylim([0.5 40.5]);
+set(gca, 'XTickLabel', {'10R', '20R', '10L', '20L'});
+set(gca, 'YTickLabel', {'10R', '20R', '10L', '20L'});
+line([20.5 20.5], ylim, 'Color', 'k');
+line(xlim, [20.5 20.5], 'Color', 'k');
 figure_format('boxsize', [0.75 0.85]); box on;
-print_svg('confusion_diff');
+print_svg('confusion_diff_both_dirs');
 % figure; 
 % imagesc(C_perfect); colorbar; colormap(bluewhitered);
 % title('Perfect CM');
@@ -86,7 +95,7 @@ print_svg('confusion_diff');
 name = 'fulldiagonal_Mouse2022_24_28';
 figure;
 
-dbfile = 'decoding.db';
+dbfile = 'decoding_with_mindist.db';
 
 conn = sqlite(dbfile); %remember to close it
 mouse_list = {'Mouse2022', 'Mouse2024', 'Mouse2028'};
@@ -114,11 +123,11 @@ conn.close;
 % Each mouse has a different total number of neurons recorded.
 name = 'decorrelation_pooled';
 figure;
-dbfile = 'decoding.db';
+dbfile = 'decoding_with_mindist.db';
 conn = sqlite(dbfile); %remember to close it
-mouse_list = {'Mouse2010', 'Mouse2012', 'Mouse2019', 'Mouse2022',...
+mouse_list = {'Mouse2012', 'Mouse2019', 'Mouse2022',... %NOT USING 2010 or 2011 since they had less than 80 DataSize
                 'Mouse2023', 'Mouse2024', 'Mouse2026', 'Mouse2028',...
-                'Mouse2025', 'Mouse2011', 'Mouse2029', 'Mouse2021'};
+                'Mouse2025', 'Mouse2029', 'Mouse2021'};
 pooled_map = containers.Map('KeyType', 'double', 'ValueType', 'any');
 pooled_map_s = containers.Map('KeyType', 'double', 'ValueType', 'any');
 for i = 1:numel(mouse_list)
@@ -166,13 +175,13 @@ conn.close;
 % and normed to 1 on the imse perf at 
 % n_cells = 180 for shuffled
 name = 'decorrelation_pooled_normed';
-dbfile = 'decoding.db';
+dbfile = 'decoding_with_mindist.db';
 conn = sqlite(dbfile); %remember to close it
-%mouse_list = {'Mouse2010', 'Mouse2012', 'Mouse2019', 'Mouse2022',...
-%                'Mouse2023', 'Mouse2024', 'Mouse2026', 'Mouse2028',...
-%                'Mouse2025', 'Mouse2011', 'Mouse2029', 'Mouse2021'};
-mouse_list = {'Mouse2019', 'Mouse2021', 'Mouse2022',...
-    'Mouse2028', 'Mouse2025', 'Mouse2024'}; %only mice with >80 trials
+mouse_list = {'Mouse2012', 'Mouse2019', 'Mouse2022',...
+                'Mouse2023', 'Mouse2024', 'Mouse2026', 'Mouse2028',...
+                'Mouse2025', 'Mouse2029', 'Mouse2021'};
+%mouse_list = {'Mouse2019', 'Mouse2021', 'Mouse2022',...
+%    'Mouse2028', 'Mouse2025', 'Mouse2024'}; %only mice with >80 trials
 
 for i = 1:numel(mouse_list)
     [nP{i}, mP{i}, eP{i}] = ...
@@ -335,7 +344,7 @@ conn.close;
 name = 'saturation_fit';
 figure;
 
-dbfile = 'decoding.db';
+dbfile = 'decoding_with_mindist.db';
 
 conn = sqlite(dbfile); %remember to close it
 %Took out Mouse2010, it has terrible cells&trials, no estimate of N
@@ -343,8 +352,10 @@ conn = sqlite(dbfile); %remember to close it
 %    'Mouse2023','Mouse2026',...
 %    'Mouse2019','Mouse2028',...
 %    'Mouse2024','Mouse2022'};
-mouse_list = {'Mouse2019', 'Mouse2021', 'Mouse2022',...
-    'Mouse2028', 'Mouse2025', 'Mouse2024'};
+%mouse_list = {'Mouse2019', 'Mouse2021', 'Mouse2022',...
+%    'Mouse2028', 'Mouse2025', 'Mouse2024'};
+mouse_list = {'Mouse2023', 'Mouse2024', 'Mouse2028', 'Mouse2012', 'Mouse2019',...
+              'Mouse2022', 'Mouse2026', 'Mouse2021', 'Mouse2025', 'Mouse2029'};
 clear n m ns ms
 for m_i = 1:numel(mouse_list)
     [n{m_i},m{m_i},~, data_size(m_i)] = DecodingPlotGenerator.get_errors('NumNeurons', conn, ...
@@ -408,7 +419,7 @@ print_svg(name);
 conn.close;
 %% ball and sticks plot for N
 figure;
-errorbar([1 1 1 1 1 1; 2 2 2 2 2 2] + randn(2,6)*0.05, [N_fit_value; N_fit_value_s], [N_lower ; N_lower_s], [N_upper ; N_upper_s], '-', 'Capsize', 3);
+errorbar([1 1 1 1 1 1 1 1 1 1; 2 2 2 2 2 2 2 2 2 2] + randn(2,10)*0.05, [N_fit_value; N_fit_value_s], [N_lower ; N_lower_s], [N_upper ; N_upper_s], '-', 'Capsize', 3);
 set(gca, 'YScale', 'log');
 xlim([0.5 2.5]);
 ylim([-Inf Inf]);
@@ -423,11 +434,11 @@ else
     text(1.4, 2000, 'n.s.');
 end
 figure_format;
-print_svg('N_fit_ballsticks_6');
+print_svg('N_fit_ballsticks_10');
 %% ball and sticks plot for I0
 figure;
 unit_factor = 1000;
-errorbar([1 1 1 1 1 1; 2 2 2 2 2 2] + randn(2,6)*0.05, unit_factor.*[I0_fit_value; I0_fit_value_s], unit_factor.*[I0_lower ; I0_lower_s], unit_factor.*[I0_upper ; I0_upper_s], '-', 'Capsize', 3);
+errorbar([1 1 1 1 1 1 1 1 1 1;2 2 2 2 2 2 2 2 2 2] + randn(2,10)*0.05, unit_factor.*[I0_fit_value; I0_fit_value_s], unit_factor.*[I0_lower ; I0_lower_s], unit_factor.*[I0_upper ; I0_upper_s], '-', 'Capsize', 3);
 %set(gca, 'YScale', 'log');
 xlim([0.5 2.5]);
 %ylim([-Inf Inf]);
@@ -442,11 +453,11 @@ else
     text(1.4, 0.9, 'n.s.');
 end
 figure_format;
-print_svg('I0_fit_ballsticks_6');
+print_svg('I0_fit_ballsticks_10');
 
 %% ball and sticks plot for N, full vs diagonal
 figure;
-errorbar([1 1 1 1 1 1; 2 2 2 2 2 2] + randn(2,6)*0.05, [N_fit_value; N_fit_value_d], [N_lower ; N_lower_d], [N_upper ; N_upper_d], '-', 'Capsize', 3);
+errorbar([1 1 1 1 1 1 1 1 1 1;2 2 2 2 2 2 2 2 2 2] + randn(2,10)*0.05, [N_fit_value; N_fit_value_d], [N_lower ; N_lower_d], [N_upper ; N_upper_d], '-', 'Capsize', 3);
 %set(gca, 'YScale', 'log');
 xlim([0.5 2.5]);
 ylim([-Inf Inf]);
@@ -461,11 +472,11 @@ else
     text(1.4, 300, 'n.s.');
 end
 figure_format;
-print_svg('N_fit_ballsticks_6_full_vs_diagonal');
+print_svg('N_fit_ballsticks_10_full_vs_diagonal');
 %% ball and sticks plot for I0
 figure;
 unit_factor = 1000;
-errorbar([1 1 1 1 1 1; 2 2 2 2 2 2] + randn(2,6)*0.05, unit_factor.*[I0_fit_value; I0_fit_value_d], unit_factor.*[I0_lower ; I0_lower_d], unit_factor.*[I0_upper ; I0_upper_d], '-', 'Capsize', 3);
+errorbar([1 1 1 1 1 1 1 1 1 1;2 2 2 2 2 2 2 2 2 2] + randn(2,10)*0.05, unit_factor.*[I0_fit_value; I0_fit_value_d], unit_factor.*[I0_lower ; I0_lower_d], unit_factor.*[I0_upper ; I0_upper_d], '-', 'Capsize', 3);
 %set(gca, 'YScale', 'log');
 xlim([0.5 2.5]);
 %ylim([-Inf Inf]);
@@ -480,7 +491,7 @@ else
     text(1.4, 0.9, 'n.s.');
 end
 figure_format;
-print_svg('I0_fit_ballsticks_6_full_vs_diagonal');
+print_svg('I0_fit_ballsticks_10_full_vs_diagonal');
 %% Panel d: The effect of correlations on total neuron's activity
 % Using event detected neural traces, the distribution of 
 [source_path, mouse_name] = DecodeTensor.default_datasets(6);
@@ -535,10 +546,10 @@ print_svg(name);
 %% Panel e_OLD: effect of correlations on total neuron's activity: pooled over 12 mice
 name = 'total_activity_change_pooled';
 clear h p
-corr_effect = cell(6,1);
-num_samples = zeros(6,1);
-indices_list = [3 12 4 8 9 6];
-for m_i = 1:6
+corr_effect = cell(10,1);
+num_samples = zeros(10,1);
+indices_list = 1:10;%[3 12 4 8 9 6];
+for m_i = 1:10
     [source_path, mouse_name] = DecodeTensor.default_datasets(indices_list(m_i));
     opt = DecodeTensor.default_opt; opt.first_half = false;
     opt.neural_data_type = 'FST_events';%'spikeDeconv';%'FST_events';
@@ -785,3 +796,40 @@ xlabel 'Time (s)'
 %set(gca, 'YTick', []);
 figure_format('boxsize', [0.8125*3 0.585].*0.98);
 print_svg('raw_traj');
+
+%% correlation coefficients, unshuf + shuf
+n_mice = 10;
+unshuf_vals = cell(n_mice,1);
+shuf_vals = cell(n_mice,1);
+for m_i = 1:10
+    d = DecodeTensor(m_i);
+    [unshuf_corr, shuf_corr] = d.corr_values(10, -1);
+    unshuf_vals{m_i} = Utils.corrs(unshuf_corr);
+    shuf_vals{m_i} = Utils.corrs(shuf_corr);
+end
+%noise correlation values, only for bin 10 leftwards, and values aggregated from
+%all mice
+unshuf_vals = cell2mat(unshuf_vals);
+shuf_vals = cell2mat(shuf_vals);
+%%
+figure;
+edges = -1:0.01:1;
+points = (edges(1:end-1) + edges(2:end))/2;
+n_unshuf = histcounts(unshuf_vals, -1:0.01:1);
+n_shuf = histcounts(shuf_vals, edges);
+
+plot(points, n_shuf, 'r'); hold on;
+plot(points, n_unshuf, 'b');
+%figure_format;
+%plotyy(points, n_unshuf, points, n_shuf);
+%figure_format;
+xlabel 'Correlation coefficient'
+ylabel 'Number of cell pairs'
+
+set(gca, 'YTickLabel', {'0', '1·10^4', '2·10^4', '3·10^4'});
+
+text(1, 2.8e4, 'Unshuffled', 'Color', 'b', 'HorizontalAlignment', 'Right');
+text(1, 2.3e4, 'Shuffled', 'Color', 'r', 'HorizontalAlignment', 'Right');
+figure_format;
+
+print_svg('correlation_values_shuf_unshuf');

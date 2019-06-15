@@ -173,7 +173,7 @@ classdef DecodeTensor < handle
         end
         
         
-        function [source_path, mouse_name] = default_datasets(index)
+        function [source_path, mouse_name, session_id] = default_datasets(index)
             %These are the paths to selected recorded sessions from 10 mice
             source_paths = {...
                 '../linear_track/Mouse2023/Mouse-2023-20150316-linear-track/Mouse-2023-20150316_091246-linear-track-TracesAndEvents.mat',...
@@ -190,8 +190,16 @@ classdef DecodeTensor < handle
             %These are the corresponding mouse ID's
             mouse_names = {'Mouse2023', 'Mouse2024', 'Mouse2028', 'Mouse2012',...
                 'Mouse2019', 'Mouse2022', 'Mouse2026', 'Mouse2021', 'Mouse2025', 'Mouse2029'};
+            session_ids = {'091246', '073912', '105544', '104915', '125138', '093722', '115921', '085536', '103035', '122709'};
             source_path = source_paths{index};
             mouse_name = mouse_names{index};
+            session_id = session_ids{index};
+        end
+        function id = qid(indices)
+            for j = 1:numel(indices)
+                index = indices(j);
+                [~,~,id{j}] = DecodeTensor.default_datasets(index);
+            end
         end
         
         function [source_path, mouse_name] = default_datasets_OLD(index)
@@ -232,7 +240,11 @@ classdef DecodeTensor < handle
             else
                 fieldname = opt.neural_data_type;
             end
+            if isfield(tracesEvents, fieldname)
             X = tracesEvents.(fieldname);
+            else
+                error('No such field %s. Options are rawTraces, rawProb, spikeDeconv, FST_events, FST_filled, FST_padded', fieldname);
+            end
             if strcmp(mouse_id, 'Mouse2022')
                 track_coord = track_coord(91:end);
                 X = X(91:end,:);
@@ -1006,41 +1018,42 @@ classdef DecodeTensor < handle
         
         function command = build_command(mouse, setting, error_type,...
                 num_neurons, num_trials)
+            bp = 'and MinDist = 0'; %boilerplate
             if isempty(num_neurons) && isempty(num_trials)
                 command = sprintf(['select NumNeurons, DataSize,'...
                     ' %s from decoding where Mouse = ''%s'' and'...
-                    ' Setting = ''%s'' order by NumNeurons, DataSize'],...
-                    error_type, mouse, setting);
+                    ' Setting = ''%s'' %s order by NumNeurons, DataSize'],...
+                    error_type, mouse, setting, bp);
             end
             if isempty(num_neurons) && strcmp(num_trials, 'max')
                 command = sprintf(['select NumNeurons, DataSize,'...
                     ' %s from decoding where Mouse = ''%s'' and'...
                     ' Setting = ''%s'' and DataSize ='...
                     ' (select max(DataSize) from decoding'...
-                    ' where Mouse = ''%s'' and Setting = ''%s'')'...
+                    ' where Mouse = ''%s'' and Setting = ''%s'') %s'...
                     ' order by NumNeurons, DataSize'],...
-                    error_type, mouse, setting, mouse, setting);
+                    error_type, mouse, setting, mouse, setting, bp);
             end
             if strcmp(num_neurons, 'max') && isempty(num_trials)
                 command = sprintf(['select NumNeurons, DataSize,'...
                     ' %s from decoding where Mouse = ''%s'' and'...
                     ' Setting = ''%s'' and NumNeurons ='...
                     ' (select max(NumNeurons) from decoding'...
-                    ' where Mouse = ''%s'' and Setting = ''%s'')'...
+                    ' where Mouse = ''%s'' and Setting = ''%s'') %s'...
                     ' order by NumNeurons, DataSize'],...
-                    error_type, mouse, setting, mouse, setting);
+                    error_type, mouse, setting, mouse, setting, bp);
             end
             if isempty(num_neurons) && isscalar(num_trials)
                 command = sprintf(['select NumNeurons, DataSize,'...
                     ' %s from decoding where Mouse = ''%s'' and'...
-                    ' Setting = ''%s'' and DataSize = %s order by NumNeurons, DataSize'],...
-                    error_type, mouse, setting, num2str(num_trials));
+                    ' Setting = ''%s'' and DataSize = %s %s order by NumNeurons, DataSize'],...
+                    error_type, mouse, setting, num2str(num_trials), bp);
             end
             if isscalar(num_neurons) && isempty(num_trials)
                 command = sprintf(['select NumNeurons, DataSize,'...
                     ' %s from decoding where Mouse = ''%s'' and'...
-                    ' Setting = ''%s'' and NumNeurons = %s order by NumNeurons, DataSize'],...
-                    error_type, mouse, setting, num2str(num_neurons));
+                    ' Setting = ''%s'' and NumNeurons = %s %s order by NumNeurons, DataSize'],...
+                    error_type, mouse, setting, num2str(num_neurons), bp);
             end
             command = [command ';'];
         end
@@ -1363,6 +1376,69 @@ classdef DecodeTensor < handle
         
         function [X, ks] = get_dataset(o)
             [X, ks] = DecodeTensor.tensor2dataset(o.data_tensor, o.tr_dir);
+        end
+        
+        function [unshuf_corr, shuf_corr] = corr_values(o, bin_index, direction)
+            data = o.data_tensor(:, bin_index, o.tr_dir == direction);
+            %data_L = o.data_tensor(:,:, o.tr_dir == -1);
+            
+            resid = data - mean(data, 3);
+            rr = reshape(resid, size(resid,1), []);
+            unshuf_corr = corr(rr');
+            
+            data_tensor_shuf = DecodeTensor.shuffle_tensor(o.data_tensor, o.tr_dir);
+            data = data_tensor_shuf(:, bin_index, o.tr_dir == direction);
+            %data_L = data_tensor_shuf(:,:, o.tr_dir == -1);
+            
+            resid = data - mean(data, 3);
+            rr = reshape(resid, size(resid,1), []);
+            shuf_corr = corr(rr');
+        end
+        
+        function [delta_mu2, sigma_in_delta_mu, sigma_in_delta_mu_shuf] = ...
+                signal_and_noise_descriptors(o, n_size)
+            [N,K,T] = size(o.data_tensor);
+            sub_tensor = o.data_tensor(randperm(N)<=n_size,:,:);
+            sub_tensor_shuf = DecodeTensor.shuffle_tensor(sub_tensor, o.tr_dir);
+            data_R = sub_tensor(:,:,o.tr_dir==1);
+            data_L = sub_tensor(:,:,o.tr_dir==-1);
+            
+            data_R_shuf = sub_tensor_shuf(:,:,o.tr_dir==1);
+            data_L_shuf = sub_tensor_shuf(:,:,o.tr_dir==-1);
+            
+            mu_R = mean(data_R, 3);
+            mu_L = mean(data_L, 3);
+            
+            res_R = data_R - mu_R;
+            res_L = data_L - mu_L;
+            
+            res_R_shuf = data_R_shuf - mu_R;
+            res_L_shuf = data_L_shuf - mu_L;
+            
+            delta_mu_R = diff(mu_R, 1, 2);
+            delta_mu_L = diff(mu_L, 1, 2);
+            
+            delta_mu2_R = zeros(K-1,1);
+            delta_mu2_L = zeros(K-1,1);
+            
+            proj_var_R = zeros(K-1,1);
+            proj_var_L = zeros(K-1,1);
+            
+            proj_var_R_shuf = zeros(K-1,1);
+            proj_var_L_shuf = zeros(K-1,1);
+            for b = 1:K-1
+                delta_mu2_R(b) = norm(delta_mu_R(:,b)).^2;
+                delta_mu2_L(b) = norm(delta_mu_L(:,b)).^2;
+                
+                proj_var_R(b) = var((delta_mu_R(:,b)'./sqrt(delta_mu2_R(b))) * squeeze(res_R(:, b, :)));
+                proj_var_L(b) = var((delta_mu_L(:,b)'./sqrt(delta_mu2_L(b))) * squeeze(res_L(:, b, :)));
+                
+                proj_var_R_shuf(b) = var((delta_mu_R(:,b)'./sqrt(delta_mu2_R(b))) * squeeze(res_R_shuf(:, b, :)));
+                proj_var_L_shuf(b) = var((delta_mu_L(:,b)'./sqrt(delta_mu2_L(b))) * squeeze(res_L_shuf(:, b, :)));
+            end
+            delta_mu2 = mean([delta_mu2_R ; delta_mu2_L]);
+            sigma_in_delta_mu = mean([proj_var_R ; proj_var_L]);
+            sigma_in_delta_mu_shuf = mean([proj_var_R_shuf ; proj_var_L_shuf]);
         end
     end
 end

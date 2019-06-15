@@ -3,7 +3,7 @@ svg_save_dir = 'figure2_svg';
 print_svg = @(name) print('-dsvg', fullfile(svg_save_dir, [name '.svg']));
 print_png = @(name) print('-dpng', '-r1800', fullfile(svg_save_dir, [name '.png']));
 %% PLS representations
-m_i = 4;
+m_i = 6;
 use_zscore = true;
 [source_path, mouse_name] = DecodeTensor.default_datasets(m_i);
 opt = DecodeTensor.default_opt;
@@ -408,3 +408,85 @@ plot(r_s, 'DisplayName', 'r\_s');
 ylim([0 90]);
 xlabel 'Position bin'
 ylabel(sprintf('Angle between\nclassifiers (degrees)'));
+
+%% growth of signal and noise as a function of number of neurons
+dm2 = cell(10,1); sm = dm2; sms = dm2;
+for m_i = 1:10
+d = DecodeTensor(m_i);
+n_max = size(d.data_tensor,1);
+n_sizes = [1 (30:30:n_max) n_max];
+n_sizes_save{m_i} = n_sizes;
+n_reps = 20;
+%dm2 = zeros(n_reps, numel(n_sizes)); sm = dm2; sms = dm2;
+for n_i = 1:numel(n_sizes)
+    for i = 1:n_reps
+        [dm2{m_i}(i, n_i), sm{m_i}(i, n_i), sms{m_i}(i, n_i)] = d.signal_and_noise_descriptors(n_sizes(n_i));
+    end
+    fprintf('Done %d of %d\n', n_sizes(n_i), n_sizes(end));
+end
+end
+%%
+figure;
+for m_i = 6
+    Utils.neuseries(n_sizes_save{m_i}, dm2{m_i}, 'k'); hold on;
+    Utils.neuseries(n_sizes_save{m_i}, sm{m_i}, 'b');
+    Utils.neuseries(n_sizes_save{m_i}, sms{m_i}, 'r');
+end
+xlabel 'Number of cells'
+ylabel(sprintf('Population vector\ndistance'));
+%legend '(\Delta\mu)^2' '\sigma^2 along \Delta\mu' '\sigma^2 along \Delta\mu (Shuffled)'
+text(20, 2, '(\Delta\mu)^2', 'Color', 'k', 'HorizontalAlignment', 'left');
+text(20, 2.5, '\sigma^2 along \Delta\mu', 'Color', 'b', 'HorizontalAlignment', 'left');
+text(20, 3, '\sigma^2 along \Delta\mu (Shuffled)', 'Color', 'r', 'HorizontalAlignment', 'left');
+figure_format;
+
+
+print_svg('signal_and_noise_growth');
+%% only mus
+figure;
+for m_i = 1:10
+    Utils.neuseries(n_sizes_save{m_i}, dm2{m_i}, 'k'); hold on;
+end
+xlabel 'Number of cells'
+ylabel('(\Delta\mu)^2');
+%figure_format;
+
+%% normed to maximal deltamu2 value
+figure;
+for m_i = [3 6 7 4 5 10]
+    [dm2_slope(m_i), dm2_conf(m_i)] = Utils.fitaline(n_sizes_save{m_i}, dm2{m_i}, cutoff_n);
+    v = dm2_slope(m_i);%mean(dm2{m_i}(:,end))./n_sizes_save{m_i}(end);
+    %v = 1;
+    Utils.neuseries(n_sizes_save{m_i}, dm2{m_i}./v, 'k'); hold on;
+    Utils.neuseries(n_sizes_save{m_i}, sm{m_i}./v, 'b');
+    Utils.neuseries(n_sizes_save{m_i}, sms{m_i}./v, 'r');
+end
+xlabel 'Number of cells'
+ylabel(sprintf('Distance\n(In units of cells)'));
+%axis equal
+text(20, 370, '(\Delta\mu)^2', 'Color', 'k', 'HorizontalAlignment', 'left');
+text(20, 470, '\sigma^2 along \Delta\mu', 'Color', 'b', 'HorizontalAlignment', 'left');
+text(20, 570, '\sigma^2 along \Delta\mu (Shuffled)', 'Color', 'r', 'HorizontalAlignment', 'left');
+figure_format;
+print_svg('signal_and_noise_growth');
+
+%% fitted slopes:
+cutoff_n = 100;
+for m_i = 1:10
+    %v = mean(dm2{m_i}(:,end))./n_sizes_save{m_i}(end);
+    [dm2_slope(m_i), dm2_conf(m_i)] = Utils.fitaline(n_sizes_save{m_i}, dm2{m_i}, cutoff_n);
+    [sm_slope(m_i), sm_conf(m_i)] = Utils.fitaline(n_sizes_save{m_i}, sm{m_i}./dm2_slope(m_i), cutoff_n);
+    [sms_slope(m_i), sms_conf(m_i)] = Utils.fitaline(n_sizes_save{m_i}, sms{m_i}./dm2_slope(m_i), cutoff_n);
+end
+
+figure;
+ballnstick('Unshuffled', 'Shuffled', sm_slope, sms_slope, sm_conf, sms_conf);
+line(xlim, [1 1], 'Color', 'k', 'LineStyle', ':');
+ylim([-Inf Inf]);
+ylabel(sprintf('\\sigma^2 along \\Delta\\mu\nrate of change'));
+figure_format;
+print_svg('rate_of_change_of_sigma2');
+
+
+
+

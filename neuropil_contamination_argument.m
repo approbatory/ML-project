@@ -1,6 +1,6 @@
 %comparing distances between cells to correlation coefficients
-function neuropil_contamination_argument(neural_data_type)
-d = DecodeTensor(4, neural_data_type);
+function neuropil_contamination_argument(m_id, neural_data_type)
+d = DecodeTensor(m_id, neural_data_type);
 [X, ks] = d.get_dataset();
 [n_cells, n_place_bins, n_trials] = size(d.data_tensor);
 %% presumably, neuropil noise will not be coding dependent,
@@ -65,13 +65,15 @@ r_vec = rho(:); d_vec = cell_dist(:); rs_vec = rho_signal(:);
 %sc_f(r_vec, d_vec, basic_filt & ~rest_filt, rest_filt,...
 %    'Noise corr.', 'Cell distance (pix)', -0.75, 125, 0.4, 40);
 figure;
-subplot(1,3,1);
+title(d.mouse_name);
+%subplot(1,3,1); %%ONLY TAKING FIRST GRAPH!!!
 basic_filt = (r_vec < 1) & (d_vec > 0);
 r_cut = 0.1; d_cut = 25;
 rest_filt = (r_vec > r_cut) & (d_vec < d_cut) & basic_filt;
 sc_f(d_vec, r_vec, basic_filt & ~rest_filt, rest_filt,...
     'Cell distance (pix)', 'Noise corr.', 140, 0.1, 25, 0.8);
 ylim([-1 1]); xlim([0 300]);
+return;%%ONLY TAKING FIRST GRAPH!!!
 % signal corr vs. noise corr
 subplot(1,3,2);
 sc_f(rs_vec, r_vec, basic_filt & ~rest_filt, rest_filt,...
@@ -83,6 +85,7 @@ sc_f(rs_vec, d_vec, basic_filt & ~rest_filt, rest_filt,...
     'Signal corr.', 'Cell distance (pix)', -0.75, 125, -0.9, 10);
 
 set(gcf, 'Position', [203 521 1409 367]);
+
 end
 
 function [com, ord] = find_neuron_com(mean_response)

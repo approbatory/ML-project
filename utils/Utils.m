@@ -361,5 +361,32 @@ classdef Utils %Common utilities for dealing with neural data
             shadedErrorBar(n, m, e, 'lineprops', c);
             %errorbar(n, m, e, c);
         end
+        
+        function rs = corrs(R)
+            assert(size(R,1)==size(R,2), 'must be a square correlation matrix');
+            n = size(R,1);
+            rs = zeros(n*(n-1)/2,1);
+            count = 1;
+            for i = 1:n
+                for j = 1:(i-1)
+                    rs(count) = R(i,j);
+                    count = count + 1;
+                end
+            end
+        end
+        
+        function [slope, slope_conf] = fitaline(n, s, min_n)
+            if ~exist('min_n', 'var')
+                min_n = min(n);
+            end
+            
+            m = mean(s);
+            m = m(n >= min_n);
+            n = n(n >= min_n);
+            [fitresult, gof] = fit(n(:), m(:), 'poly1');
+            slope = fitresult.p1;
+            conf = confint(fitresult);
+            slope_conf = diff(conf(:,1))/2;
+        end
     end
 end

@@ -489,14 +489,16 @@ while true
     break;
 end
 
-sessions = {'../linear_track/Mouse2019/Mouse-2019-20150311-linear-track/Mouse-2019-20150311_101049-linear-track-TracesAndEvents.mat',...
-    '../linear_track/Mouse2021/Mouse-2021-20150326-linear-track/Mouse-2021-20150326_085536-linear-track-TracesAndEvents.mat',...
-    '../linear_track/Mouse2022/Mouse-2022-20150326-linear-track/Mouse-2022-20150326_093722-linear-track-TracesAndEvents.mat',...
-    '../linear_track/Mouse2028/Mouse-2028-20150327-linear-track/Mouse-2028-20150327_105544-linear-track-TracesAndEvents.mat',...
-    '../linear_track/Mouse2025/Mouse-2025-20150303-linear-track/Mouse-2025-20150303_091715-linear-track-TracesAndEvents.mat',...
-    '../linear_track/Mouse2024/Mouse-2024-20150311-linear-track/Mouse-2024-20150311_073912-linear-track-TracesAndEvents.mat'};
-sessions_mouse = {'Mouse2019', 'Mouse2021', 'Mouse2022',...
-    'Mouse2028', 'Mouse2025', 'Mouse2024'};
+%sessions = {'../linear_track/Mouse2019/Mouse-2019-20150311-linear-track/Mouse-2019-20150311_101049-linear-track-TracesAndEvents.mat',...
+%    '../linear_track/Mouse2021/Mouse-2021-20150326-linear-track/Mouse-2021-20150326_085536-linear-track-TracesAndEvents.mat',...
+%    '../linear_track/Mouse2022/Mouse-2022-20150326-linear-track/Mouse-2022-20150326_093722-linear-track-TracesAndEvents.mat',...
+%    '../linear_track/Mouse2028/Mouse-2028-20150327-linear-track/Mouse-2028-20150327_105544-linear-track-TracesAndEvents.mat',...
+%    '../linear_track/Mouse2025/Mouse-2025-20150303-linear-track/Mouse-2025-20150303_091715-linear-track-TracesAndEvents.mat',...
+%    '../linear_track/Mouse2024/Mouse-2024-20150311-linear-track/Mouse-2024-20150311_073912-linear-track-TracesAndEvents.mat'};
+%sessions_mouse = {'Mouse2019', 'Mouse2021', 'Mouse2022',...
+%    'Mouse2028', 'Mouse2025', 'Mouse2024'};
+sessions = arrayfun(@DecodeTensor.default_datasets, 1:10, 'UniformOutput', false);
+session_mouse = cellfun(@(x) x(17:25), sessions, 'UniformOutput', false);
 
 num_sess = numel(sessions);
 me_ = zeros(1, num_sess);
@@ -593,7 +595,8 @@ ylabel(sprintf('Ratio of MSE shuf/shuf'));
 %ylabel 'Num neurons'
 text(300, 1, sprintf('adj. R^2=%.2f', gof.adjrsquare));
 %% signal direction vs noise angles, over ~150 sessions
-res_safe = res(safe_filter);
+%res_safe = res(safe_filter);
+res_safe = res;
 for i = 1:numel(res_safe)
     my_res = res_safe{i};
     s = cell2mat(reshape(my_res.el_pre',[],1)).^2;
@@ -638,20 +641,20 @@ xlim([1 50]);
 ylim([3e-4 7e-2]);
 set(gca, 'YTick', [1e-3 1e-2])
 figure_format;
-print_svg('signal_pc_loadings_6');
+print_svg('signal_pc_loadings_10');
 %% boxplots of median noise in the signal direction ratios (median over bins)
 figure;
 boxplot([median(sig_noise./sig_noise_s)', median(rnd_noise./rnd_noise_s)'], {'Signal', 'Random'}, 'outliersize', 1);
 ylabel(sprintf('Unshuf./shuf. noise\nvariance ratio'));
 l_ = refline([0 1]); l_.Color = 'k';
 figure_format;
-print_svg('noise_attenuation_boxplot_6');
+print_svg('noise_attenuation_boxplot_10');
 %% inset of random boxplot
 figure; 
 boxplot(median(rnd_noise./rnd_noise_s)', {'Random'}, 'outliersize', 1);
 l_ = refline([0 1]); l_.Color = 'k';
 figure_format('boxsize', [0.8125 0.585].*0.98/2);
-print_svg('noise_attenuation_boxplot_6_inset');
+print_svg('noise_attenuation_boxplot_10_inset');
 %% ball and stick plot for sig_noise and sig_noise_s
 figure;
 plot([median(sig_noise) ; median(sig_noise_s)], '-k.');
@@ -662,7 +665,7 @@ set(gca, 'XTickLabel', {'Unshuffled', 'Shuffled'});
 ylabel(sprintf('Noise in\nsignal direction'));
 l_ = refline(0,1); l_.Color = 'k';
 figure_format;
-print_svg('noise_attenuation_stickplot_6');
+print_svg('noise_attenuation_stickplot_10');
 %% decoding advantage / signal direction variance scatterplot + numneurons control
 num_neuron_limit = 200;
 num_trials_limit = 50;
