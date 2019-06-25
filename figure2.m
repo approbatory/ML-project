@@ -35,6 +35,8 @@ axis equal;
 xlabel PLS1; ylabel PLS2;
 %xlim(xlim.*0.8);
 %ylim(ylim-0.01);
+xlim([min(XS(:,1)) max(XS(:,1))]);
+xlim([min(XS(:,2)) max(XS(:,2))]);
 xl_ = xlim;
 yl_ = ylim;
 set(gca, 'XTick', []);
@@ -57,27 +59,29 @@ print_png('PLS_shuf');
 
 %%
 figure;
-scatter(XS(:,1), XS(:,2), 4, Utils.colorcode(ceil(ks/2)), 'filled', 'MarkerFaceAlpha', 0.02); hold on;
+scatter(XS(:,1), XS(:,2), 8, Utils.colorcode(ceil(ks/2)), 'filled', 'MarkerFaceAlpha', 0.02); hold on;
 scatter(origin(1), origin(2), 10, 'k');
 xlabel PLS1; ylabel PLS2;
-axis equal;
-xlim(xl_); ylim(yl_);
+axis equal; axis tight;
+%xlim(xl_); ylim(yl_);
+xl_ = xlim;
+yl_ = ylim;
 set(gca, 'XTick', []);
 set(gca, 'YTick', []);
-text(-0.03, 0.03, 'Unshuffled', 'Color', 'b')
-figure_format;
+%text(-0.03, 0.03, 'Unshuffled', 'Color', 'b')
+figure_format('boxsize', [1 1.2], 'fontsize', 6);
 print_png('PLS_adjacent');
 
 figure;
-scatter(XS_s(:,1), XS_s(:,2), 4, Utils.colorcode(ceil(ks/2)), 'filled', 'MarkerFaceAlpha', 0.02); hold on;
+scatter(XS_s(:,1), XS_s(:,2), 8, Utils.colorcode(ceil(ks/2)), 'filled', 'MarkerFaceAlpha', 0.02); hold on;
 scatter(origin_s(1), origin_s(2), 10, 'k');
 xlabel PLS1; ylabel PLS2;
-axis equal;
+axis equal; axis tight;
 xlim(xl_); ylim(yl_);
 set(gca, 'XTick', []);
 set(gca, 'YTick', []);
-text(-0.03, 0.03, 'Shuffled', 'Color', 'r')
-figure_format;
+%text(-0.03, 0.03, 'Shuffled', 'Color', 'r')
+figure_format('boxsize', [1 1.2], 'fontsize', 6);
 print_png('PLS_adjacent_shuf');
 % [~, stats] = Utils.pls_plot(X_fst, [ceil(ks_fst/2), mod(ks_fst,2)]);
 % suptitle('Using FST\_events, unshuffled');
@@ -412,18 +416,18 @@ ylabel(sprintf('Angle between\nclassifiers (degrees)'));
 %% growth of signal and noise as a function of number of neurons
 dm2 = cell(10,1); sm = dm2; sms = dm2;
 for m_i = 1:10
-d = DecodeTensor(m_i);
-n_max = size(d.data_tensor,1);
-n_sizes = [1 (30:30:n_max) n_max];
-n_sizes_save{m_i} = n_sizes;
-n_reps = 20;
-%dm2 = zeros(n_reps, numel(n_sizes)); sm = dm2; sms = dm2;
-for n_i = 1:numel(n_sizes)
-    for i = 1:n_reps
-        [dm2{m_i}(i, n_i), sm{m_i}(i, n_i), sms{m_i}(i, n_i)] = d.signal_and_noise_descriptors(n_sizes(n_i));
+    d = DecodeTensor(m_i);
+    n_max = size(d.data_tensor,1);
+    n_sizes = [1 (30:30:n_max) n_max];
+    n_sizes_save{m_i} = n_sizes;
+    n_reps = 20;
+    %dm2 = zeros(n_reps, numel(n_sizes)); sm = dm2; sms = dm2;
+    for n_i = 1:numel(n_sizes)
+        for i = 1:n_reps
+            [dm2{m_i}(i, n_i), sm{m_i}(i, n_i), sms{m_i}(i, n_i)] = d.signal_and_noise_descriptors(n_sizes(n_i));
+        end
+        fprintf('Done %d of %d\n', n_sizes(n_i), n_sizes(end));
     end
-    fprintf('Done %d of %d\n', n_sizes(n_i), n_sizes(end));
-end
 end
 %%
 figure;
@@ -489,4 +493,197 @@ print_svg('rate_of_change_of_sigma2');
 
 
 
+%% median signal direction loadings 
+progressbar('Mouse', 'Ensemble Size', 'Samples');
+median_loadings = cell(10,1); median_loadings_s = median_loadings;
+for m_i = 1:10
+    d = DecodeTensor(m_i);
+    n_max = size(d.data_tensor,1);
+    n_sizes = [2 (30:30:n_max) n_max];
+    n_sizes_save{m_i} = n_sizes;
+    n_reps = 20;
+    for n_i = 1:numel(n_sizes)
+        for i = 1:n_reps
+            [ml, mls] = d.signal_loadings(n_sizes(n_i));
+            if length(ml) < 50
+                ml = [ml zeros(1, 50 - length(ml))];
+                mls = [mls zeros(1, 50 - length(mls))];
+            else
+                ml = ml(1:50);
+                mls = mls(1:50);
+            end
+            %[median_loadings(i, n_i, :), median_loadings_s(i, n_i, :)] = d.signal_loadings(n_sizes(n_i));
+            median_loadings{m_i}(i, n_i, :) = ml;
+            median_loadings_s{m_i}(i, n_i, :) = mls;
+            progressbar([],[],i/n_reps);
+        end
+        fprintf('%d:: Done %d of %d\n', m_i, n_sizes(n_i), n_sizes(end));
+        progressbar([], n_sizes(n_i)/n_sizes(end));
+    end
+    progressbar(m_i/10);
+end
+%%
+figure;
+for m_i = 1:10
+    mean_median_loadings = squeeze(mean(abs(median_loadings{m_i})));
+    mean_median_loadings_s = squeeze(mean(abs(median_loadings_s{m_i})));
+    
+    %figure;
+    subplot(2,10,m_i);
+    im_data = log10(mean_median_loadings(2:end-1,1:30));
+    padded_im_data = nan(16 - size(im_data,1), size(im_data,2));
+    imagesc([im_data;padded_im_data], [-1.6 log10(0.3)]);
+    %colorbar
+    %title '|cos(PC, \Delta\mu)|'
+    
+    ylabel 'Ensemble size'
+    set(gca, 'FontSize', 6);
+    set(gca, 'FontName', 'Helvetica LT Std');
+    set(gca, 'TickLength', [0.02 0.02]);
+    rectangle('Position',...
+        0.5+[0 size(im_data,1) size(im_data,2) (16 - size(im_data,1))],...
+        'FaceColor', 'w', 'EdgeColor', 'k', 'LineStyle', 'none');
+    set(gca, 'YTickLabel', 30*cellfun(@str2num, get(gca, 'YTickLabel')));
+    %figure_format([0.8 1.4]);
+    %box on; colorbar off;
+    hc = colorbar;
+    
+    
+    %set(gcf, 'Position', [0 0 1.3 1]);
+    %print_svg('signal_loadings_by_size');
+    box off
+    if m_i > 1
+        axis off
+    end
+    
+    %figure;
+    subplot(2,10,m_i+10);
+    im_data = log10(mean_median_loadings_s(2:end-1,1:30));
+    imagesc([im_data;padded_im_data], [-1.6 log10(0.3)]);
+    set(gca, 'FontSize', 6);
+    set(gca, 'FontName', 'Helvetica LT Std');
+    set(gca, 'TickLength', [0.02 0.02]);
+    xlabel 'Noise PC'
+    rectangle('Position',...
+        0.5+[0 size(im_data,1) size(im_data,2) (16 - size(im_data,1))],...
+        'FaceColor', 'w', 'EdgeColor', 'k', 'LineStyle', 'none');
+    set(gca, 'YTickLabel', 30*cellfun(@str2num, get(gca, 'YTickLabel')));
+    %colorbar
+    %title '|cos(PC, \Delta\mu)|, Shuffled'
+    %set(gca, 'XTickLabel', []);
+    %set(gca, 'YTickLabel', []);
+    %figure_format([0.8 1.4]);
+    box off;
+    if m_i > 1
+        axis off
+    end
+end
+set(gcf, 'Units', 'inches');
+set(gcf, 'Position', [8.6146    4.3854    7.5833    3.4896]);
+print_svg('signal_loadings_by_size_shuf');
+%%
+figure;
+cutoff_n = 50;
+for m_i = 1:10
+    %subplot(2,5,m_i);
+    mean_median_loadings = squeeze(mean(median_loadings{m_i}.^2));
+    mean_median_loadings_s = squeeze(mean(median_loadings_s{m_i}.^2));
+    eig_index = zeros(1, numel(n_sizes_save{m_i})); 
+    eig_index_s = eig_index;
+    for e_i = 1:numel(n_sizes_save{m_i})
+        [~, eig_index(e_i)] = max(mean_median_loadings(e_i, :)); 
+        [~, eig_index_s(e_i)] = max(mean_median_loadings_s(e_i,:));
+    end
+    fprintf('m_i = %d: ', m_i); disp(eig_index); fprintf(' ; '); disp(eig_index_s);
+    %Utils.neuseries(n_sizes_save{m_i}, median_loadings{m_i}(:,:,eig_index(end)).^2, 'b');
+    loadings_by_size = abs(median_loadings{m_i}(:, sub2ind([numel(n_sizes_save{m_i}) 50], 1:numel(n_sizes_save{m_i}), eig_index)));
+    [loadings_slope(m_i), loadings_conf(m_i)] = Utils.fitaline(log10(n_sizes_save{m_i}), log10(loadings_by_size), log10(cutoff_n));
+    Utils.neuseries(n_sizes_save{m_i}, loadings_by_size, 'b');
+    hold on;
+    %Utils.neuseries(n_sizes_save{m_i}, median_loadings_s{m_i}(:,:,eig_index(end)).^2, 'r');
+    loadings_by_size_s = abs(median_loadings_s{m_i}(:, sub2ind([numel(n_sizes_save{m_i}) 50], 1:numel(n_sizes_save{m_i}), eig_index_s)));
+    [loadings_slope_s(m_i), loadings_conf_s(m_i)] = Utils.fitaline(log10(n_sizes_save{m_i}), log10(loadings_by_size_s), log10(cutoff_n));
+    Utils.neuseries(n_sizes_save{m_i}, loadings_by_size_s, 'r');
+    plot(1:500, sqrt(0.5)./sqrt(1:500), 'k');
+    %title(sprintf('m_i = %d', m_i));
+    set(gca, 'XScale', 'log');
+    set(gca, 'YScale', 'log');
+    xlabel 'Number of cells'
+    ylabel('max_\alpha |cos(PC_\alpha, \Delta\mu)|');
+end
+xlim([1 500]);
+ylim([-Inf 1]);
+figure_format([1 1.4]);
+print_svg('max_noise_loading');
 
+%%
+figure;
+ballnstick('Unsh.', 'Sh.', loadings_slope, loadings_slope_s, loadings_conf, loadings_conf_s);
+line(xlim-0.5, [0 0], 'Color', 'k', 'LineStyle', '-');
+line(xlim, [-0.5 -0.5], 'Color', 'k', 'LineStyle', ':');
+ylim([-Inf Inf]);
+%ylabel('Slope past 50 cells');
+figure_format([0.8 1]/2);
+print_svg('max_noise_loading_inset_slope');
+
+%% decoding imse saturation value
+figure;
+scatter(I0_fit_value.*N_fit_value, 1./sm_slope, 40, 'b');
+limit_uncertainty = sqrt((I0_fit_value.*(N_upper - N_fit_value)).^2 + (N_fit_value.*(I0_upper - I0_fit_value)).^2);
+inv_sm_slope_uncertainty = sm_conf ./ sm_slope.^2;
+hold on;
+errorbar(I0_fit_value.*N_fit_value, 1./sm_slope, inv_sm_slope_uncertainty, inv_sm_slope_uncertainty,...
+    limit_uncertainty, limit_uncertainty, 'LineStyle', 'none', 'Color', 'b');
+[fitresult, adjr2] = Utils.regress_line(I0_fit_value.*N_fit_value, 1./sm_slope);
+plot(fitresult); legend off
+text(0.1, 4, sprintf('adj. R^2 = %.2f', adjr2));
+xlabel 'IMSE limit I_0N';
+ylabel 'Inverse \sigma^2 rate of change';
+%% junk
+hold on;
+errorbar(N_fit_value(f_), sm_slope(f_),...
+    sm_conf(f_), sm_conf(f_), N_lower(f_), N_upper(f_),...
+    'LineStyle', 'none', 'Color', 'b');
+
+scatter(N_fit_value_s(f_), sms_slope(f_), 40, 'r');
+errorbar(N_fit_value_s(f_), sms_slope(f_),...
+    sms_conf(f_), sms_conf(f_), N_lower_s(f_), N_upper_s(f_),...
+    'LineStyle', 'none', 'Color', 'r');
+set(gca, 'XScale', 'log');
+xlabel 'N fit value'
+ylabel '\sigma^2 rate of change'
+%%
+figure;
+scatter(I0_fit_value_s, 1./cellfun(@(x)x(end), sms), 'r');
+hold on;
+errorbar(I0_fit_value_s, 1./cellfun(@(x)x(end), sms), 0.*cellfun(@(x)x(end), sms), 0.*cellfun(@(x)x(end), sms), I0_lower_s, I0_upper_s, 'LineStyle', 'none', 'Color', 'r');
+[fitresult, adjr2] = Utils.regress_line(I0_fit_value_s, 1./cellfun(@(x)x(end), sms));
+plot(fitresult); legend off
+text(0.0005, 10, sprintf('adj. R^2 = %.2f', adjr2));
+xlabel 'I_0 fit value'
+ylabel 'Asymptotic 1/\sigma^2'
+%% sampling issues for estimating N and I0
+progressbar('d_neu', 'n_reps');
+total_n_neu = 500;
+for d_neu = 1:50
+    for n_reps = 1:1000
+        my_I0 = 5e-4;
+        my_N  = 100;
+        my_n_samp = [1, d_neu:d_neu:total_n_neu, total_n_neu];
+        my_true_IMSE = my_I0 .* my_n_samp ./ (1 + my_n_samp ./ my_N);
+        noise_level = 0.001*sqrt(20/n_reps);
+        my_noisy_IMSE = my_true_IMSE + noise_level*randn(size(my_true_IMSE));
+        [my_fitresult, my_gof] = createFit_infoSaturation(my_n_samp, my_noisy_IMSE);
+        c_ = confint(my_fitresult);
+        rep_err(d_neu, n_reps) = c_(end) - my_fitresult.N;
+        n_calc_reps(d_neu, n_reps) = numel(my_n_samp) * n_reps;
+        progressbar(d_neu/50, n_reps/1000);
+        %figure;
+        %errorbar(my_n_samp, my_noisy_IMSE, noise_level*ones(size(my_true_IMSE)));
+    end
+end
+%%
+figure;
+semilogy(rep_err); 
+refline(0, 10);
+refline(0, 5);

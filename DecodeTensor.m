@@ -1291,6 +1291,12 @@ classdef DecodeTensor < handle
 
         end
         
+        function o = cons(index)
+            L = load('sheet_paths.mat');
+            my_source_path = L.sheet_paths{index};
+            my_mouse_name = my_source_path(17:25);
+            o = DecodeTensor({my_source_path, my_mouse_name});
+        end
     end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%% Object creation %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1439,6 +1445,16 @@ classdef DecodeTensor < handle
             delta_mu2 = mean([delta_mu2_R ; delta_mu2_L]);
             sigma_in_delta_mu = mean([proj_var_R ; proj_var_L]);
             sigma_in_delta_mu_shuf = mean([proj_var_R_shuf ; proj_var_L_shuf]);
+        end
+        
+        function [median_loadings, median_loadings_shuf] = signal_loadings(o, n_size)
+            [N,K,T] = size(o.data_tensor);
+            sub_tensor = o.data_tensor(randperm(N)<=n_size,:,:);
+            res = DecodeTensor.noise_properties(sub_tensor, o.tr_dir, true); %using correlation matrix for PCA
+            loadings = res.el_pre;
+            loadings_shuf = res.el_pre_s;
+            median_loadings = median(abs(cell2mat(loadings(:))));
+            median_loadings_shuf = median(abs(cell2mat(loadings_shuf(:))));
         end
     end
 end

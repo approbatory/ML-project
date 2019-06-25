@@ -9,7 +9,7 @@ print_svg = @(name) print('-dsvg', fullfile(svg_save_dir, [name '.svg']));
 % Shaded regions represent 95% confidence range.
 % Trial shuffled data does not reach a performance saturation at 500 neurons, whereas
 % unshuffled data does.
-name = 'decorrelation_Mouse2022_24_28';
+name = 'decorrelation_Mouse_all';
 figure;
 
 dbfile = 'decoding_with_mindist.db';
@@ -17,22 +17,32 @@ dbfile = 'decoding_with_mindist.db';
 conn = sqlite(dbfile); %remember to close it
 %DecodingPlotGenerator.plot_mice(conn, {'Mouse2022'}, 'shuffled', 'NumNeurons', 'IMSE', 'max');
 %DecodingPlotGenerator.plot_mice(conn, {'Mouse2022'}, 'unshuffled', 'NumNeurons', 'IMSE', 'max');
-mouse_list = {'Mouse2022', 'Mouse2024', 'Mouse2028'};
+%mouse_list = {'Mouse2022', 'Mouse2024', 'Mouse2028'};
+mouse_list = {'Mouse2023', 'Mouse2024', 'Mouse2028', 'Mouse2012', 'Mouse2019', 'Mouse2022', 'Mouse2026', 'Mouse2021', 'Mouse2025', 'Mouse2029'};
+%mouse_list = {'Mouse2029', 'Mouse2023', 'Mouse2022', 'Mouse2021'};
+for m_i = 1:numel(mouse_list)
+    mouse = mouse_list{m_i};
+    disp(mouse);
+    %[n,m,e] = DecodingPlotGenerator.get_errors('NumNeurons', conn, mouse, 'unshuffled', 'IMSE', 'max');
+    [ns,ms,es] = DecodingPlotGenerator.get_errors('NumNeurons', conn, mouse, 'shuffled', 'IMSE', 'max');
+    hold on;
+    DecodingPlotGenerator.errors_plotter(ns,ms,es, 'shuffled');
+    %DecodingPlotGenerator.errors_plotter(n,m,e, 'unshuffled');
+end
 for m_i = 1:numel(mouse_list)
     mouse = mouse_list{m_i};
     disp(mouse);
     [n,m,e] = DecodingPlotGenerator.get_errors('NumNeurons', conn, mouse, 'unshuffled', 'IMSE', 'max');
-    [ns,ms,es] = DecodingPlotGenerator.get_errors('NumNeurons', conn, mouse, 'shuffled', 'IMSE', 'max');
     hold on;
-    DecodingPlotGenerator.errors_plotter(ns,ms,es, 'shuffled');
     DecodingPlotGenerator.errors_plotter(n,m,e, 'unshuffled');
 end
 xlabel 'Number of cells'
 ylabel '1/MSE (cm^{-2})'
 xlim([0 500]);
+ylim([0 Inf]);
 text(200+50, 0.3/5.9, 'Unshuffled', 'Color', 'blue');
-text(150, 0.8/5.9, 'Shuffled', 'Color', 'red');
-figure_format;
+text(60, 0.8/5.9, 'Shuffled', 'Color', 'red');
+figure_format([0.8125 1.5], 'fontsize', 6*6/6.4);
 
 print_svg(name);
 %print('-dsvg', fullfile(svg_save_dir, 'A.svg'));
@@ -833,3 +843,27 @@ text(1, 2.3e4, 'Shuffled', 'Color', 'r', 'HorizontalAlignment', 'Right');
 figure_format;
 
 print_svg('correlation_values_shuf_unshuf');
+
+%% fit I(n) = I_0 * n / (1 + n/N) schematic
+
+figure;
+x_vals = 1:500;
+I_func = @(n) n./(1 + n./100);
+plot(x_vals, I_func(x_vals), 'b'); hold on;
+plot(x_vals, x_vals, 'r');
+ylim([0 200]);
+xlim([0 500]);
+l_ = refline(0, 100); l_.Color = 'k';
+set(gca, 'XTick', 0:100:500);
+set(gca, 'XTickLabel', {'0', 'N', '2N', '3N', '4N', '5N'});
+m_ = 1;
+set(gca, 'YTick', [m_./(m_+1).*100, 100]);
+set(gca, 'YTickLabel', {'I_0N/2', 'I_0N'});
+line([100 100], [0 500], 'LineStyle', ':', 'Color', 'k');
+line([0 500], [50 50], 'LineStyle', ':', 'Color', 'k');
+text(200, 20, 'I_0n/(1+n/N)', 'Color', 'b');
+text(200, 165, 'I_0n', 'Color', 'r');
+xlabel 'Number of cells'
+ylabel '1/MSE'
+figure_format;
+print_svg('equation_schematic');

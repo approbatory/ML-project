@@ -388,5 +388,10 @@ classdef Utils %Common utilities for dealing with neural data
             conf = confint(fitresult);
             slope_conf = diff(conf(:,1))/2;
         end
+        
+        function [fitresult, R2_adj] = regress_line(x, y)
+            [fitresult, gof] = fit(x(:), y(:), 'poly1');
+            R2_adj = gof.adjrsquare;
+        end
     end
 end
