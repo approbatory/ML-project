@@ -375,7 +375,7 @@ for m_i = 1:numel(mouse_list)
     [nd{m_i},md{m_i},~, data_size_d(m_i)] = DecodingPlotGenerator.get_errors('NumNeurons', conn, ...
         mouse_list{m_i}, 'diagonal', 'IMSE', 'max');
 
-    [fitresult, gof] = createFit_infoSaturation(n{m_i}, m{m_i});
+    [fitresult, gof] = createFit_infoSaturation(n{m_i}, m{m_i}); %%% TODO: report R^2 values as range
     N_fit_value(m_i) = fitresult.N;
     I0_fit_value(m_i) = fitresult.I_0;
     confidence_intervals = confint(fitresult);

@@ -1297,6 +1297,14 @@ classdef DecodeTensor < handle
             my_mouse_name = my_source_path(17:25);
             o = DecodeTensor({my_source_path, my_mouse_name});
         end
+        
+        function o = cons_filt(index_filt)
+            L = load('sheet_paths.mat');
+            filt_paths = L.sheet_paths(L.sheet_paths_filt);
+            my_source_path = filt_paths{index_filt};
+            my_mouse_name = my_source_path(17:25);
+            o = DecodeTensor({my_source_path, my_mouse_name});
+        end
     end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%% Object creation %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1445,6 +1453,24 @@ classdef DecodeTensor < handle
             delta_mu2 = mean([delta_mu2_R ; delta_mu2_L]);
             sigma_in_delta_mu = mean([proj_var_R ; proj_var_L]);
             sigma_in_delta_mu_shuf = mean([proj_var_R_shuf ; proj_var_L_shuf]);
+        end
+        
+        function [dm2, sm, sms, n_sizes] = signal_and_noise_descriptors_series(o, d_neu, n_reps)
+            if ~exist('n_reps', 'var')
+                n_reps = 1;
+            end
+            n_max = size(o.data_tensor, 1);
+            n_sizes = [1, d_neu:d_neu:n_max, n_max];
+            dm2 = zeros(n_reps, numel(n_sizes));
+            sm = dm2; sms = dm2;
+            for n_i = 1:numel(n_sizes)
+                for i = 1:n_reps
+                    [dm2(i, n_i), sm(i, n_i), sms(i, n_i)] = o.signal_and_noise_descriptors(n_sizes(n_i));
+                    progressbar([], [], i/n_reps);
+                end
+                progressbar([], n_i/numel(n_sizes), []);
+                fprintf('Done %d of %d\n', n_sizes(n_i), n_sizes(end));
+            end
         end
         
         function [median_loadings, median_loadings_shuf] = signal_loadings(o, n_size)

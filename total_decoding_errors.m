@@ -24,7 +24,7 @@ for i = 1:num_mice
     m_errs = mean(cell2mat(errs{i}));
     e_errs = std(cell2mat(errs{i})) ./ sqrt(size(errs{i},1));
     
-    fprintf('\t%s\t%s\t%d\t\t%d\t\t%.2f+-%.2f\t%.2f+-%.2f\n', mouse_name, session_id,...
+    fprintf('\t%s\t%s\t%d\t\t%d\t\t%.3f+-%.3f\t%.3f+-%.3f\n', mouse_name, session_id,...
         neu_size{1, i}, neu_size{2, i}, m_errs(1), e_errs(1), m_errs(2), e_errs(2));
 end
 conn.close;
