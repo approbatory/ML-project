@@ -7,3 +7,6 @@
 *.txt~
 sandbox/
 !sheet_paths.mat
+!signal_and_noise_final.mat
+session_filterer_*_*.txt
+session_filterer_res.txt_OLD_68
