@@ -490,9 +490,38 @@ ylim([-Inf Inf]);
 ylabel(sprintf('\\sigma^2 along \\Delta\\mu\nrate of change'));
 figure_format;
 print_svg('rate_of_change_of_sigma2');
+%% TODO: same thing as cell above, but for 107 sessions, from signal_and_noise_final.mat
+SnN = load('signal_and_noise_final.mat');
+n_sess = length(SnN.dm2_full);
+cutoff_n = 100;
+dm2_slope = zeros(1,n_sess); dm2_conf = dm2_slope; sm_slope = dm2_slope; sm_conf = dm2_slope; sms_slope = dm2_slope; sms_conf = dm2_slope;
+for m_i = 1:n_sess
+    n_sizes = SnN.n_sizes_full{m_i};
+    dm2 = SnN.dm2_full{m_i};
+    sm = SnN.sm_full{m_i};
+    sms = SnN.sms_full{m_i};
+    [dm2_slope(m_i), dm2_conf(m_i)] = Utils.fitaline(n_sizes, dm2, cutoff_n);
+    [sm_slope(m_i), sm_conf(m_i)] = Utils.fitaline(n_sizes, sm./dm2_slope(m_i), cutoff_n);
+    [sms_slope(m_i), sms_conf(m_i)] = Utils.fitaline(n_sizes, sms./dm2_slope(m_i), cutoff_n);
+end
+%%
+mouse_ids = cellfun(@(x)x(17:25), sheet_paths, 'UniformOutput', false);
+mouse_ids = mouse_ids(sheet_paths_filt);
+high_conf_filt = (sm_conf < 0.1) & (sms_conf < 0.1); h_ = high_conf_filt;
+figure;
+ballnstick('Unshuffled', 'Shuffled', sm_slope(h_), sms_slope(h_),...
+    sm_conf(h_), sms_conf(h_), 'scatter', true,...
+    'coloring', mouse_ids(h_), 'err_scale', 0.05);
+line(xlim, [1 1], 'Color', 'k', 'LineStyle', ':');
+ylim([-Inf Inf]);
+ylabel(sprintf('\\sigma^2 along \\Delta\\mu\nrate of change'));
 
-
-
+figure_format;
+print_svg('rate_of_change_of_sigma2_scatter');
+%%
+figure;
+histogram(sm_slope(h_)); hold on;
+histogram(sms_slope(h_));
 %% median signal direction loadings 
 progressbar('Mouse', 'Ensemble Size', 'Samples');
 median_loadings = cell(10,1); median_loadings_s = median_loadings;

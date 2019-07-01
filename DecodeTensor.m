@@ -18,6 +18,12 @@ classdef DecodeTensor < handle
             DecodeTensor.decode_series(source_path, mouse_name, opt);
         end
         
+        function dispatch_filt(dispatch_index)
+            %index is from 1 to 107
+            d = DecodeTensor.cons_filt(dispatch_index, true);
+            DecodeTensor.decode_series(d{1}, d{2}, DecodeTensor.default_opt);
+        end
+        
         function decode_series(source_path, mouse_id, opt)
             %%Decoding performance as a function of number of neurons
             % in three settings: unshuffled, shuffled, and diagonal
@@ -109,23 +115,25 @@ classdef DecodeTensor < handle
             for i = numel(neuron_series):-1:1
                 sample_id = randi(2^16);
                 n_neu = neuron_series(i);
-                [mean_err, MSE] = DecodeTensor.decode_tensor(data_tensor, tr_dir, opt.bin_width, alg, false,...
-                    n_neu, num_trials);
+                
+                err_res = DecodeTensor.decode_all(data_tensor, tr_dir, opt.bin_width, alg, n_neu, num_trials);
+                %[mean_err, MSE] = DecodeTensor.decode_tensor(data_tensor, tr_dir, opt.bin_width, alg, false,...
+                %    n_neu, num_trials);
                 db_queue{i,1} = ...
-                    {mouse_id, session_id, 'unshuffled', n_neu, num_trials, opt.restrict_cell_distance, mean_err, MSE, sample_id};
-                fprintf('n_neu=%d\tmean_err = %.2f\n', n_neu, mean_err);
+                    {mouse_id, session_id, 'unshuffled', n_neu, num_trials, opt.restrict_cell_distance, err_res.mean_err.unshuffled, err_res.MSE.unshuffled, sample_id};
+                fprintf('n_neu=%d\tmean_err = %.2f\n', n_neu, err_res.mean_err.unshuffled);
                 
-                [mean_err_s, MSE_s] = DecodeTensor.decode_tensor(data_tensor, tr_dir, opt.bin_width, alg, true,...
-                    n_neu, num_trials);
+                %[mean_err_s, MSE_s] = DecodeTensor.decode_tensor(data_tensor, tr_dir, opt.bin_width, alg, true,...
+                %    n_neu, num_trials);
                 db_queue{i,2} = ...
-                    {mouse_id, session_id, 'shuffled', n_neu, num_trials, opt.restrict_cell_distance, mean_err_s, MSE_s, sample_id};
-                fprintf('n_neu=%d\tmean_err_s = %.2f\n', n_neu, mean_err_s);
+                    {mouse_id, session_id, 'shuffled', n_neu, num_trials, opt.restrict_cell_distance, err_res.mean_err.shuffled, err_res.MSE.shuffled, sample_id};
+                fprintf('n_neu=%d\tmean_err_s = %.2f\n', n_neu, err_res.mean_err.shuffled);
                 
-                [mean_err_d, MSE_d] = DecodeTensor.decode_tensor(data_tensor, tr_dir, opt.bin_width, alg_diag, false,...
-                    n_neu, num_trials);
+                %[mean_err_d, MSE_d] = DecodeTensor.decode_tensor(data_tensor, tr_dir, opt.bin_width, alg_diag, false,...
+                %    n_neu, num_trials);
                 db_queue{i,3} = ...
-                    {mouse_id, session_id, 'diagonal', n_neu, num_trials, opt.restrict_cell_distance, mean_err_d, MSE_d, sample_id};
-                fprintf('n_neu=%d\tmean_err_d = %.2f\n\n', n_neu, mean_err_d);
+                    {mouse_id, session_id, 'diagonal', n_neu, num_trials, opt.restrict_cell_distance, err_res.mean_err.diagonal, err_res.MSE.diagonal, sample_id};
+                fprintf('n_neu=%d\tmean_err_d = %.2f\n\n', n_neu, err_res.mean_err.diagonal);
             end
             
             if ~exist('records', 'dir')
@@ -158,7 +166,7 @@ classdef DecodeTensor < handle
             opt.samp_freq = 20; %Hz
             opt.v_thresh = 4; %cm/s
             opt.n_bins = 20;
-            opt.d_neurons = 30;
+            opt.d_neurons = 10;%30;
             opt.restrict_trials = -1;
             opt.neural_data_type = 'rawTraces';
             
@@ -277,6 +285,47 @@ classdef DecodeTensor < handle
                 cell_coords = tracesEvents.cellAnatomicLocat;
                 assert(size(cell_coords,1) == size(T,1), 'mismatch between cell coord numbers and number of traces');
             end
+        end
+        
+        function err_res = decode_all(data_tensor, tr_dir, binsize, alg, num_neurons, num_trials)
+            [data_tensor, tr_dir] = DecodeTensor.cut_tensor(data_tensor, tr_dir, num_neurons, num_trials);
+            [T1, d1, T2, d2, ~] = DecodeTensor.holdout_half(data_tensor, tr_dir);
+            T1s = DecodeTensor.shuffle_tensor(T1, d1);
+            T2s = DecodeTensor.shuffle_tensor(T2, d2);
+            [sup_X1, sup_ks1] = DecodeTensor.tensor2dataset(T1, d1);
+            [sup_X2, sup_ks2] = DecodeTensor.tensor2dataset(T2, d2);
+            [sup_X1s, sup_ks1s] = DecodeTensor.tensor2dataset(T1s, d1);
+            [sup_X2s, sup_ks2s] = DecodeTensor.tensor2dataset(T2s, d2);
+            mean_err_func = @(ks, ps) mean(abs(ceil(ks/2) - ceil(ps/2))) * binsize;
+            MSE_func = @(ks, ps) mean((ceil(ks/2) - ceil(ps/2)).^2) * binsize.^2;
+            model1 = alg.train(sup_X1, sup_ks1);
+            model2 = alg.train(sup_X2, sup_ks2);
+            model1s = alg.train(sup_X1s, sup_ks1s);
+            model2s = alg.train(sup_X2s, sup_ks2s);
+            sup_ps2 = alg.test(model1, sup_X2);
+            sup_ps2s = alg.test(model1s, sup_X2s);
+            sup_ps2d = alg.test(model1s, sup_X2);
+            sup_ps1 = alg.test(model2, sup_X1);
+            sup_ps1s = alg.test(model2s, sup_X1s);
+            sup_ps1d = alg.test(model2s, sup_X1);
+            mean_err2 = mean_err_func(sup_ks2, sup_ps2);
+            mean_err2s = mean_err_func(sup_ks2, sup_ps2s);
+            mean_err2d = mean_err_func(sup_ks2, sup_ps2d);
+            mean_err1 = mean_err_func(sup_ks1, sup_ps1);
+            mean_err1s = mean_err_func(sup_ks1, sup_ps1s);
+            mean_err1d = mean_err_func(sup_ks1, sup_ps1d);
+            MSE2 = MSE_func(sup_ks2, sup_ps2);
+            MSE2s = MSE_func(sup_ks2, sup_ps2s);
+            MSE2d = MSE_func(sup_ks2, sup_ps2d);
+            MSE1 = MSE_func(sup_ks1, sup_ps1);
+            MSE1s = MSE_func(sup_ks1, sup_ps1s);
+            MSE1d = MSE_func(sup_ks1, sup_ps1d);
+            err_res.mean_err.unshuffled = mean([mean_err1 mean_err2]);
+            err_res.mean_err.shuffled = mean([mean_err1s mean_err2s]);
+            err_res.mean_err.diagonal = mean([mean_err1d mean_err2d]);
+            err_res.MSE.unshuffled = mean([MSE1 MSE2]);
+            err_res.MSE.shuffled = mean([MSE1s MSE2s]);
+            err_res.MSE.diagonal = mean([MSE1d MSE2d]);
         end
         function [mean_err, MSE, ps, ks, model, stats] = decode_tensor(data_tensor, tr_dir,...
                 binsize, alg, shuf, num_neurons, num_trials, pls_dims)
@@ -1298,12 +1347,19 @@ classdef DecodeTensor < handle
             o = DecodeTensor({my_source_path, my_mouse_name});
         end
         
-        function o = cons_filt(index_filt)
+        function o = cons_filt(index_filt, no_create)
+            if ~exist('no_create', 'var')
+                no_create = false;
+            end
             L = load('sheet_paths.mat');
             filt_paths = L.sheet_paths(L.sheet_paths_filt);
             my_source_path = filt_paths{index_filt};
             my_mouse_name = my_source_path(17:25);
-            o = DecodeTensor({my_source_path, my_mouse_name});
+            if no_create
+                o = {my_source_path, my_mouse_name};
+            else
+                o = DecodeTensor({my_source_path, my_mouse_name});
+            end
         end
     end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1359,6 +1415,17 @@ classdef DecodeTensor < handle
             end
             [me, mse, ps, ks, model] = DecodeTensor.decode_tensor(o.data_tensor, o.tr_dir,...
                 o.opt.bin_width, alg, shuf, num_neurons, num_trials);
+        end
+        
+        function err_res = decode_set(o, num_neurons, num_trials)
+            if ~exist('num_neurons', 'var')
+                num_neurons = [];
+            end
+            if ~exist('num_trials', 'var')
+                num_trials = [];
+            end
+            alg = my_algs('ecoclin');
+            err_res = DecodeTensor.decode_all(o.data_tensor, o.tr_dir, o.opt.bin_width, alg, num_neurons, num_trials);
         end
         
         function [me, mse, ps, ks, model, stats] = PLS_decode(o, pls_dims, shuf, num_neurons, num_trials, alg)
