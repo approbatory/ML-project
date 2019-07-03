@@ -415,6 +415,7 @@ ylabel(sprintf('Angle between\nclassifiers (degrees)'));
 
 %% growth of signal and noise as a function of number of neurons
 dm2 = cell(10,1); sm = dm2; sms = dm2;
+progressbar('mouse', 'nsize', 'rep');
 for m_i = 1:10
     d = DecodeTensor(m_i);
     n_max = size(d.data_tensor,1);
@@ -425,9 +426,12 @@ for m_i = 1:10
     for n_i = 1:numel(n_sizes)
         for i = 1:n_reps
             [dm2{m_i}(i, n_i), sm{m_i}(i, n_i), sms{m_i}(i, n_i)] = d.signal_and_noise_descriptors(n_sizes(n_i));
+            progressbar([],[],i/n_reps);
         end
         fprintf('Done %d of %d\n', n_sizes(n_i), n_sizes(end));
+        progressbar([],n_i/numel(n_sizes));
     end
+    progressbar(m_i/10);
 end
 %%
 figure;
@@ -481,6 +485,7 @@ for m_i = 1:10
     [dm2_slope(m_i), dm2_conf(m_i)] = Utils.fitaline(n_sizes_save{m_i}, dm2{m_i}, cutoff_n);
     [sm_slope(m_i), sm_conf(m_i)] = Utils.fitaline(n_sizes_save{m_i}, sm{m_i}./dm2_slope(m_i), cutoff_n);
     [sms_slope(m_i), sms_conf(m_i)] = Utils.fitaline(n_sizes_save{m_i}, sms{m_i}./dm2_slope(m_i), cutoff_n);
+    [sms_intercept(m_i), sms_intercept_conf(m_i)] = Utils.fitaline(n_sizes_save{m_i}, sms{m_i}./dm2_slope(m_i), cutoff_n, true);
 end
 
 figure;
@@ -657,16 +662,41 @@ print_svg('max_noise_loading_inset_slope');
 
 %% decoding imse saturation value
 figure;
-scatter(I0_fit_value.*N_fit_value, 1./sm_slope, 40, 'b');
-limit_uncertainty = sqrt((I0_fit_value.*(N_upper - N_fit_value)).^2 + (N_fit_value.*(I0_upper - I0_fit_value)).^2);
+%scatter(I0_fit_value.*N_fit_value, 1./sm_slope, 4, 'b');
+limit_uncertainty = sqrt((I0_fit_value.*(N_upper)).^2 + (N_fit_value.*(I0_upper)).^2);
 inv_sm_slope_uncertainty = sm_conf ./ sm_slope.^2;
 hold on;
 errorbar(I0_fit_value.*N_fit_value, 1./sm_slope, inv_sm_slope_uncertainty, inv_sm_slope_uncertainty,...
-    limit_uncertainty, limit_uncertainty, 'LineStyle', 'none', 'Color', 'b');
+    limit_uncertainty, limit_uncertainty, 'LineStyle', 'none', 'Color', 'b', 'CapSize', 1);
 [fitresult, adjr2] = Utils.regress_line(I0_fit_value.*N_fit_value, 1./sm_slope);
+h_ = plot(fitresult); legend off
+h_.Color = 'b';
+text(0.03, 8.5, sprintf('adj. R^2 = %.2f', adjr2));
+xlabel 'IMSE limit I_0N';
+ylabel(sprintf('Inverse \\sigma^2\nrate of change'));
+figure_format;
+print_svg('imse_limit_regression');
+%% just with N
+figure;
+scatter(N_fit_value, 1./sm_slope, 40, 'b');
+hold on;
+errorbar(N_fit_value, 1./sm_slope, inv_sm_slope_uncertainty, inv_sm_slope_uncertainty,...
+    N_upper, N_upper, 'LineStyle', 'none', 'Color', 'b');
+[fitresult, adjr2] = Utils.regress_line(N_fit_value, 1./sm_slope);
 plot(fitresult); legend off
 text(0.1, 4, sprintf('adj. R^2 = %.2f', adjr2));
-xlabel 'IMSE limit I_0N';
+xlabel 'N fit value';
+ylabel 'Inverse \sigma^2 rate of change';
+%% just with I_0
+figure;
+scatter(I0_fit_value, 1./sm_slope, 40, 'b');
+hold on;
+errorbar(I0_fit_value, 1./sm_slope, inv_sm_slope_uncertainty, inv_sm_slope_uncertainty,...
+    I0_upper, I0_upper, 'LineStyle', 'none', 'Color', 'b');
+[fitresult, adjr2] = Utils.regress_line(I0_fit_value, 1./sm_slope);
+plot(fitresult); legend off
+text(6e-4, 4, sprintf('adj. R^2 = %.2f', adjr2));
+xlabel 'I_0 fit value';
 ylabel 'Inverse \sigma^2 rate of change';
 %% junk
 hold on;
@@ -683,14 +713,18 @@ xlabel 'N fit value'
 ylabel '\sigma^2 rate of change'
 %%
 figure;
-scatter(I0_fit_value_s, 1./cellfun(@(x)x(end), sms), 'r');
+%scatter(I0_fit_value_s, 1./sms_intercept, 'r');
 hold on;
-errorbar(I0_fit_value_s, 1./cellfun(@(x)x(end), sms), 0.*cellfun(@(x)x(end), sms), 0.*cellfun(@(x)x(end), sms), I0_lower_s, I0_upper_s, 'LineStyle', 'none', 'Color', 'r');
-[fitresult, adjr2] = Utils.regress_line(I0_fit_value_s, 1./cellfun(@(x)x(end), sms));
+inv_intercept_errb = sms_intercept_conf./sms_intercept.^2;
+errorbar(I0_fit_value_s, 1./sms_intercept, inv_intercept_errb, inv_intercept_errb, I0_lower_s, I0_upper_s, 'LineStyle', 'none', 'Color', 'r', 'CapSize', 1);
+[fitresult, adjr2] = Utils.regress_line(I0_fit_value_s, 1./sms_intercept);
 plot(fitresult); legend off
-text(0.0005, 10, sprintf('adj. R^2 = %.2f', adjr2));
+text(1e-4, 0.055, sprintf('adj. R^2 = %.2f', adjr2));
 xlabel 'I_0 fit value'
 ylabel 'Asymptotic 1/\sigma^2'
+set(gca, 'XTickLabel', arrayfun(@Utils.my_fmt, get(gca, 'XTick') ,'UniformOutput', false));
+figure_format;
+print_svg('I0_value_regression');
 %% sampling issues for estimating N and I0
 progressbar('d_neu', 'n_reps');
 total_n_neu = 500;

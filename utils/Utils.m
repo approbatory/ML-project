@@ -375,23 +375,50 @@ classdef Utils %Common utilities for dealing with neural data
             end
         end
         
-        function [slope, slope_conf] = fitaline(n, s, min_n)
+        function [res, res_conf] = fitaline(n, s, min_n, intercept)
             if ~exist('min_n', 'var')
                 min_n = min(n);
             end
-            
+            if ~exist('intercept', 'var')
+                intercept = false;
+            end
             m = mean(s);
             m = m(n >= min_n);
             n = n(n >= min_n);
             [fitresult, gof] = fit(n(:), m(:), 'poly1');
-            slope = fitresult.p1;
-            conf = confint(fitresult);
-            slope_conf = diff(conf(:,1))/2;
+            if intercept
+                res = fitresult.p2;
+                conf = confint(fitresult);
+                res_conf = diff(conf(:,2))/2;
+            else
+                res = fitresult.p1;
+                conf = confint(fitresult);
+                res_conf = diff(conf(:,1))/2;
+            end
         end
         
         function [fitresult, R2_adj] = regress_line(x, y)
             [fitresult, gof] = fit(x(:), y(:), 'poly1');
             R2_adj = gof.adjrsquare;
+        end
+        
+        function r = my_fmt(n, f)
+            if ~exist('f', 'var')
+                f = '%.e';
+            else
+                f = sprintf('%%.%de',f);
+            end
+            if n==0
+                r = '0';
+                return;
+            end
+            exp_form = sprintf(f, n);
+            e_loc = find(exp_form == 'e');
+            
+            base = exp_form(1:e_loc-1);
+            expo = exp_form(e_loc+1:end);
+            expo_num = str2double(expo);
+            r = [base, '·10^{', sprintf('%d', expo_num), '}'];
         end
     end
 end
