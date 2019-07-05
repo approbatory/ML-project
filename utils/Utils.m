@@ -446,5 +446,56 @@ classdef Utils %Common utilities for dealing with neural data
                 signif_text = 'n.s';
             end
         end
+        
+        function run_range(f, T, n, d, name, endit)
+            if ~exist('endit', 'var')
+                endit = '';
+            end
+            dname = sprintf('records_%s', name);
+            if ~exist(dname, 'dir')
+                mkdir(dname);
+            end
+            input_indices = 1:T;
+            my_selection = ceil(input_indices./T.*d) == n;
+            my_indices = find(my_selection);
+            number_size = length(sprintf('%d', T));
+            for i = 1:numel(my_indices)
+                index = my_indices(i);
+                res = f(index);
+                fname = sprintf(['%s_%.' num2str(number_size) 'd_%s.mat'], name, index, timestring);
+                fname = fullfile(dname, fname);
+                save(fname, '-struct', 'res');
+                fprintf('Saved run %s: %d/%d\n', name, index, T);
+            end
+            if strcmp(endit, 'quit')
+                exit;
+            end
+        end
+        
+        function aggregate_range(name, cleanup)
+            if ~exist('cleanup', 'var')
+                cleanup = false;
+            end
+            
+            dname = sprintf('records_%s', name);
+            if ~exist(dname, 'dir')
+                error('directory %s must exist', dname);
+            end
+            S = dir(dname);
+            res_index = 0;
+            for i = 1:numel(S)
+                s = S(i);
+                if s.isdir || ~startsWith(s.name, name)
+                    continue;
+                end
+                res_index = res_index + 1;
+                res(res_index) = load(fullfile(s.folder, s.name));
+            end
+            fname = sprintf('%s_agg_%s.mat', name, timestring);
+            save(fname, 'res');
+            if cleanup
+                rmdir(dname, 's');
+            end
+        end
     end
 end
