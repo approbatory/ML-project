@@ -535,7 +535,7 @@ median_loadings = cell(n_,1); median_loadings_s = median_loadings;
 for m_i = 1:n_
     d = DecodeTensor.cons_filt(m_i);
     n_max = size(d.data_tensor,1);
-    n_sizes = [unique(ceil(10.^(0:0.1:log10(n_max)))) n_max];
+    n_sizes = [unique(ceil(10.^(log10(2):0.1:log10(n_max)))) n_max];
     n_sizes_save{m_i} = n_sizes;
     n_reps = 20;
     for n_i = 1:numel(n_sizes)
@@ -556,7 +556,7 @@ for m_i = 1:n_
         fprintf('%d:: Done %d of %d\n', m_i, n_sizes(n_i), n_sizes(end));
         progressbar([], n_sizes(n_i)/n_sizes(end));
     end
-    progressbar(m_i/10);
+    progressbar(m_i/n_);
 end
 %%
 figure;
