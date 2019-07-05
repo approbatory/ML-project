@@ -12,27 +12,30 @@ print_svg = @(name) print('-dsvg', fullfile(svg_save_dir, [name '.svg']));
 name = 'decorrelation_Mouse_all';
 figure;
 
-dbfile = 'decoding_with_mindist.db';
+dbfile = 'decoding_all_sess.db';
 
 conn = sqlite(dbfile); %remember to close it
 %DecodingPlotGenerator.plot_mice(conn, {'Mouse2022'}, 'shuffled', 'NumNeurons', 'IMSE', 'max');
 %DecodingPlotGenerator.plot_mice(conn, {'Mouse2022'}, 'unshuffled', 'NumNeurons', 'IMSE', 'max');
 %mouse_list = {'Mouse2022', 'Mouse2024', 'Mouse2028'};
-mouse_list = {'Mouse2023', 'Mouse2024', 'Mouse2028', 'Mouse2012', 'Mouse2019', 'Mouse2022', 'Mouse2026', 'Mouse2021', 'Mouse2025', 'Mouse2029'};
+%mouse_list = {'Mouse2023', 'Mouse2024', 'Mouse2028', 'Mouse2012', 'Mouse2019', 'Mouse2022', 'Mouse2026', 'Mouse2021', 'Mouse2025', 'Mouse2029'};
 %mouse_list = {'Mouse2029', 'Mouse2023', 'Mouse2022', 'Mouse2021'};
+[sess_list, mouse_list] = DecodeTensor.special_sess_id_list;
 for m_i = 1:numel(mouse_list)
     mouse = mouse_list{m_i};
+    sess = sess_list{m_i};
     disp(mouse);
     %[n,m,e] = DecodingPlotGenerator.get_errors('NumNeurons', conn, mouse, 'unshuffled', 'IMSE', 'max');
-    [ns,ms,es] = DecodingPlotGenerator.get_errors('NumNeurons', conn, mouse, 'shuffled', 'IMSE', 'max');
+    [ns,ms,es] = DecodingPlotGenerator.get_errors('NumNeurons', conn, sess, 'shuffled', 'IMSE', 'max');
     hold on;
     DecodingPlotGenerator.errors_plotter(ns,ms,es, 'shuffled');
     %DecodingPlotGenerator.errors_plotter(n,m,e, 'unshuffled');
 end
 for m_i = 1:numel(mouse_list)
     mouse = mouse_list{m_i};
+    sess = sess_list{m_i};
     disp(mouse);
-    [n,m,e] = DecodingPlotGenerator.get_errors('NumNeurons', conn, mouse, 'unshuffled', 'IMSE', 'max');
+    [n,m,e] = DecodingPlotGenerator.get_errors('NumNeurons', conn, sess, 'unshuffled', 'IMSE', 'max');
     hold on;
     DecodingPlotGenerator.errors_plotter(n,m,e, 'unshuffled');
 end
@@ -49,6 +52,135 @@ print_svg(name);
 %print('-dpng', '-r900', fullfile(svg_save_dir, 'A.png'));
 %body
 conn.close;
+%% parameter fits
+load('fit_result_record.mat');
+N_fit_val = cellfun(@(x)x.N, fitresult);
+Ns_fit_val = cellfun(@(x)x.N, fitresult_s);
+confints = cellfun(@(x)confint(x), fitresult, 'UniformOutput', false);
+confints_s = cellfun(@(x)confint(x), fitresult_s, 'UniformOutput', false);
+N_err = N_fit_val - cellfun(@(x)x(1,2), confints);
+Ns_err = Ns_fit_val - cellfun(@(x)x(1,2), confints_s);
+figure;
+ballnstick('Unshuffled', 'Shuffled', N_fit_val, Ns_fit_val, N_err, Ns_err,...
+    'scatter', true, 'coloring', mouse_list, 'err_scale', 2, 'relative_err', true);
+set(gca, 'YScale', 'log');
+ylim([10 Inf]);
+set(gca, 'YTick', [10 100 1000 10000 100000]);
+ylabel(sprintf('N parameter fit\n(neurons)'));
+weighted_average_e = sum((1./N_fit_val) ./ (N_err./N_fit_val.^2)) ./ sum(1./(N_err./N_fit_val.^2));
+weighted_average_N = sum(N_fit_val ./ N_err) ./ sum(1./N_err);
+%l_ = refline(0, weighted_average_N); l_.Color = 'b';  l_.LineStyle = ':';
+weighted_average_es = sum((1./Ns_fit_val) ./ (Ns_err./Ns_fit_val.^2)) ./ sum(1./(Ns_err./Ns_fit_val.^2));
+weighted_average_Ns = sum(Ns_fit_val ./ Ns_err) ./ sum(1./Ns_err);
+%l_ = refline(0, weighted_average_Ns); l_.Color = 'r'; l_.LineStyle = ':';
+figure_format;
+print_svg('N_fit_scatter_all');
+%%
+figure;
+rat_ = Ns_fit_val./N_fit_val;
+[~, edges] = histcounts(log10(rat_));
+histogram(rat_, 10.^edges);
+set(gca, 'XScale', 'log');
+xlabel 'N ratio'
+ylabel 'Freq.'
+xlim([-Inf Inf]);
+set(gca, 'XTick', [1 10 100 1000]);
+figure_format([0.4 0.25], 'fontsize', 4);
+print_svg('N_fit_scatter_all_inset');
+%% showing distribution among mice
+labels = {'1','2','3','4','5','6','7','8','9','10','11','12';...
+    '1s','2s','3s','4s','5s','6s','7s','8s','9s','10s','11s','12s'};
+my_mice = unique(mouse_list);
+for i = 1:12
+    f_ = strcmp(mouse_list, my_mice{i});
+    N_{1,i} = N_fit_val(f_);
+    N_{2,i} = Ns_fit_val(f_);
+    e_{1,i} = N_err(f_);
+    e_{2,i} = Ns_err(f_);
+end
+figure;
+multiballnstick(labels, N_, e_);
+set(gca, 'YScale', 'log');
+ylim([-Inf Inf]);
+l_ = refline(0, median(N_fit_val)); l_.Color = 'b'; l_.LineStyle = ':';
+l_ = refline(0, median(Ns_fit_val)); l_.Color = 'r'; l_.LineStyle = ':';
+xlabel 'Mouse index'
+ylabel(sprintf('N parameter fit\n(neurons)'));
+figure_format([3 0.6]*2);
+set(gca, 'TickLength', [0.005 0])
+print_svg('multi_mouse_N_fit');
+%% displaying e
+e_fit_val = 1./N_fit_val;
+e_err = N_err ./ N_fit_val.^2;
+es_fit_val = 1./Ns_fit_val;
+es_err = Ns_err ./ Ns_fit_val.^2;
+for i = 1:12
+    f_ = strcmp(mouse_list, my_mice{i});
+    e_{1,i} = -e_fit_val(f_);
+    e_{2,i} = -es_fit_val(f_);
+    e_err_{1,i} = e_err(f_);
+    e_err_{2,i} = es_err(f_);
+end
+figure;
+%ballnstick('Unshuffled', 'Shuffled',...
+%    e_fit_val, es_fit_val, e_err, es_err,...
+%    'scatter', true, 'coloring', mouse_list, 'err_scale', 0.002);
+%figure_format;
+%multiballnstick(labels, e_, e_err_);
+%ylim([-Inf Inf]);
+%figure_format([2 0.6]*2);
+%set(gca, 'YTickLabel',...
+%    arrayfun(@(x)sprintf('%.0f',x), 1./get(gca, 'YTick'),...
+%    'UniformOutput', false));
+boxplot([N_fit_val;Ns_fit_val]', 'Labels',...
+    {'Unshuffled', 'Shuffled'}, 'OutlierSize', 2);
+set(gca, 'YScale', 'log');
+ylabel(sprintf('N parameter fit\n(neurons)'));
+set(gca, 'YTick', [100 1000 10000]);
+figure_format;
+print_svg('N_fit_boxplot');
+%% I0 fit boxplot
+I0_fit_val = cellfun(@(x)x.I_0, fitresult);
+I0s_fit_val = cellfun(@(x)x.I_0, fitresult_s);
+confints = cellfun(@(x)confint(x), fitresult, 'UniformOutput', false);
+confints_s = cellfun(@(x)confint(x), fitresult_s, 'UniformOutput', false);
+I0_err = I0_fit_val - cellfun(@(x)x(1,1), confints);
+I0s_err = I0s_fit_val - cellfun(@(x)x(1,1), confints_s);
+
+figure;
+boxplot([I0_fit_val;I0s_fit_val]', 'Labels',...
+    {'Unshuffled', 'Shuffled'}, 'OutlierSize', 2);
+[p_, h_] = signrank(I0_fit_val, I0s_fit_val);
+text(1.5,8e-4, Utils.pstar(p_), 'HorizontalAlignment', 'center');
+ylabel(sprintf('I_0 parameter fit\n(cm^{-2}neuron^{-1})'));
+
+figure_format;
+%set(gca, 'YTickLabel', arrayfun(@Utils.my_fmt, get(gca, 'YTick'), 'UniformOutput', false));
+print_svg('I0_fit_boxplot');
+%set(gca, 'YTickLabel', arrayfun(@Utils.my_fmt, get(gca, 'YTick') ,'UniformOutput', false));
+%% multi mouse I0 fit
+labels = {'1','2','3','4','5','6','7','8','9','10','11','12';...
+    '1s','2s','3s','4s','5s','6s','7s','8s','9s','10s','11s','12s'};
+my_mice = unique(mouse_list);
+for i = 1:12
+    f_ = strcmp(mouse_list, my_mice{i});
+    I0_{1,i} = I0_fit_val(f_);
+    I0_{2,i} = I0s_fit_val(f_);
+    e_{1,i} = I0_err(f_);
+    e_{2,i} = I0s_err(f_);
+end
+figure;
+multiballnstick(labels, I0_, e_);
+
+ylim([-Inf Inf]);
+l_ = refline(0, median(I0_fit_val)); l_.Color = 'b'; l_.LineStyle = ':';
+l_ = refline(0, median(I0s_fit_val)); l_.Color = 'r'; l_.LineStyle = ':';
+xlabel 'Mouse index'
+ylabel(sprintf('I_0 parameter fit\n(cm^{-2}neuron^{-1})'));
+figure_format([3 0.6]*2);
+set(gca, 'TickLength', [0.005 0])
+set(gca, 'YTickLabel', arrayfun(@Utils.my_fmt, get(gca, 'YTick'), 'UniformOutput', false));
+print_svg('multi_mouse_I0_fit');
 %% confusion mat %%TODO
 parfor i = 1:10
     D_T = DecodeTensor(i, 'rawTraces');

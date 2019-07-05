@@ -245,9 +245,14 @@ classdef DecodingPlotGenerator < handle
                 error_type = 'MSE';
                 special = 'inverse';
             end
+            if mouse(1) == 'M'
+                bc = @DecodeTensor.build_command;
+            else
+                bc = @DecodeTensor.build_command_sess;
+            end
             switch series_type
                 case 'NumNeurons'
-                    res = conn.fetch(DecodeTensor.build_command(mouse, setting, error_type, [], uniform_param));
+                    res = conn.fetch(bc(mouse, setting, error_type, [], uniform_param));
                     NumNeurons = cell2mat(res(:,1));
                     DataSize = cell2mat(res(:,2));
                     Error = cell2mat(res(:,3));
@@ -255,7 +260,7 @@ classdef DecodingPlotGenerator < handle
                     Uniform = DataSize;
                     Uniform_name = 'DataSize';
                 case 'DataSize'
-                    res = conn.fetch(DecodeTensor.build_command(mouse, setting, error_type, uniform_param, []));
+                    res = conn.fetch(bc(mouse, setting, error_type, uniform_param, []));
                     NumNeurons = cell2mat(res(:,1));
                     DataSize = cell2mat(res(:,2));
                     Error = cell2mat(res(:,3));

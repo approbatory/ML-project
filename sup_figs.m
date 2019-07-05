@@ -1035,11 +1035,20 @@ conn = sqlite(dbfile); %remember to close it
 mouse_list = {'Mouse2022', 'Mouse2019', 'Mouse2028'};
 for m_i = 1:numel(mouse_list)
     mouse = mouse_list{m_i};
-    disp(mouse);
-    [n,m,e] = DecodingPlotGenerator.get_errors('DataSize', conn, mouse, 'unshuffled', 'IMSE', 'max');
+    %disp(mouse);
+    %[n,m,e] = DecodingPlotGenerator.get_errors('DataSize', conn, mouse, 'unshuffled', 'IMSE', 'max');
     [ns,ms,es] = DecodingPlotGenerator.get_errors('DataSize', conn, mouse, 'shuffled', 'IMSE', 'max');
     hold on;
     DecodingPlotGenerator.errors_plotter(ns,ms,es, 'shuffled');
+    %DecodingPlotGenerator.errors_plotter(n,m,e, 'unshuffled');
+end
+for m_i = 1:numel(mouse_list)
+    mouse = mouse_list{m_i};
+    %disp(mouse);
+    [n,m,e] = DecodingPlotGenerator.get_errors('DataSize', conn, mouse, 'unshuffled', 'IMSE', 'max');
+    %[ns,ms,es] = DecodingPlotGenerator.get_errors('DataSize', conn, mouse, 'shuffled', 'IMSE', 'max');
+    hold on;
+    %DecodingPlotGenerator.errors_plotter(ns,ms,es, 'shuffled');
     DecodingPlotGenerator.errors_plotter(n,m,e, 'unshuffled');
 end
 xlabel 'Number of trials'
@@ -1047,14 +1056,82 @@ ylabel '1/MSE (cm^{-2})'
 xlim([0 200]);
 text(100, 0.325/5.9, 'Unshuffled', 'Color', 'blue');
 text(15, 0.8/5.9, 'Shuffled', 'Color', 'red');
-figure_format;
+line([30 30], ylim, 'Color', 'k', 'LineStyle', ':');
+figure_format([0.8125 1.5], 'fontsize', 6*6/6.4);
 
 print_svg(name);
 %print('-dsvg', fullfile(svg_save_dir, 'A.svg'));
 %print('-dpng', '-r900', fullfile(svg_save_dir, 'A.png'));
 %body
+figure;
+for m_i = 1:numel(mouse_list)
+    mouse = mouse_list{m_i};
+    %disp(mouse);
+    [n,m,e] = DecodingPlotGenerator.get_errors('DataSize', conn, mouse, 'unshuffled', 'IMSE', 'max');
+    [ns,ms,es] = DecodingPlotGenerator.get_errors('DataSize', conn, mouse, 'shuffled', 'IMSE', 'max');
+    hold on;
+    DecodingPlotGenerator.errors_plotter(ns, ms./m, ms./m.*sqrt((es./ms).^2+(e./m).^2), 'bah');
+    %DecodingPlotGenerator.errors_plotter(n,m,e, 'unshuffled');
+end
+
+xlabel 'Number of trials'
+ylabel '1/MSE ratio'
+xlim([0 200]);
+text(35, 1, sprintf('Shuffled/Unshuffled'), 'Color', 'black');
+line([30 30], ylim, 'Color', 'k', 'LineStyle', ':');
+figure_format([0.8125 1.5], 'fontsize', 6*6/6.4);
+
+print_svg('shuf_unshuf_ratio');
+conn.close;
+%%
+dbfile = 'decoding_all_sess.db';
+
+conn = sqlite(dbfile); %remember to close it
+%mouse_list = {'091246', '073912', '105544', '121404', '104915',...
+%              '125138', '093722', '115921', '104559', '104705', '103035', '105003'};
+[sess_list, mouse_list] = DecodeTensor.filt_sess_id_list;
+progressbar('sessions');
+for s_i = 1:numel(sess_list)
+    sess = sess_list{s_i};
+    %disp(mouse);
+    [n,m,e] = DecodingPlotGenerator.get_errors('NumNeurons', conn, sess, 'unshuffled', 'IMSE', 'max');
+    [fitresult{s_i}, gof{s_i}] = createFit_infoSaturation(n, m);
+    
+    [ns,ms,es] = DecodingPlotGenerator.get_errors('NumNeurons', conn, sess, 'shuffled', 'IMSE', 'max');
+    [fitresult_s{s_i}, gof_s{s_i}] = createFit_infoSaturation(ns, ms);
+    
+    [nd,md,ed] = DecodingPlotGenerator.get_errors('NumNeurons', conn, sess, 'diagonal', 'IMSE', 'max');
+    [fitresult_d{s_i}, gof_d{s_i}] = createFit_infoSaturation(nd, md);
+    
+    [N_vals{s_i}, N_confs{s_i}] = Utils.partial_fits(n, m);
+    n_size_values{s_i} = n;
+    %[ns,ms,es] = DecodingPlotGenerator.get_errors('DataSize', conn, mouse, 'shuffled', 'IMSE', 'max');
+    %hold on;
+    
+    %%N_estimation_err = diff(N_confs)/2;
+    %%semilogy(n, N_estimation_err);
+    %%est_err_at_150(m_i) = N_estimation_err(n == 150)./N_vals(end);
+    %plot(n, N_confs(1, :) > 0);
+    
+    %%DecodingPlotGenerator.errors_plotter(n, N_vals, diff(N_confs)/2, 'unshuffled');
+    %DecodingPlotGenerator.errors_plotter(ns, ms./m, ms./m.*sqrt((es./ms).^2+(e./m).^2), 'bah');
+    %DecodingPlotGenerator.errors_plotter(n,m,e, 'unshuffled');
+    progressbar(s_i/numel(sess_list));
+end
+%xlabel 'Number of cells'
+%ylabel 'N estimate'
+%xlim([0 500]);
+%set(gca, 'YScale', 'log');
 conn.close;
 
+save 'fit_result_record.mat' sess_list mouse_list fitresult fitresult_s fitresult_d gof gof_s gof_d N_vals N_confs n_size_values
+%%
+figure;
+for i=1:107
+    plot(n_size_values{i}, N_confs{i}(1,:), 'o');
+    hold on;
+end
+line([150 150], ylim, 'Color', 'k', 'LineStyle', '-');
 %%
 
 name = 'DataSize_controlled';

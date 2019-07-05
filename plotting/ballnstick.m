@@ -6,6 +6,7 @@ p.addOptional('e2', []);
 p.addOptional('scatter', false, @islogical);
 p.addOptional('coloring', {}, @iscell);
 p.addOptional('err_scale', 0.5, @isnumeric);
+p.addOptional('relative_err', false, @islogical);
 p.parse(varargin{:});
 e1 = p.Results.e1;
 e2 = p.Results.e2;
@@ -16,12 +17,17 @@ if ~isempty(e1) && ~isempty(e2) && (length(e1) == length(e2))
     hold on;
     
     if p.Results.scatter
+        if p.Results.relative_err
+            err_marker = p.Results.err_scale./[e1(:)'./y1(:)', e2(:)'./y2(:)'];
+        else
+            err_marker = p.Results.err_scale./[e1(:)', e2(:)'];
+        end
         if isempty(p.Results.coloring)
             scatter([ones(1,n), 2*ones(1,n)]+randn(1,2*n)*0.05,...
-                [y1(:)', y2(:)'], p.Results.err_scale./[e1(:)', e2(:)'], 'filled');
+                [y1(:)', y2(:)'], err_marker, 'filled');
         else
             scatter([ones(1,n), 2*ones(1,n)]+randn(1,2*n)*0.05,...
-                [y1(:)', y2(:)'], p.Results.err_scale./[e1(:)', e2(:)'],...
+                [y1(:)', y2(:)'], err_marker,...
                 categorical([p.Results.coloring p.Results.coloring]), 'filled');
         end
     else

@@ -420,5 +420,31 @@ classdef Utils %Common utilities for dealing with neural data
             expo_num = str2double(expo);
             r = [base, '·10^{', sprintf('%d', expo_num), '}'];
         end
+        
+        function [N_vals, N_confs] = partial_fits(n, m)
+            n_points = numel(n);
+            N_vals = zeros(1, n_points);
+            N_confs = zeros(2, n_points);
+            for i = 3:n_points
+                n_part = n(1:i);
+                m_part = m(1:i);
+                [fitresult, gof] = createFit_infoSaturation(n_part, m_part);
+                N_vals(i) = fitresult.N;
+                confints = confint(fitresult);
+                N_confs(:, i) = confints(:, 2);
+            end
+        end
+        
+        function signif_text = pstar(p)
+            if p < 0.001
+                signif_text = '***';
+            elseif p < 0.01
+                signif_text = '**';
+            elseif p < 0.05
+                signif_text = '*';
+            else
+                signif_text = 'n.s';
+            end
+        end
     end
 end

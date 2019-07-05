@@ -529,11 +529,13 @@ histogram(sm_slope(h_)); hold on;
 histogram(sms_slope(h_));
 %% median signal direction loadings 
 progressbar('Mouse', 'Ensemble Size', 'Samples');
-median_loadings = cell(10,1); median_loadings_s = median_loadings;
-for m_i = 1:10
-    d = DecodeTensor(m_i);
+[sess_list, mouse_list] = DecodeTensor.filt_sess_id_list;
+n_ = numel(sess_list);
+median_loadings = cell(n_,1); median_loadings_s = median_loadings;
+for m_i = 1:n_
+    d = DecodeTensor.cons_filt(m_i);
     n_max = size(d.data_tensor,1);
-    n_sizes = [2 (30:30:n_max) n_max];
+    n_sizes = [unique(ceil(10.^(0:0.1:log10(n_max)))) n_max];
     n_sizes_save{m_i} = n_sizes;
     n_reps = 20;
     for n_i = 1:numel(n_sizes)
