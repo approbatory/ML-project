@@ -402,6 +402,17 @@ classdef Utils %Common utilities for dealing with neural data
             R2_adj = gof.adjrsquare;
         end
         
+        function [fitresult, gof] = fit_slopechanger(x, y)
+            [xData, yData] = prepareCurveData(x, y);
+            ft = fittype( '(r_i*N*x+r_f*x^2)/(N+x)', 'independent', 'x', 'dependent', 'y' );
+            opts = fitoptions( 'Method', 'NonlinearLeastSquares' );
+            opts.Display = 'Off';
+            opts.StartPoint = [1 100 0];
+            
+            % Fit model to data.
+            [fitresult, gof] = fit( xData, yData, ft, opts );
+        end
+        
         function r = my_fmt(n, f)
             if ~exist('f', 'var')
                 f = '%.e';
@@ -496,6 +507,50 @@ classdef Utils %Common utilities for dealing with neural data
             if cleanup
                 rmdir(dname, 's');
             end
+        end
+        
+        function fname = ffetch(pattern)
+            S = dir(pattern);
+            if numel(S)~=1
+                error('One match not found for %s', pattern);
+            end
+            fname = S.name;
+        end
+        
+        function [val, err] = fit_get(fitresults, pname)
+            val = zeros(size(fitresults));
+            err = zeros(size(fitresults));
+            for i = 1:numel(fitresults)
+                if iscell(fitresults)
+                    fitresult = fitresults{i};
+                else
+                    fitresult = fitresults(i);
+                end
+                val(i) = fitresult.(pname);
+                confs = confint(fitresult);
+                p_names = coeffnames(fitresult);
+                err(i) = diff(confs(:,strcmp(p_names, pname)))/2;
+            end
+        end
+        
+        function bns_groupings(fit_val, fit_val_s, confs, confs_s, mouse_list)
+            a_ = {fit_val, fit_val_s, confs, confs_s, mouse_list};
+            assert(all(cellfun(@(x,y)isequal(size(x),size(y)), a_, circshift(a_,1))), 'all input sizes must match');
+            my_mice = unique(mouse_list);
+            for i = 1:numel(my_mice)
+                f_ = strcmp(mouse_list, my_mice{i});
+                y_{1,i} = fit_val(f_);
+                y_{2,i} = fit_val_s(f_);
+                e_{1,i} = confs(f_);
+                e_{2,i} = confs_s(f_);
+                
+            end%% TODO finish multiballnstick automator helper function
+            multiballnstick(1:numel(my_mice), y_, e_);
+        end
+        
+        
+        function res = cf_(f, varargin)
+            res = cellfun(f, varargin{:}, 'UniformOutput', false);
         end
     end
 end

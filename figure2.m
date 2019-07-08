@@ -523,6 +523,49 @@ ylabel(sprintf('\\sigma^2 along \\Delta\\mu\nrate of change'));
 
 figure_format;
 print_svg('rate_of_change_of_sigma2_scatter');
+%% signal and noise plots
+figure;
+[~, ~, sp_indices] = DecodeTensor.special_sess_id_list;
+for m_i = sp_indices
+    [dm2_slope, dm2_conf] = Utils.fitaline(n_sizes_full{m_i}, dm2_full{m_i});
+    v = dm2_slope;%mean(dm2{m_i}(:,end))./n_sizes_save{m_i}(end);
+    %v = 1;
+    if mean(sm_full{m_i}(:,end)./v) > 250
+        %fprintf('rogue index = %d\n', m_i);
+        continue;
+    end
+    if n_sizes_full{m_i}(end) < 200
+        continue;
+    end
+    fprintf('Including index %d\n', m_i);
+    Utils.neuseries(n_sizes_full{m_i}, dm2_full{m_i}./v, 'k'); hold on;
+    Utils.neuseries(n_sizes_full{m_i}, sm_full{m_i}./v, 'b');
+    Utils.neuseries(n_sizes_full{m_i}, sms_full{m_i}./v, 'r');
+end
+xlabel 'Number of cells'
+ylabel(sprintf('Distance\n(In units of cells)'));
+%axis equal
+text(20, 370, '(\Delta\mu)^2', 'Color', 'k', 'HorizontalAlignment', 'left');
+text(20, 470, '\sigma^2 along \Delta\mu', 'Color', 'b', 'HorizontalAlignment', 'left');
+text(20, 570, '\sigma^2 along \Delta\mu (Shuffled)', 'Color', 'r', 'HorizontalAlignment', 'left');
+figure_format;
+print_svg('signal_and_noise_growth');
+%% boxplot of final slope fit
+figure;
+for s_i = 1:numel(n_sizes_full)
+    [dm2_slope(s_i), dm2_conf(s_i)] = Utils.fitaline(n_sizes_full{s_i}, dm2_full{s_i});
+    v = dm2_slope(s_i);
+    %[changer_fit{s_i}, changer_fit_gof{s_i}] = Utils.fit_slopechanger(n_sizes_full{s_i}, mean(sm_full{s_i})./v);
+    %[changer_fit_s{s_i}, changer_fit_gof_s{s_i}] = Utils.fit_slopechanger(n_sizes_full{s_i}, mean(sms_full{s_i})./v);
+    [sm_slope(s_i), sm_conf(s_i)] = Utils.fitaline(n_sizes_full{s_i}, sm_full{s_i}./v, 100);
+    [sms_slope(s_i), sms_conf(s_i)] = Utils.fitaline(n_sizes_full{s_i}, sms_full{s_i}./v, 100);
+end
+%%
+boxplot([sm_slope; sms_slope]', {'Unshuffled';'Shuffled'});
+%%
+figure;
+ballnstick('Unshuffled', 'Shuffled', sm_slope, sms_slope, sm_conf, sms_conf);
+%%bookmark abcdefg
 %%
 figure;
 histogram(sm_slope(h_)); hold on;
