@@ -1421,13 +1421,18 @@ classdef DecodeTensor < handle
             m = cellfun(@(x)x(17:25), filt_paths, 'UniformOutput', false);
         end
         
-        function [l, m] = special_sess_id_list
+        function [l, m, indices] = special_sess_id_list
             l =  {'091246', '073912', '105544', '121404', '104915',...
                   '125138', '093722', '115921', '104559', '104705',...
                   '103035', '105003'};
             m = {'Mouse2023', 'Mouse2024', 'Mouse2028', 'Mouse2010',...
                  'Mouse2012', 'Mouse2019', 'Mouse2022', 'Mouse2026',...
                  'Mouse2011', 'Mouse2021', 'Mouse2025', 'Mouse2029'};
+            l_filt_sess = DecodeTensor.filt_sess_id_list;
+            indices = zeros(1,numel(l));
+            for i = 1:numel(l)
+                indices(i) = find(strcmp(l_filt_sess, l{i}),1);
+            end
         end
     end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
