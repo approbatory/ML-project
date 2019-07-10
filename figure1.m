@@ -940,20 +940,22 @@ figure_format('boxsize', [0.8125*3 0.585].*0.98);
 print_svg('raw_traj');
 
 %% correlation coefficients, unshuf + shuf
-n_mice = 10;
+n_mice = 107;
 unshuf_vals = cell(n_mice,1);
 shuf_vals = cell(n_mice,1);
-for m_i = 1:10
-    d = DecodeTensor(m_i);
+progressbar('session crunch');
+for m_i = 1:n_mice
+    d = DecodeTensor.cons_filt(m_i);
     [unshuf_corr, shuf_corr] = d.corr_values(10, -1);
     unshuf_vals{m_i} = Utils.corrs(unshuf_corr);
     shuf_vals{m_i} = Utils.corrs(shuf_corr);
+    progressbar(m_i/n_mice);
 end
 %noise correlation values, only for bin 10 leftwards, and values aggregated from
 %all mice
 unshuf_vals = cell2mat(unshuf_vals);
 shuf_vals = cell2mat(shuf_vals);
-%%
+%
 figure;
 edges = -1:0.01:1;
 points = (edges(1:end-1) + edges(2:end))/2;
@@ -968,13 +970,13 @@ plot(points, n_unshuf, 'b');
 xlabel 'Correlation coefficient'
 ylabel 'Number of cell pairs'
 
-set(gca, 'YTickLabel', {'0', '1·10^4', '2·10^4', '3·10^4'});
+%set(gca, 'YTickLabel', {'0', '1·10^4', '2·10^4', '3·10^4'});
 
 text(1, 2.8e4, 'Unshuffled', 'Color', 'b', 'HorizontalAlignment', 'Right');
 text(1, 2.3e4, 'Shuffled', 'Color', 'r', 'HorizontalAlignment', 'Right');
-figure_format;
+%figure_format;
 
-print_svg('correlation_values_shuf_unshuf');
+%print_svg('correlation_values_shuf_unshuf');
 
 %% fit I(n) = I_0 * n / (1 + n/N) schematic
 

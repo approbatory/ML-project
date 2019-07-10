@@ -545,12 +545,76 @@ classdef Utils %Common utilities for dealing with neural data
                 e_{2,i} = confs_s(f_);
                 
             end%% TODO finish multiballnstick automator helper function
-            multiballnstick(1:numel(my_mice), y_, e_);
+            multiballnstick(Utils.cf_(@(x)x(end-1:end),my_mice), y_, e_);
         end
         
         
         function res = cf_(f, varargin)
             res = cellfun(f, varargin{:}, 'UniformOutput', false);
+        end
+        
+        function res = cf_p(level, f, varargin)
+            m = numel(varargin);
+            n = numel(varargin{1});
+            progress_prefix = repmat({[]}, 1, level-1);
+            for i = 1:n
+                for j = 1:m
+                    inputs{j} = varargin{j}{i};
+                end
+                res{i} = f(inputs{:});
+                progressbar(progress_prefix{:}, i/n);
+            end
+        end
+        
+        function create_svg(fig, svg_save_dir, name)
+            print(fig, '-dsvg', fullfile(svg_save_dir, [name '.svg']));
+        end
+        
+        function specific_format(codename)
+            switch codename
+                case 'MBNS' %multi ball and stick
+                    ylim([-Inf Inf]);
+                    figure_format([3 0.6]*2);
+                    set(gca, 'TickLength', [0.005 0]);
+                    
+                case 'inset'
+                    figure_format([0.4 0.25], 'fontsize', 4);
+                otherwise
+                    error('Unrecognized codename: %s', codename);
+            end
+        end
+        
+        function horiz_boxplot(label1, label2, y1, y2)
+            boxplot([y1(:),y2(:)], {label1, label2},...
+                'OutlierSize', 0.5,...
+                'Orientation', 'Horizontal');
+            %[p, h] = signrank(y1, y2);
+            %
+            %signif_text = Utils.pstar(p);
+            %yl_ = ylim;
+            %text(1.5, yl_(1) + 0.8*diff(yl_), signif_text, 'HorizontalAlignment', 'center');
+        end
+        
+        function basic_boxplot(label1, label2, y1, y2)
+            boxplot([y1(:),y2(:)], {label1, label2},...
+                'OutlierSize', 0.5);
+            [p, h] = signrank(y1, y2);
+            
+            signif_text = Utils.pstar(p);
+            yl_ = ylim;
+            text(1.5, yl_(1) + 0.8*diff(yl_), signif_text, 'HorizontalAlignment', 'center');
+        end
+        
+        function basic_doublehist(label1, label2, y1, y2, edges)
+            histogram(y1, edges, 'FaceColor', 'b');
+            hold on;
+            histogram(y2, edges, 'FaceColor', 'r');
+            legend(label1, label2);
+            legend boxoff
+            [p, h] = signrank(y1, y2);
+            signif_text = Utils.pstar(p);
+            yl_ = ylim;
+            text(mean(xlim), yl_(1) + 0.8*diff(yl_), signif_text, 'HorizontalAlignment', 'center');
         end
     end
 end
