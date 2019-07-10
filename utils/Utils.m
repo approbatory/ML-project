@@ -616,5 +616,19 @@ classdef Utils %Common utilities for dealing with neural data
             yl_ = ylim;
             text(mean(xlim), yl_(1) + 0.8*diff(yl_), signif_text, 'HorizontalAlignment', 'center');
         end
+        
+        function fix_exponent(gca, axtype, fmat)
+            f = @(x)Utils.my_fmt(x, fmat);
+            switch upper(axtype)
+                case 'X'
+                    set(gca, 'XTickLabel', arrayfun(f, get(gca, 'XTick') ,'UniformOutput', false));
+                case 'Y'
+                    set(gca, 'YTickLabel', arrayfun(f, get(gca, 'YTick') ,'UniformOutput', false));
+                case 'Z'
+                    set(gca, 'ZTickLabel', arrayfun(f, get(gca, 'ZTick') ,'UniformOutput', false));
+                otherwise
+                    error('Can only be X Y or Z');
+            end
+        end
     end
 end

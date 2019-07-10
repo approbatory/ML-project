@@ -182,7 +182,9 @@ set(gca, 'TickLength', [0.005 0])
 set(gca, 'YTickLabel', arrayfun(@Utils.my_fmt, get(gca, 'YTick'), 'UniformOutput', false));
 print_svg('multi_mouse_I0_fit');
 %% confusion mat %%TODO
-parfor i = 1:10
+progressbar('sess crunch');
+n_sess = 10;
+for i = 1:n_sess
     D_T = DecodeTensor(i, 'rawTraces');
     
     [~, ~, ps, ks, ~] = D_T.basic_decode(false, [], []);
@@ -206,6 +208,7 @@ parfor i = 1:10
     CsC = (C_s - C)./C;
     CsC(isnan(CsC)) = 0;
     disp(i);
+    progressbar(i/n_sess);
 end
 %%
 figure;
@@ -955,7 +958,8 @@ end
 %all mice
 unshuf_vals = cell2mat(unshuf_vals);
 shuf_vals = cell2mat(shuf_vals);
-%
+%%
+load('raw_corr_values.mat');
 figure;
 edges = -1:0.01:1;
 points = (edges(1:end-1) + edges(2:end))/2;
@@ -972,11 +976,12 @@ ylabel 'Number of cell pairs'
 
 %set(gca, 'YTickLabel', {'0', '1·10^4', '2·10^4', '3·10^4'});
 
-text(1, 2.8e4, 'Unshuffled', 'Color', 'b', 'HorizontalAlignment', 'Right');
-text(1, 2.3e4, 'Shuffled', 'Color', 'r', 'HorizontalAlignment', 'Right');
-%figure_format;
+text(1, 4.5*2.8e4, 'Unshuffled', 'Color', 'b', 'HorizontalAlignment', 'Right');
+text(1, 4.5*2.3e4, 'Shuffled', 'Color', 'r', 'HorizontalAlignment', 'Right');
+Utils.fix_exponent(gca, 'Y', 1);
+figure_format;
 
-%print_svg('correlation_values_shuf_unshuf');
+Utils.create_svg(gcf, 'figure1_svg', 'correlation_values_shuf_unshuf');
 
 %% fit I(n) = I_0 * n / (1 + n/N) schematic
 
