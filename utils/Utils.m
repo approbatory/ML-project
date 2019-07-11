@@ -533,7 +533,10 @@ classdef Utils %Common utilities for dealing with neural data
             end
         end
         
-        function bns_groupings(fit_val, fit_val_s, confs, confs_s, mouse_list)
+        function bns_groupings(fit_val, fit_val_s, confs, confs_s, mouse_list, is_grouped)
+            if ~exist('is_grouped', 'var')
+                is_grouped = false;
+            end
             a_ = {fit_val, fit_val_s, confs, confs_s, mouse_list};
             assert(all(cellfun(@(x,y)isequal(size(x),size(y)), a_, circshift(a_,1))), 'all input sizes must match');
             my_mice = unique(mouse_list);
@@ -545,7 +548,11 @@ classdef Utils %Common utilities for dealing with neural data
                 e_{2,i} = confs_s(f_);
                 
             end%% TODO finish multiballnstick automator helper function
-            multiballnstick(Utils.cf_(@(x)x(end-1:end),my_mice), y_, e_);
+            if is_grouped
+                grouped_ballnstick({'Unshuffled', 'Shuffled'}, y_, e_);
+            else
+                multiballnstick(Utils.cf_(@(x)x(end-1:end),my_mice), y_, e_);
+            end
         end
         
         
@@ -562,6 +569,19 @@ classdef Utils %Common utilities for dealing with neural data
                     inputs{j} = varargin{j}{i};
                 end
                 res{i} = f(inputs{:});
+                progressbar(progress_prefix{:}, i/n);
+            end
+        end
+        
+        function [res1, res2] = cf_p2(level, f, varargin)
+            m = numel(varargin);
+            n = numel(varargin{1});
+            progress_prefix = repmat({[]}, 1, level-1);
+            for i = 1:n
+                for j = 1:m
+                    inputs{j} = varargin{j}{i};
+                end
+                [res1{i}, res2{i}] = f(inputs{:});
                 progressbar(progress_prefix{:}, i/n);
             end
         end

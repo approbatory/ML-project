@@ -109,6 +109,14 @@ ylabel(sprintf('N parameter fit\n(neurons)'));
 figure_format([3 0.6]*2);
 set(gca, 'TickLength', [0.005 0])
 print_svg('multi_mouse_N_fit');
+
+figure;
+grouped_ballnstick({'Unshuffled', 'Shuffled'}, N_, e_);
+set(gca, 'YScale', 'log');
+%ylim([-Inf Inf]);
+ylabel(sprintf('N parameter fit\n(neurons)'));
+figure_format;
+print_svg('grouped_mouse_N_fit');
 %% displaying e
 e_fit_val = 1./N_fit_val;
 e_err = N_err ./ N_fit_val.^2;
@@ -181,6 +189,14 @@ figure_format([3 0.6]*2);
 set(gca, 'TickLength', [0.005 0])
 set(gca, 'YTickLabel', arrayfun(@Utils.my_fmt, get(gca, 'YTick'), 'UniformOutput', false));
 print_svg('multi_mouse_I0_fit');
+
+figure;
+grouped_ballnstick({'Unshuffled', 'Shuffled'}, I0_, e_);
+ylim([-Inf Inf]);
+ylabel(sprintf('I_0 parameter fit\n(cm^{-2}neuron^{-1})'));
+figure_format;
+set(gca, 'YTickLabel', arrayfun(@Utils.my_fmt, get(gca, 'YTick'), 'UniformOutput', false));
+print_svg('grouped_mouse_I0_fit');
 %% confusion mat %%TODO
 progressbar('sess crunch');
 n_sess = 10;

@@ -1127,11 +1127,34 @@ conn.close;
 save 'fit_result_record.mat' sess_list mouse_list fitresult fitresult_s fitresult_d gof gof_s gof_d N_vals N_confs n_size_values
 %%
 figure;
+n_sizes_under_0 = [];
+total_n = [];
 for i=1:107
-    plot(n_size_values{i}, N_confs{i}(1,:), 'o');
+    %plot(n_size_values{i}, N_confs{i}(1,:), '.-');
+    %size(n_size_values{i})
+    %size(n_size_values{i}(N_confs{i}(1,:) < 0))
+    n_sizes_under_0 = [n_sizes_under_0;n_size_values{i}(N_confs{i}(1,:) < 0)];
+    total_n = [total_n;n_size_values{i}];
     hold on;
 end
-line([150 150], ylim, 'Color', 'k', 'LineStyle', '-');
+histogram(total_n); hold on;
+histogram(n_sizes_under_0);
+
+line([150 150], ylim, 'Color', 'm', 'LineStyle', '-');
+legend 'Sizes tested' 'Lower 95% confidence bound < 0' '150 cells criterion'
+xlabel 'Number of cells'
+ylabel 'Frequency'
+%%
+figure;
+for i = 1:107
+    plot(n_size_values{i}, diff(N_confs{i})./N_vals{i}, '.-');
+    hold on;
+end
+xlabel 'Number of cells'
+ylabel 'N confidence interval size / N value'
+set(gca, 'YScale', 'log');
+line([150 150], ylim, 'Color', 'm', 'LineStyle', '-');
+l_ = refline(0,1); l_.Color = 'k';
 %%
 
 name = 'DataSize_controlled';

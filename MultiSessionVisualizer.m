@@ -4,6 +4,115 @@
 
 classdef MultiSessionVisualizer
     methods(Static)
+        function Confusion
+            load('confusion_agg_190710-161742_0.mat');
+            
+            tot_num_trials = sum([res.num_trials]);
+            tot_cdiff = sum(cat(3, res.sum_CDiff),3)/20; %dividing by number of reps
+            normed_cdiff = tot_cdiff./tot_num_trials;
+            figure;
+            imagesc(normed_cdiff);
+            colorbar;
+            colormap(bluewhitered);
+            xlabel 'Predicted bin'
+            ylabel 'Correct bin'
+            axis equal;
+            xlim([0.5 40.5]); ylim([0.5 40.5]);
+            set(gca, 'XTickLabel', {'10R', '20R', '10L', '20L'});
+            set(gca, 'YTickLabel', {'10R', '20R', '10L', '20L'});
+            line([20.5 20.5], ylim, 'Color', 'k');
+            line(xlim, [20.5 20.5], 'Color', 'k');
+            figure_format('boxsize', [0.75 0.85]); box on;
+            p_ = get(gcf, 'Position');
+            set(gcf, 'Position', [p_(1:2), p_(3)*1.5, p_(4)]);
+            Utils.create_svg(gcf, 'figure1_svg', 'confusion_diff_both_dirs');
+        end
+        
+        function Decoding
+            dbfile = 'decoding_all_sess.db';
+            conn = sqlite(dbfile);
+            samp_size = 20;
+            bc = @DecodeTensor.build_command_sess;
+            [sess, mouse_names] = DecodeTensor.filt_sess_id_list;
+            q = @Utils.cf_p;
+            res = q(1,@(s)conn.fetch(bc(s, 'unshuffled', 'MSE', [], 'max')), sess);
+            n_sizes = q(1,@(r)double(cell2mat(r(:,1))), res);
+            imse = q(1,@(r)1./cell2mat(r(:,3)), res);
+            [n_sizes, imse] = Utils.cf_p2(1,...
+                @(n,i)MultiSessionVisualizer.regroup(n, i, samp_size),...
+                n_sizes, imse);
+            
+            res_s = q(1,@(s)conn.fetch(bc(s, 'shuffled', 'MSE', [], 'max')), sess);
+            n_sizes_s = q(1,@(r)double(cell2mat(r(:,1))), res_s);
+            imse_s = q(1,@(r)1./cell2mat(r(:,3)), res_s);
+            [n_sizes_s, imse_s] = Utils.cf_p2(1,...
+                @(n,i)MultiSessionVisualizer.regroup(n, i, samp_size),...
+                n_sizes_s, imse_s);
+            assert(isequal(n_sizes, n_sizes_s), 'mismatch between unshuffled and shuffled sampling');
+            MultiSessionVisualizer.plot_series(n_sizes, {imse, imse_s}, {'b', 'r'}, mouse_names, 0.18);
+            xlabel 'Number of cells'
+            ylabel '1/MSE (cm^{-2})'
+            multi_figure_format;
+            Utils.create_svg(gcf, 'supplements_svg', 'multi_decoding_IMSE_curves');
+            
+            series_fits = q(1,@(s)q(2,@(n,m)createFit_infoSaturation(n(:),mean(m)'), n_sizes, s), {imse, imse_s});
+            [I0_fit, I0_conf] = Utils.fit_get(series_fits{1}, 'I_0');
+            [I0_fit_s, I0_conf_s] = Utils.fit_get(series_fits{2}, 'I_0');
+            
+            [N_fit, N_conf] = Utils.fit_get(series_fits{1}, 'N');
+            [N_fit_s, N_conf_s] = Utils.fit_get(series_fits{2}, 'N');
+            
+            figure;
+            Utils.bns_groupings(I0_fit, I0_fit_s, I0_conf, I0_conf_s, mouse_names);
+            xlabel 'Mouse index';
+            ylabel(sprintf('I_0 fit value\n(cm^{-2}neuron^{-1})'));
+            Utils.specific_format('MBNS');
+            Utils.fix_exponent(gca, 'Y', 0);
+            Utils.create_svg(gcf, 'supplements_svg', 'multi_I0_fit');
+            
+            figure;
+            Utils.bns_groupings(I0_fit, I0_fit_s, I0_conf, I0_conf_s, mouse_names, true);
+            ylim([-Inf Inf]);
+            ylabel(sprintf('I_0 fit value\n(cm^{-2}neuron^{-1})'));
+            figure_format;
+            Utils.fix_exponent(gca, 'Y', 0);
+            Utils.create_svg(gcf, 'figure1_svg', 'grouped_I0_fit');
+            
+            figure;
+            Utils.bns_groupings(N_fit, N_fit_s, N_conf, N_conf_s, mouse_names);
+            set(gca, 'YScale', 'log');
+            xlabel 'Mouse index';
+            ylabel(sprintf('N fit value\n(neuron)'));
+            Utils.specific_format('MBNS');
+            Utils.create_svg(gcf, 'supplements_svg', 'multi_N_fit');
+            
+            figure;
+            Utils.bns_groupings(N_fit, N_fit_s, N_conf, N_conf_s, mouse_names, true);
+            set(gca, 'YScale', 'log');
+            %ylim([-Inf Inf]);
+            ylabel(sprintf('N fit value\n(neuron)'));
+            figure_format;
+            Utils.create_svg(gcf, 'figure1_svg', 'grouped_N_fit');
+            
+            figure;
+            [~,~,select_indices] = DecodeTensor.special_sess_id_list;
+            MultiSessionVisualizer.plot_single_filtered(n_sizes, {imse, imse_s}, {'b','r'}, select_indices);
+            xlabel 'Number of cells'
+            ylabel '1/MSE (cm^{-2})'
+            figure_format([1 1.4]);
+            Utils.create_svg(gcf, 'figure1_svg', 'decoding_IMSE_curves_selected');
+        end
+        
+        function [n, err] = regroup(n_samp, err_samp, samp_size)
+            n = unique(n_samp);
+            err = zeros(samp_size, numel(n));
+            for i = 1:numel(n)
+                my_n = n(i);
+                my_es = err_samp(n_samp == my_n);
+                err(:,i) = my_es(randperm(numel(my_es)) <= samp_size);
+            end
+        end
+        
         function MedLoad
             load('MedLoad_agg_190705-171806_0.mat');
             n_sizes = {res.n_sizes};
@@ -32,6 +141,17 @@ classdef MultiSessionVisualizer
             ylabel 'Fit exponent'
             Utils.specific_format('MBNS');
             Utils.create_svg(gcf, 'supplements_svg', 'multi_medload_exponents');
+            
+            figure;
+            Utils.bns_groupings(rate_f, rate_f_s, rate_f_conf, rate_f_s_conf, mouse_name, true);
+            hold on;
+            line(xlim-0.5, [0 0], 'Color', 'k', 'LineStyle', '-');
+            line(xlim, [-0.5 -0.5], 'Color', 'k', 'LineStyle', ':');
+            ylabel 'Fit exponent'
+            ylim([-Inf Inf]);
+            set(gca, 'XTickLabels', {'Unsh.', 'Sh.'});
+            figure_format([0.8 1]/2, 'fontsize', 4);
+            Utils.create_svg(gcf, 'figure2_svg', 'group_medload_exponents');
             
             figure;
             %boxplot([rate_f(:), rate_f_s(:)], {'Unsh.', 'Sh.'});
@@ -114,11 +234,20 @@ classdef MultiSessionVisualizer
             Utils.create_svg(gcf, 'supplements_svg', 'multi_noise_rate_of_change');
             
             figure;
+            Utils.bns_groupings(sm_slope, sms_slope, sm_conf, sms_conf, mouse_list, true);
+            ylim([-Inf Inf]);
+            ylabel(sprintf('\\sigma^2 along \\Delta\\mu\nrate of change'));
+            figure_format;
+            Utils.create_svg(gcf, 'figure2_svg', 'grouped_noise_rate_of_change');
+            
+            figure;
             Utils.basic_doublehist('Unshuffled', 'Shuffled', sm_slope, sms_slope, -0.1:0.05:1.1);
             xlim([-0.1 1.1]);
             xlabel(sprintf('\\sigma^2 along \\Delta\\mu\nrate of change'));
             figure_format;
             Utils.create_svg(gcf, 'figure2_svg', 'hist_noise_rate_of_change');
+            
+            pause;
             
             figure;
             Utils.horiz_boxplot('Unsh.', 'Sh.', sm_slope, sms_slope);
@@ -201,7 +330,10 @@ classdef MultiSessionVisualizer
             Utils.create_svg(gcf, 'figure2_svg', 'I0_value_regression');
         end
         
-        function plot_series(n_sizes, series_cell, color_cell, mouse_list)
+        function plot_series(n_sizes, series_cell, color_cell, mouse_list, max_y_val)
+            if ~exist('max_y_val', 'var')
+                max_y_val = Inf;
+            end
             figure;
             mouse_names = unique(mouse_list);
             num_mice = numel(mouse_names);
@@ -220,7 +352,7 @@ classdef MultiSessionVisualizer
                     end %session in mouse
                 end %quantity shown
                 xlim([0 500]);
-                ylim([0 Inf]);
+                ylim([0 max_y_val]);
                 title(mouse_names{m_i});
             end %mice id
         end %func
