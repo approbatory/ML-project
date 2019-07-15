@@ -49,6 +49,7 @@ classdef MultiSessionVisualizer
                 @(n,i)MultiSessionVisualizer.regroup(n, i, samp_size),...
                 n_sizes_s, imse_s);
             assert(isequal(n_sizes, n_sizes_s), 'mismatch between unshuffled and shuffled sampling');
+            if false %cancelling unnecessary plots
             MultiSessionVisualizer.plot_series(n_sizes, {imse_s, imse}, {'r', 'b'}, mouse_names, 0.18);
             xlabel 'Number of cells'
             ylabel '1/MSE (cm^{-2})'
@@ -117,6 +118,46 @@ classdef MultiSessionVisualizer
             ylabel '1/MSE (cm^{-2})'
             figure_format([0.8125 1.5]);
             Utils.create_svg(gcf, 'figure1_svg', 'decoding_IMSE_curves_selected_colored');
+            end %if false
+            
+            figure;
+            [mouse_identity, agg_n_values, agg_imse_values] =...
+                MultiSessionVisualizer.aggregate_sess_per_mouse(n_sizes, imse, mouse_names);
+            [mouse_identity_s, agg_n_values_s, agg_imse_values_s] =...
+                MultiSessionVisualizer.aggregate_sess_per_mouse(n_sizes, imse_s, mouse_names);
+            MultiSessionVisualizer.plot_single_agg(agg_n_values, {agg_imse_values_s, agg_imse_values}, {'r', 'b'}, mouse_identity);
+            %almenaux
+            xlabel 'Number of cells'
+            ylabel '1/MSE (cm^{-2})'
+            figure_format([0.8125 1.5]);
+            Utils.create_svg(gcf, 'figure1_svg', 'decoding_IMSE_curves_mouse_aggregated');
+            %keyboard;
+            agg_imse_mean = Utils.cf_(@(x)cellfun(@mean,x),agg_imse_values);
+            agg_imse_mean_s = Utils.cf_(@(x)cellfun(@mean,x),agg_imse_values_s);
+            series_fits_agg = q(1,@(s)q(2,@(n,m)createFit_infoSaturation(n(:),m'), agg_n_values, s),...
+                {agg_imse_mean, agg_imse_mean_s});
+            [agg_I0_fit, agg_I0_conf] = Utils.fit_get(series_fits_agg{1}, 'I_0');
+            [agg_I0_fit_s, agg_I0_conf_s] = Utils.fit_get(series_fits_agg{2}, 'I_0');
+            
+            [agg_N_fit, agg_N_conf] = Utils.fit_get(series_fits_agg{1}, 'N');
+            [agg_N_fit_s, agg_N_conf_s] = Utils.fit_get(series_fits_agg{2}, 'N');
+            
+            figure;
+            ballnstick('Unshuffled', 'Shuffled', agg_I0_fit, agg_I0_fit_s, agg_I0_conf, agg_I0_conf_s);
+            ylim([-Inf Inf]);
+            ylabel(sprintf('I_0 fit value\n(cm^{-2}neuron^{-1})'));
+            figure_format;
+            Utils.fix_exponent(gca, 'Y', 1);
+            Utils.create_svg(gcf, 'figure1_svg', 'agg_I0_fit');
+            
+            figure;
+            ballnstick('Unshuffled', 'Shuffled', agg_N_fit, agg_N_fit_s, agg_N_conf, agg_N_conf_s);
+            set(gca, 'YScale', 'log');
+            ylim([-Inf Inf]);
+            set(gca, 'YTick', [1e2 1e4 1e6]);
+            ylabel(sprintf('N fit value\n(neuron)'));
+            figure_format;
+            Utils.create_svg(gcf, 'figure1_svg', 'agg_N_fit');
         end
         
         function [n, err] = regroup(n_samp, err_samp, samp_size)
@@ -390,6 +431,20 @@ classdef MultiSessionVisualizer
             ylim([0 Inf]);
         end%func
         
+        function plot_single_agg(n_sizes, series_cell, color_cell, mouse_identity)
+            for j = 1:numel(series_cell)
+                s_ = series_cell{j};
+                c_ = color_cell{j};
+                for k = 1:numel(s_)
+                    s_set = s_{k};
+                    s_mean = cellfun(@mean, s_set);
+                    s_err = 1.96.*cellfun(@(x)std(x)./sqrt(length(x)), s_set);
+                    hold on;
+                    shadedErrorBar(n_sizes{k}, s_mean, s_err, 'lineprops', c_);
+                end
+            end
+        end
+        
         function plot_single_filtered_sesscolor(n_sizes, series_cell, color_cell, filter_selection)
             n_sizes = n_sizes(filter_selection);
             series_cell = Utils.cf_(@(x)x(filter_selection), series_cell);
@@ -409,6 +464,22 @@ classdef MultiSessionVisualizer
             ylim([0 Inf]);
         end%func
         
-        %function 
+        function [my_mice, n_vals, corresponding_mean_ms] = aggregate_sess_per_mouse(ns, ms, mouse_name)
+            ns = ns(:); ms = ms(:); mouse_name = mouse_name(:);
+            my_mice = unique(mouse_name);
+            for m_i = 1:numel(my_mice)
+                my_mouse = my_mice{m_i};
+                f_ = strcmp(mouse_name, my_mouse);
+                my_ns = ns(f_);
+                my_ms = ms(f_);
+                n_vals{m_i} = unique(cell2mat(Utils.cf_(@(x)x(:)', my_ns(:)')));
+                for n_i = 1:numel(n_vals{m_i})
+                    my_n = n_vals{m_i}(n_i);
+                    corresponding_mean_ms{m_i}{n_i} = ...
+                        cell2mat(Utils.cf_(@(f, m_) mean(m_(:,f)),...
+                        Utils.cf_(@(n_) n_ == my_n, my_ns), my_ms)');
+                end
+            end
+        end
     end%methods
 end%classdef
