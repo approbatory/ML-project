@@ -178,6 +178,7 @@ classdef DecodeTensor < handle
             opt.pad_seconds = 0.8;
             opt.discard_incomplete_trials = true;
             opt.restrict_cell_distance = 0;
+            opt.interactive = false;
         end
         
         
@@ -253,10 +254,10 @@ classdef DecodeTensor < handle
             else
                 error('No such field %s. Options are rawTraces, rawProb, spikeDeconv, FST_events, FST_filled, FST_padded', fieldname);
             end
-            if strcmp(mouse_id, 'Mouse2022')
-                track_coord = track_coord(91:end);
-                X = X(91:end,:);
-            end
+            %if strcmp(mouse_id, 'Mouse2022')
+            %    track_coord = track_coord(91:end);
+            %    X = X(91:end,:);
+            %end
             if strcmp(opt.neural_data_type, 'FST_events')
                 X = Utils.event_detection(X);
             end
@@ -511,6 +512,20 @@ classdef DecodeTensor < handle
             %calculation of velocity in cm/s
             vel = [0; diff(track_coord)] .* cpp .* samp_freq;
             
+            if opt.interactive
+                figure;
+                time_coord = (1:numel(track_coord))./samp_freq;
+                position_coord = cpp.*(track_coord - prctile(track_coord, cutoff_p));
+                lgn(1) = plot(time_coord, position_coord, '-ok');
+                l_ = refline(0, 0); l_.Color = 'k'; l_.LineStyle = ':';
+                l_ = refline(0, total_length); l_.Color = 'k'; l_.LineStyle = ':';
+                ylim([0 total_length]);
+                xlim([1300 1500]);
+                xlabel 'Time (s)'
+                ylabel 'Position (cm)'
+                %pause;
+            end
+            
             %select only frames above the threshold velocity (4cm/s by
             %default)
             fast_frames = abs(vel) > v_thresh;
@@ -518,6 +533,18 @@ classdef DecodeTensor < handle
             trial_start = find(diff(fast_frames) == 1);
             trial_end = find(diff(fast_frames) == -1);
             trial_start = trial_start(1:numel(trial_end));
+            
+            if opt.interactive
+                hold on;
+                position_coord_non_trials_only = position_coord;
+                for tr_i = 1:numel(trial_start)
+                    position_coord_non_trials_only(trial_start(tr_i):trial_end(tr_i)) = nan;
+                end
+                lgn(2) = plot(time_coord, position_coord_non_trials_only, '-or');
+                num_trials_total = numel(trial_start);
+                title(sprintf('Trials found: %d (>%.2f cm/s)', num_trials_total, v_thresh));
+                %pause;
+            end
             
             %filter out the trials that don't start at one end of the
             %track and end at the other end of the track
@@ -528,6 +555,24 @@ classdef DecodeTensor < handle
             
             trial_start = trial_start(regular_trial);
             trial_end = trial_end(regular_trial);
+            
+            if opt.interactive
+                position_coord_irregular_trials_only = position_coord;
+                position_coord_irregular_trials_only(~isnan(position_coord_non_trials_only)) = nan;
+                for tr_i = 1:numel(trial_start)
+                    position_coord_irregular_trials_only(trial_start(tr_i):trial_end(tr_i)) = nan;
+                end
+                lgn(3) = plot(time_coord, position_coord_irregular_trials_only, '-og');
+                num_trials_regular = numel(trial_start);
+                title(sprintf('Total trials: %d, Regular trials: %d', num_trials_total, num_trials_regular));
+                %title ''
+                
+                for b_i = 1:n_bins
+                    l_ = refline(0, total_length*b_i/n_bins); l_.Color = 'k'; l_.LineStyle = ':';
+                end
+                legend(lgn, 'Used trials (fast part starts & ends at edge bins)', 'Not trials', 'Irregular trials (fast part starts or ends at a non-edge bin)');
+                pause;
+            end
             
             %determine the direction of motion for each trial
             trial_direction((track_coord(trial_start) < b) & (track_coord(trial_end) > t)) = 1;
@@ -1259,7 +1304,7 @@ classdef DecodeTensor < handle
                     [coeff{i_d, i_b}, latent{i_d, i_b}] = pcacov(Noise_Cov{i_d, i_b});
                     Noise_Cov_s{i_d, i_b} = cov(X_noise_s);
                     %if using_corr
-                    %    Noise_Cov_s{i_d, i_b} = eye(total_neurons);
+                   c %    Noise_Cov_s{i_d, i_b} = eye(total_neurons);
                     %end
                     %if using_corr
                     %    SD = sqrt(diag(Noise_Cov_s{i_d, i_b}));
@@ -1387,11 +1432,18 @@ classdef DecodeTensor < handle
 
         end
         
-        function o = cons(index)
+        function o = cons(index, no_create)
+            if ~exist('no_create', 'var')
+                no_create = false;
+            end
             L = load('sheet_paths.mat');
             my_source_path = L.sheet_paths{index};
             my_mouse_name = my_source_path(17:25);
-            o = DecodeTensor({my_source_path, my_mouse_name});
+            if no_create
+                o = {my_source_path, my_mouse_name};
+            else
+                o = DecodeTensor({my_source_path, my_mouse_name});
+            end
         end
         
         function o = cons_filt(index_filt, no_create)

@@ -49,7 +49,7 @@ classdef MultiSessionVisualizer
                 @(n,i)MultiSessionVisualizer.regroup(n, i, samp_size),...
                 n_sizes_s, imse_s);
             assert(isequal(n_sizes, n_sizes_s), 'mismatch between unshuffled and shuffled sampling');
-            MultiSessionVisualizer.plot_series(n_sizes, {imse, imse_s}, {'b', 'r'}, mouse_names, 0.18);
+            MultiSessionVisualizer.plot_series(n_sizes, {imse_s, imse}, {'r', 'b'}, mouse_names, 0.18);
             xlabel 'Number of cells'
             ylabel '1/MSE (cm^{-2})'
             multi_figure_format;
@@ -96,11 +96,27 @@ classdef MultiSessionVisualizer
             
             figure;
             [~,~,select_indices] = DecodeTensor.special_sess_id_list;
-            MultiSessionVisualizer.plot_single_filtered(n_sizes, {imse, imse_s}, {'b','r'}, select_indices);
+            MultiSessionVisualizer.plot_single_filtered(n_sizes, {imse_s, imse}, {'r', 'b'}, select_indices);
             xlabel 'Number of cells'
             ylabel '1/MSE (cm^{-2})'
-            figure_format([1 1.4]);
+            figure_format([0.8125 1.5]);
             Utils.create_svg(gcf, 'figure1_svg', 'decoding_IMSE_curves_selected');
+            
+            figure;
+            [~,m_,select_indices] = DecodeTensor.special_sess_id_list;
+            [~, o_] = sort(m_);
+            select_indices = select_indices(o_);
+            %%TODO change colorcell
+            l_ = lines; 
+            colorcell = mat2cell(l_(1:numel(select_indices),:), ones(1,numel(select_indices)), 3);
+            colorcell = [Utils.cf_(@(x)x, colorcell), colorcell]';
+            MultiSessionVisualizer.plot_single_filtered_sesscolor(n_sizes, {imse_s, imse},...
+                colorcell,...
+                select_indices);
+            xlabel 'Number of cells'
+            ylabel '1/MSE (cm^{-2})'
+            figure_format([0.8125 1.5]);
+            Utils.create_svg(gcf, 'figure1_svg', 'decoding_IMSE_curves_selected_colored');
         end
         
         function [n, err] = regroup(n_samp, err_samp, samp_size)
@@ -150,7 +166,8 @@ classdef MultiSessionVisualizer
             ylabel 'Fit exponent'
             ylim([-Inf Inf]);
             set(gca, 'XTickLabels', {'Unsh.', 'Sh.'});
-            figure_format([0.8 1]/2, 'fontsize', 4);
+            %figure_format([0.8 1]/2, 'fontsize', 4);
+            Utils.specific_format('inset');
             Utils.create_svg(gcf, 'figure2_svg', 'group_medload_exponents');
             
             figure;
@@ -173,7 +190,8 @@ classdef MultiSessionVisualizer
             ylabel 'max_\alpha|cos(PC_\alpha, \Delta\mu)|'
             xlim([1 500]);
             ylim([-Inf 1]);
-            figure_format([1 1.4]);
+            %figure_format([1 1.4]);
+            figure_format;
             Utils.create_svg(gcf, 'figure2_svg', 'medload_selected');
         end
         
@@ -370,6 +388,27 @@ classdef MultiSessionVisualizer
             end %quantity shown
             xlim([0 500]);
             ylim([0 Inf]);
-        end%func 
+        end%func
+        
+        function plot_single_filtered_sesscolor(n_sizes, series_cell, color_cell, filter_selection)
+            n_sizes = n_sizes(filter_selection);
+            series_cell = Utils.cf_(@(x)x(filter_selection), series_cell);
+            for j = 1:numel(series_cell)
+                s_ = series_cell{j};
+                %c_ = color_cell{j};
+                for k = 1:numel(s_)
+                    h_ = Utils.neuseries(n_sizes{k}, s_{k}, 'k');
+                    set(h_.edge, 'Color', color_cell{j,k});
+                    h_.patch.FaceColor = color_cell{j,k};
+                    h_.patch.EdgeColor = color_cell{j,k};
+                    h_.mainLine.Color = color_cell{j,k};
+                    hold on;
+                end %session
+            end %quantity shown
+            xlim([0 500]);
+            ylim([0 Inf]);
+        end%func
+        
+        %function 
     end%methods
 end%classdef
