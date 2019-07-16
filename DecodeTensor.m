@@ -437,8 +437,55 @@ classdef DecodeTensor < handle
         end
     end
     methods(Static) %functions involving decoding pipeline decisions
+        
         function [cpp, vel, trial_start, trial_end,...
                 trial_direction, track_bins, track_dir_bins] = new_sel(XY, opt)
+            opt.total_length = 120;
+            opt.ends = 3.5;
+            
+            pix_coord = XY(:,1);
+            pix_bottom = prctile(pix_coord, opt.cutoff_p);
+            pix_top = prctile(pix_coord, 100-opt.cutoff_p);
+            cm_coord = (pix_coord - pix_bottom)./(pix_top - pix_bottom) .* opt.total_length;
+            cpp = opt.total_length ./ (pix_top - pix_bottom);
+            vel = [0; diff(cm_coord)] .* opt.samp_freq;
+            
+            mid_start = opt.ends;
+            mid_end = opt.total_length - opt.ends;
+
+            track_bins = ceil(opt.n_bins.*(cm_coord - mid_start)./(mid_end - mid_start));
+            track_bins(track_bins < 1) = 0;
+            track_bins(track_bins > opt.n_bins) = opt.n_bins + 1;
+            
+            track_dir_bins = -(sign(vel)==1) + 2.*track_bins;
+            
+            trial_candidates = (cm_coord > mid_start) & (cm_coord < mid_end);
+            tc_diff = diff(trial_candidates);
+            trial_start = find(tc_diff > 0);
+            trial_end = find(tc_diff < 0);
+            n_tc = numel(trial_end);
+            trial_start = trial_start(1:n_tc);
+            trial_direction = zeros(1,n_tc);
+            has_all_bins = false(1,n_tc);
+            for i = 1:n_tc
+                if all(vel(trial_start(i):trial_end(i)) > opt.v_thresh)
+                    trial_direction(i) = 1;
+                elseif all(vel(trial_start(i):trial_end(i)) < -opt.v_thresh)
+                    trial_direction(i) = -1;
+                end
+                
+                tr_bins = track_bins(trial_start(i):trial_end(i));
+                has_all_bins(i) = all(sum(tr_bins(:) == (1:opt.n_bins))~=0);
+            end
+            fprintf('Just velocity: %d, thrown out due to not all bins: %d\n', sum(trial_direction~=0), sum((trial_direction~=0)&~has_all_bins));
+            vel_filt = (trial_direction ~= 0) & has_all_bins;
+            trial_start = trial_start(vel_filt);
+            trial_end = trial_end(vel_filt);
+            trial_direction = trial_direction(vel_filt);
+        end
+        
+        function [cpp, vel, trial_start, trial_end,...
+                trial_direction, track_bins, track_dir_bins] = new_sel_deprecated(XY, opt)
             %%Selecting trials:
             % The length of the track that is accessible to the mouse is
             % taken to be 118cm.
