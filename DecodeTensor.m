@@ -439,7 +439,7 @@ classdef DecodeTensor < handle
     methods(Static) %functions involving decoding pipeline decisions
         
         function [cpp, vel, trial_start, trial_end,...
-                trial_direction, track_bins, track_dir_bins] = new_sel(XY, opt)
+                trial_direction, track_bins, track_dir_bins] = new_sel_ends(XY, opt)
             opt.total_length = 120;
             opt.ends = 3.5;
             
@@ -485,7 +485,7 @@ classdef DecodeTensor < handle
         end
         
         function [cpp, vel, trial_start, trial_end,...
-                trial_direction, track_bins, track_dir_bins] = new_sel_deprecated(XY, opt)
+                trial_direction, track_bins, track_dir_bins] = new_sel(XY, opt)
             %%Selecting trials:
             % The length of the track that is accessible to the mouse is
             % taken to be 118cm.
