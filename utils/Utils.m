@@ -429,7 +429,11 @@ classdef Utils %Common utilities for dealing with neural data
             base = exp_form(1:e_loc-1);
             expo = exp_form(e_loc+1:end);
             expo_num = str2double(expo);
-            r = [base, '·10^{', sprintf('%d', expo_num), '}'];
+            if ispc
+                r = [base, '�10^{', sprintf('%d', expo_num), '}'];
+            else
+                r = [base, '·10^{', sprintf('%d', expo_num), '}'];
+            end
         end
         
         function [N_vals, N_confs] = partial_fits(n, m)
@@ -587,7 +591,12 @@ classdef Utils %Common utilities for dealing with neural data
         end
         
         function create_svg(fig, svg_save_dir, name)
+            pdf_special_dir_name = fullfile(svg_save_dir, 'pdf_versions');
+            if ~exist(pdf_special_dir_name, 'dir')
+                mkdir(pdf_special_dir_name);
+            end
             print(fig, '-dsvg', fullfile(svg_save_dir, [name '.svg']));
+            print(fig, '-dpdf', fullfile(pdf_special_dir_name, [name '.pdf']));
         end
         
         function specific_format(codename)

@@ -5,7 +5,7 @@ print_png = @(name) print('-dpng', '-r1800', fullfile(svg_save_dir, [name '.png'
 %% PLS representations
 m_i = 6;
 use_zscore = true;
-[source_path, mouse_name] = DecodeTensor.default_datasets(m_i);
+[source_path, mouse_name] = DecodeTensor.default_datasets(m_i, '../../../Box/share');
 opt = DecodeTensor.default_opt;
 opt.restrict_trials = -1;
 
@@ -71,6 +71,7 @@ set(gca, 'YTick', []);
 %text(-0.03, 0.03, 'Unshuffled', 'Color', 'b')
 figure_format('boxsize', [1 1.2], 'fontsize', 6);
 print_png('PLS_adjacent');
+Utils.create_svg(gcf, 'figure2_svg', 'PLS_adjacent');
 
 figure;
 scatter(XS_s(:,1), XS_s(:,2), 8, Utils.colorcode(ceil(ks/2)), 'filled', 'MarkerFaceAlpha', 0.02); hold on;
@@ -83,6 +84,7 @@ set(gca, 'YTick', []);
 %text(-0.03, 0.03, 'Shuffled', 'Color', 'r')
 figure_format('boxsize', [1 1.2], 'fontsize', 6);
 print_png('PLS_adjacent_shuf');
+Utils.create_svg(gcf, 'figure2_svg', 'PLS_adjacent_shuf');
 % [~, stats] = Utils.pls_plot(X_fst, [ceil(ks_fst/2), mod(ks_fst,2)]);
 % suptitle('Using FST\_events, unshuffled');
 % colormap jet;

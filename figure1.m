@@ -990,12 +990,12 @@ plot(points, n_unshuf, 'b');
 xlabel 'Correlation coefficient'
 ylabel 'Number of cell pairs'
 
-%set(gca, 'YTickLabel', {'0', '1Â·10^4', '2Â·10^4', '3Â·10^4'});
+%set(gca, 'YTickLabel', {'0', '1·10^4', '2·10^4', '3·10^4'});
 
 text(1, 4.5*2.8e4, 'Unshuffled', 'Color', 'b', 'HorizontalAlignment', 'Right');
 text(1, 4.5*2.3e4, 'Shuffled', 'Color', 'r', 'HorizontalAlignment', 'Right');
 Utils.fix_exponent(gca, 'Y', 1);
-figure_format;
+figure_format([0.88 0.83]);
 
 Utils.create_svg(gcf, 'figure1_svg', 'correlation_values_shuf_unshuf');
 

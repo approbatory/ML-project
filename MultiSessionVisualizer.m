@@ -28,7 +28,11 @@ classdef MultiSessionVisualizer
             Utils.create_svg(gcf, 'figure1_svg', 'confusion_diff_both_dirs');
         end
         
-        function Decoding
+        function series_fits = Decoding(make_plots)
+            if ~exist('make_plots', 'var')
+                make_plots = true;
+            end
+            
             dbfile = 'decoding_all_sess.db';
             conn = sqlite(dbfile);
             samp_size = 20;
@@ -49,12 +53,6 @@ classdef MultiSessionVisualizer
                 @(n,i)MultiSessionVisualizer.regroup(n, i, samp_size),...
                 n_sizes_s, imse_s);
             assert(isequal(n_sizes, n_sizes_s), 'mismatch between unshuffled and shuffled sampling');
-            if false %cancelling unnecessary plots
-            MultiSessionVisualizer.plot_series(n_sizes, {imse_s, imse}, {'r', 'b'}, mouse_names, 0.18);
-            xlabel 'Number of cells'
-            ylabel '1/MSE (cm^{-2})'
-            multi_figure_format;
-            Utils.create_svg(gcf, 'supplements_svg', 'multi_decoding_IMSE_curves');
             
             series_fits = q(1,@(s)q(2,@(n,m)createFit_infoSaturation(n(:),mean(m)'), n_sizes, s), {imse, imse_s});
             [I0_fit, I0_conf] = Utils.fit_get(series_fits{1}, 'I_0');
@@ -62,6 +60,13 @@ classdef MultiSessionVisualizer
             
             [N_fit, N_conf] = Utils.fit_get(series_fits{1}, 'N');
             [N_fit_s, N_conf_s] = Utils.fit_get(series_fits{2}, 'N');
+            
+            if make_plots %cancelling unnecessary plots
+            MultiSessionVisualizer.plot_series(n_sizes, {imse_s, imse}, {'r', 'b'}, mouse_names, 0.18);
+            xlabel 'Number of cells'
+            ylabel '1/MSE (cm^{-2})'
+            multi_figure_format;
+            Utils.create_svg(gcf, 'supplements_svg', 'multi_decoding_IMSE_curves');
             
             figure;
             Utils.bns_groupings(I0_fit, I0_fit_s, I0_conf, I0_conf_s, mouse_names);
@@ -100,7 +105,8 @@ classdef MultiSessionVisualizer
             MultiSessionVisualizer.plot_single_filtered(n_sizes, {imse_s, imse}, {'r', 'b'}, select_indices);
             xlabel 'Number of cells'
             ylabel '1/MSE (cm^{-2})'
-            figure_format([0.8125 1.5]);
+            %figure_format([0.8125 1.5]);
+            figure_format([2 2.5]);
             Utils.create_svg(gcf, 'figure1_svg', 'decoding_IMSE_curves_selected');
             
             figure;
@@ -118,8 +124,9 @@ classdef MultiSessionVisualizer
             ylabel '1/MSE (cm^{-2})'
             figure_format([0.8125 1.5]);
             Utils.create_svg(gcf, 'figure1_svg', 'decoding_IMSE_curves_selected_colored');
-            end %if false
+            end %if true
             
+            if false
             figure;
             [mouse_identity, agg_n_values, agg_imse_values] =...
                 MultiSessionVisualizer.aggregate_sess_per_mouse(n_sizes, imse, mouse_names);
@@ -129,9 +136,9 @@ classdef MultiSessionVisualizer
             %almenaux
             xlabel 'Number of cells'
             ylabel '1/MSE (cm^{-2})'
-            figure_format([0.8125 1.5]);
+            figure_format([0.8125 1.5].*[2 1.5]);
             Utils.create_svg(gcf, 'figure1_svg', 'decoding_IMSE_curves_mouse_aggregated');
-            %keyboard;
+            keyboard;
             agg_imse_mean = Utils.cf_(@(x)cellfun(@mean,x),agg_imse_values);
             agg_imse_mean_s = Utils.cf_(@(x)cellfun(@mean,x),agg_imse_values_s);
             series_fits_agg = q(1,@(s)q(2,@(n,m)createFit_infoSaturation(n(:),m'), agg_n_values, s),...
@@ -158,6 +165,7 @@ classdef MultiSessionVisualizer
             ylabel(sprintf('N fit value\n(neuron)'));
             figure_format;
             Utils.create_svg(gcf, 'figure1_svg', 'agg_N_fit');
+            end
         end
         
         function [n, err] = regroup(n_samp, err_samp, samp_size)
@@ -340,11 +348,15 @@ classdef MultiSessionVisualizer
             Utils.create_svg(gcf, 'figure2_svg', 'signal_and_noise_growth');
             
             
-            load('fit_result_record.mat');
+            %load('fit_result_record.mat');
+            %bagopo
+            series_fits = MultiSessionVisualizer.Decoding(false);
+            fitresult = series_fits{1};
+            fitresult_s = series_fits{2};
             if filt_num
                 fitresult = fitresult(f_);
                 fitresult_s = fitresult_s(f_);
-                fitresult_d = fitresult_d(f_);
+                %fitresult_d = fitresult_d(f_);
             end
             [I0_fit_value, I0_upper] = Utils.fit_get(fitresult, 'I_0');
             [I0_fit_value_s, I0_upper_s] = Utils.fit_get(fitresult_s, 'I_0');
