@@ -553,9 +553,9 @@ classdef Utils %Common utilities for dealing with neural data
                 
             end%% TODO finish multiballnstick automator helper function
             if is_grouped
-                grouped_ballnstick({'Unshuffled', 'Shuffled'}, y_, e_);
+                grouped_ballnstick({'Unshuffled', 'Shuffled'}, y_, e_, 'coloring', DecodeTensor.mcolor(my_mice));
             else
-                multiballnstick(Utils.cf_(@(x)x(end-1:end),my_mice), y_, e_);
+                multiballnstick(Utils.cf_(@(x)x(end-1:end),my_mice), y_, e_, 'coloring', DecodeTensor.mcolor(my_mice));
             end
         end
         
@@ -597,6 +597,14 @@ classdef Utils %Common utilities for dealing with neural data
             end
             print(fig, '-dsvg', fullfile(svg_save_dir, [name '.svg']));
             print(fig, '-dpdf', fullfile(pdf_special_dir_name, [name '.pdf']));
+        end
+        
+        function printto(save_dir, fname)
+            pdf_fname = fullfile(save_dir, fname);
+            if ~exist(save_dir, 'dir')
+                mkdir(save_dir);
+            end
+            export_fig(pdf_fname, '-pdf', '-transparent', '-nofontswap');
         end
         
         function specific_format(codename)
@@ -657,6 +665,34 @@ classdef Utils %Common utilities for dealing with neural data
                     set(gca, 'ZTickLabel', arrayfun(f, get(gca, 'ZTick') ,'UniformOutput', false));
                 otherwise
                     error('Can only be X Y or Z');
+            end
+        end
+        
+        function cs = colorscheme(i)
+            cs = {[145,  30, 180], [240,  50, 230], [128, 128,   0],...
+                  [  0, 128, 128], [  0,   0, 128], [230,  25,  75],...
+                  [245, 130,  48], [255, 225,  25], [210, 245,  60],...
+                  [ 60, 180,  75], [ 70, 240, 240], [  0, 130, 200]}';
+            cs = Utils.cf_(@(x)x/255, cs);
+            if nargin == 1
+                cs = cs{i};
+            end
+        end
+        
+        function c = names_to_colors(names, uniq, make_cell)
+            if ~exist('make_cell', 'var')
+                make_cell = true;
+            end
+            assert(isvector(names), 'input must be char vector');
+            assert(isvector(uniq), 'input must be char vector');
+            %uniq = unique(names);
+            c = zeros(numel(names), 3);
+            for i = 1:numel(names)
+                index = find(strcmp(names{i}, uniq),1);
+                c(i,:) = Utils.colorscheme(index);
+            end
+            if make_cell
+                c = mat2cell(c, ones(1,size(c,1)), size(c,2));
             end
         end
     end

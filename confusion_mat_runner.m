@@ -11,16 +11,18 @@ for j = 1:n_reps
     ps_s = remapper(ps_s);
     ks_s = remapper(ks_s);
     num_trials = 2*D_T.n_one_dir_trials;
-    C = confusionmat(ks, ps); %./ (2*D_T.n_one_dir_trials);
-    C_s = confusionmat(ks_s, ps_s);% ./ (2*D_T.n_one_dir_trials);
-    C_perfect = confusionmat(ks_s, ks);% ./ (2*D_T.n_one_dir_trials);
-    CDiff(:,:,j) = C_s - C;
-    CsC = (C_s - C)./C;
-    CsC(isnan(CsC)) = 0;
+    C(:,:,j) = confusionmat(ks, ps); %./ (2*D_T.n_one_dir_trials);
+    C_s(:,:,j) = confusionmat(ks_s, ps_s);% ./ (2*D_T.n_one_dir_trials);
+    %C_perfect = confusionmat(ks_s, ks);% ./ (2*D_T.n_one_dir_trials);
+    %CDiff(:,:,j) = C_s - C;
+    %CsC = (C_s - C)./C;
+    %CsC(isnan(CsC)) = 0;
     progressbar(j/n_reps);
 end
 
 res.num_trials = num_trials;
-res.sum_CDiff = squeeze(sum(CDiff,3));
+res.C = squeeze(mean(C,3));
+res.C_s = squeeze(mean(C_s,3));
+res.source = D_T.source_path;
 toc
 end

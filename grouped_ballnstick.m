@@ -1,11 +1,11 @@
-function [p,h] = grouped_ballnstick(labels, ys, errs)
+function [p,h] = grouped_ballnstick(labels, ys, errs, varargin)
 %n = size(labels, 2);
 
 averaged_ys = cellfun(@weighted_avg, ys, errs);
 errs_w = cellfun(@weighted_errs, ys, errs);
 [p,h] = ballnstick(labels{1}, labels{2},...
     averaged_ys(1,:), averaged_ys(2,:),...
-    errs_w(1,:), errs_w(2,:));
+    errs_w(1,:), errs_w(2,:), varargin{:});
 
 
 end

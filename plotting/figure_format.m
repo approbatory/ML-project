@@ -1,15 +1,16 @@
 function figure_format(varargin)
 p = inputParser;
 p.addOptional('boxsize', [0.8125 0.585].*0.98, @(x) isnumeric(x) && (numel(x) == 2));
+p.addOptional('factor', 1, @isscalar);
 p.addOptional('lwid', 0.5, @isscalar);
-p.addOptional('fontsize', 6*6/6.4, @isscalar);
+p.addOptional('fontsize', 6, @isscalar);
 p.parse(varargin{:});
 
-my_font = 'Helvetica LT Std';
+my_font = 'Helvetica';
 
 hf = gcf;
 hf.Units = 'inches';
-hf.Position = [hf.Position(1:2), p.Results.boxsize.*1.6];
+hf.Position = [hf.Position(1:2), p.Results.boxsize.*1.6.*p.Results.factor];
 
 ax = gca;
 ax.FontName = my_font;
@@ -17,7 +18,7 @@ ax.FontSize = p.Results.fontsize;
 ax.Box = 'off';
 ax.LineWidth = p.Results.lwid;
 ax.Units = 'inches';
-ax.Position = [ax.Position(1:2), p.Results.boxsize];
+ax.Position = [ax.Position(1:2), p.Results.boxsize.*p.Results.factor];
 ax.TickLength = [0.02 0.02];
 
 ax.XLabel.FontName = my_font;

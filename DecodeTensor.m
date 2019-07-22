@@ -184,7 +184,7 @@ classdef DecodeTensor < handle
         
         function [source_path, mouse_name, session_id] = default_datasets(index, pref)
             if ~exist('pref', 'var')
-                pref = '../linear_track';
+                pref = DecodeTensor.linear_track_path;
             end
             %These are the paths to selected recorded sessions from 10 mice
             source_paths = {...
@@ -1487,8 +1487,9 @@ classdef DecodeTensor < handle
                 no_create = false;
             end
             L = load('sheet_paths.mat');
-            my_source_path = L.sheet_paths{index};
-            my_mouse_name = my_source_path(17:25);
+            my_source_path = fullfile(DecodeTensor.linear_track_path,...
+                L.sheet_paths{index});
+            my_mouse_name = L.sheet_paths{index}(1:9);
             if no_create
                 o = {my_source_path, my_mouse_name};
             else
@@ -1502,13 +1503,28 @@ classdef DecodeTensor < handle
             end
             L = load('sheet_paths.mat');
             filt_paths = L.sheet_paths(L.sheet_paths_filt);
-            my_source_path = filt_paths{index_filt};
-            my_mouse_name = my_source_path(17:25);
+            my_source_path = fullfile(DecodeTensor.linear_track_path,...
+                filt_paths{index_filt});
+            my_mouse_name = filt_paths{index_filt}(1:9);
             if no_create
                 o = {my_source_path, my_mouse_name};
             else
                 o = DecodeTensor({my_source_path, my_mouse_name});
             end
+        end
+        
+        function pref = linear_track_path(p)
+            persistent data_path;
+            if nargin
+                data_path = p;
+            elseif isempty(data_path) && isa(data_path, 'double')
+                if ispc
+                    data_path = '../../../Box/share';
+                else
+                    data_path = '../linear_track';
+                end
+            end
+            pref = data_path;
         end
         
         function [l, m] = filt_sess_id_list
@@ -1520,7 +1536,7 @@ classdef DecodeTensor < handle
                 filt_paths, 'UniformOutput', false),...
                 'UniformOutput', false),...
                 'UniformOutput', false);
-            m = cellfun(@(x)x(17:25), filt_paths, 'UniformOutput', false);
+            m = cellfun(@(x)x(1:9), filt_paths, 'UniformOutput', false);
         end
         
         function [l, m, indices] = special_sess_id_list
@@ -1535,6 +1551,19 @@ classdef DecodeTensor < handle
             for i = 1:numel(l)
                 indices(i) = find(strcmp(l_filt_sess, l{i}),1);
             end
+            
+            [~, ord] = sort(m);
+            l = l(ord);
+            m = m(ord);
+            indices = indices(ord);
+        end
+        
+        function c = mcolor(mouse_list, varargin)
+            m = {'Mouse2023', 'Mouse2024', 'Mouse2028', 'Mouse2010',...
+                 'Mouse2012', 'Mouse2019', 'Mouse2022', 'Mouse2026',...
+                 'Mouse2011', 'Mouse2021', 'Mouse2025', 'Mouse2029'};
+            m = unique(m);
+            c = Utils.names_to_colors(mouse_list, m, varargin{:});
         end
     end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
