@@ -1,6 +1,8 @@
 classdef PanelGenerator
 methods(Static)
     function confusion
+        savedir = 'figure1_pdf/confusion';
+        
         res = load('confusion_mat_one_session.mat');
         nt = res.num_trials/2;
         C_pct = res.C/nt*100;
@@ -18,7 +20,7 @@ methods(Static)
         line(xlim, [nb nb]/2+0.5, 'Color', 'w');
         h_ = colorbar; ylabel(h_, 'Confusion (%)', 'Rotation', 270);
         Utils.specific_format('confusion');
-        Utils.printto('figure1_pdf', 'confusion_unshuffled');
+        Utils.printto(savedir, 'confusion_unshuffled');
         
         figure;
         imagesc(C_s_pct, [0 100]);
@@ -33,7 +35,7 @@ methods(Static)
         line(xlim, [nb nb]/2+0.5, 'Color', 'w');
         h_ = colorbar; ylabel(h_, 'Confusion (%)', 'Rotation', 270);
         Utils.specific_format('confusion');
-        Utils.printto('figure1_pdf', 'confusion_shuffled');
+        Utils.printto(savedir, 'confusion_shuffled');
         
         figure;
         imagesc(C_s_pct - C_pct);
@@ -49,7 +51,10 @@ methods(Static)
         colormap(bluewhitered);
         h_ = colorbar; ylabel(h_, 'Confusion difference (%)', 'Rotation', 270);
         Utils.specific_format('confusion');
-        Utils.printto('figure1_pdf', 'confusion_diff');
+        Utils.printto(savedir, 'confusion_diff');
+        
+        figure;
+        plot(C_pct)
     end
 end
 end
