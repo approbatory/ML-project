@@ -604,7 +604,8 @@ classdef Utils %Common utilities for dealing with neural data
             if ~exist(save_dir, 'dir')
                 mkdir(save_dir);
             end
-            export_fig(pdf_fname, '-pdf', '-transparent', '-nofontswap');
+            %export_fig(pdf_fname, '-pdf', '-transparent', '-nofontswap', '-cmyk');
+            print(gcf, '-dpdf', [pdf_fname '.pdf']);
         end
         
         function specific_format(codename)
@@ -616,6 +617,11 @@ classdef Utils %Common utilities for dealing with neural data
                     
                 case 'inset'
                     figure_format([0.4 0.25], 'fontsize', 4);
+                    
+                case 'confusion'
+                    figure_format('boxsize', [0.75 0.85]); box on;
+                    set(gca, 'TickLength', [0 0]);
+                    
                 otherwise
                     error('Unrecognized codename: %s', codename);
             end
