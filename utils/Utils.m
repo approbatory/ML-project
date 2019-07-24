@@ -600,12 +600,19 @@ classdef Utils %Common utilities for dealing with neural data
         end
         
         function printto(save_dir, fname)
+            if ~exist('save_dir', 'var')
+                save_dir = '.';
+            end
+            if ~exist('fname', 'var')
+                fname = get(gcf, 'FileName');
+            end
             pdf_fname = fullfile(save_dir, fname);
-            if ~exist(save_dir, 'dir')
-                mkdir(save_dir);
+            pref = fileparts(pdf_fname);
+            if ~exist(pref, 'dir')
+                mkdir(pref);
             end
             %export_fig(pdf_fname, '-pdf', '-transparent', '-nofontswap', '-cmyk');
-            print(gcf, '-dpdf', [pdf_fname '.pdf']);
+            print(gcf, '-dpdf', pdf_fname);
         end
         
         function specific_format(codename)
@@ -616,7 +623,7 @@ classdef Utils %Common utilities for dealing with neural data
                     set(gca, 'TickLength', [0.005 0]);
                     
                 case 'inset'
-                    figure_format([0.4 0.25], 'fontsize', 4);
+                    figure_format([0.4 0.25], 'fontsize', 5);
                     
                 case 'confusion'
                     figure_format('boxsize', [0.75 0.85]); box on;
