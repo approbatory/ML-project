@@ -107,7 +107,7 @@ classdef PanelGenerator
             if p.Results.recompute || ~exist(save_file, 'file')
                 dbfile = 'decoding_all_sess.db';
                 conn = sqlite(dbfile);
-                samp_size = 20;
+                samp_size = 80;
                 bc = @DecodeTensor.build_command_sess;
                 [sess, mouse_names] = DecodeTensor.filt_sess_id_list;
                 q = @Utils.cf_p;
@@ -373,6 +373,70 @@ classdef PanelGenerator
             text(20, 570, 's^2 along Dm (Shuffled)', 'Color', 'r', 'HorizontalAlignment', 'left');
             %figure_format('factor', 1.3);
             figure_format([1 1.4], 'factor', 1.2);
+            Utils.printto;
+            
+            fit_savefile = 'decoding_curves_fits.mat';
+            if ~exist(fit_savefile, 'file')
+                PanelGenerator.decoding_curves;
+            end
+            load(fit_savefile);
+            dotsize = 4;
+            
+            fitresult = series_fits{1};
+            fitresult_s = series_fits{2};
+            if filt_num
+                fitresult = fitresult(f_);
+                fitresult_s = fitresult_s(f_);
+                mouse_names = mouse_names(f_);
+                %fitresult_d = fitresult_d(f_);
+            end
+            [I0_fit_value, I0_upper] = Utils.fit_get(fitresult, 'I_0');
+            [I0_fit_value_s, I0_upper_s] = Utils.fit_get(fitresult_s, 'I_0');
+            [N_fit_value, N_upper] = Utils.fit_get(fitresult, 'N');
+            
+            good_fit_filter = (I0_upper < I0_fit_value) &...
+                (I0_upper_s < I0_fit_value_s) &...
+                (N_upper < N_fit_value);
+            g_ = good_fit_filter;
+            disp(find(~g_));
+            figure('FileName', 'figure2_pdf/signal_and_noise/imse_limit_regression.pdf');
+            %scatter(I0_fit_value.*N_fit_value, 1./sm_slope, 4, 'b');
+            limit_uncertainty = sqrt((I0_fit_value.*(N_upper)).^2 + (N_fit_value.*(I0_upper)).^2);
+            inv_sm_slope_uncertainty = sm_conf ./ sm_slope.^2;
+            hold on;
+            
+            errorbar(I0_fit_value(g_).*N_fit_value(g_), 1./sm_slope(g_), inv_sm_slope_uncertainty(g_), inv_sm_slope_uncertainty(g_),...
+                limit_uncertainty(g_), limit_uncertainty(g_), 'LineStyle', 'none', 'Color', 'k', 'CapSize', 1);
+            scatter(I0_fit_value(g_).*N_fit_value(g_), 1./sm_slope(g_), dotsize, DecodeTensor.mcolor(mouse_names(g_), false), 'filled');
+            [fitresult, adjr2] = Utils.regress_line(I0_fit_value(g_).*N_fit_value(g_), 1./sm_slope(g_));
+            h_ = plot(fitresult); legend off
+            h_.Color = 'b';
+            xlim([-Inf 0.15]);
+            text(0.1, 1, sprintf('adj. R^2 = %.2f', adjr2));
+            xlabel 'IMSE limit I_0N';
+            ylabel(sprintf('Inverse s^2\nrate of change'));
+            fprintf('imse limit regression, N = %d\n', numel(I0_fit_value(g_)));
+            figure_format('factor', 1.6);
+            %Utils.create_svg(gcf, 'figure2_svg', 'imse_limit_regression');
+            Utils.printto;
+            
+            
+            figure('FileName', 'figure2_pdf/signal_and_noise/I0_value_regression.pdf');
+            %scatter(I0_fit_value_s, 1./sms_intercept, 'r');
+            hold on;
+            inv_intercept_errb = sms_intercept_conf./sms_intercept.^2;
+            
+            errorbar(I0_fit_value_s(g_), 1./sms_intercept(g_), inv_intercept_errb(g_), inv_intercept_errb(g_), I0_upper_s(g_), I0_upper_s(g_), 'LineStyle', 'none', 'Color', 'k', 'CapSize', 1);
+            scatter(I0_fit_value_s(g_), 1./sms_intercept(g_), dotsize, DecodeTensor.mcolor(mouse_names(g_), false), 'filled');
+            [fitresult, adjr2] = Utils.regress_line(I0_fit_value_s(g_), 1./sms_intercept(g_));
+            plot(fitresult); legend off
+            text(7e-4, 0.055, sprintf('adj. R^2 = %.2f', adjr2));
+            xlabel 'I_0 fit value'
+            ylabel 'Asymptotic 1/s^2'
+            set(gca, 'XTickLabel', arrayfun(@Utils.my_fmt, get(gca, 'XTick') ,'UniformOutput', false));
+            fprintf('I0 value regression, N = %d\n', numel(I0_fit_value_s(g_)));
+            figure_format('factor', 1.6);
+            %Utils.create_svg(gcf, 'figure2_svg', 'I0_value_regression');
             Utils.printto;
         end
     end
