@@ -308,6 +308,11 @@ classdef PanelGenerator
             Utils.printto;
         end
         
+        function adjacent_decoders
+            load('adjacent_agg_190725-094031_0.mat');
+            keyboard
+        end
+        
         function signal_and_noise
             normed = true;
             filt_num = false;
