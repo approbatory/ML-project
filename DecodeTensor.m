@@ -291,6 +291,94 @@ classdef DecodeTensor < handle
             end
         end
         
+        function [noise_var, noise_var_s, noise_var_d, m2, m2_s, m2_d, mean_dist2]...
+                = adjacent_decoder_noise(data_tensor, tr_dir, num_neurons, num_trials)
+            [data_tensor, tr_dir] = DecodeTensor.cut_tensor(data_tensor, tr_dir, num_neurons, num_trials);
+            [T1, d1, T2, d2, ~] = DecodeTensor.holdout_half(data_tensor, tr_dir);
+            T1s = DecodeTensor.shuffle_tensor(T1, d1);
+            T2s = DecodeTensor.shuffle_tensor(T2, d2);
+            [N, K, T] = size(T1);
+            [noise_var, noise_var_s, noise_var_d, m2, m2_s, m2_d, mean_dist2] = deal(zeros(K-1, 2));
+            %progressbar('Place', 'Direction', 'Setting', 'Division');
+            alg = my_algs('linsvm');
+            for k = 1:K-1
+                for d_i = 1:2
+                    dirs = [-1 1];
+                    direction = dirs(d_i);
+                    
+                    X1_neg = squeeze(T1(:, k, d1==direction))';
+                    X1_pos = squeeze(T1(:, k+1, d1==direction))';
+                    X1 = [X1_neg ; X1_pos];
+                    X1s_neg = squeeze(T1s(:, k, d1==direction))';
+                    X1s_pos = squeeze(T1s(:, k+1, d1==direction))';
+                    X1s = [X1s_neg ; X1s_pos];
+                    ks1 = [-ones(sum(d1==direction),1) ; ones(sum(d1==direction),1)];
+                    
+                    X2_neg = squeeze(T2(:, k, d2==direction))';
+                    X2_pos = squeeze(T2(:, k+1, d2==direction))';
+                    X2 = [X2_neg ; X2_pos];
+                    X2s_neg = squeeze(T2s(:, k, d2==direction))';
+                    X2s_pos = squeeze(T2s(:, k+1, d2==direction))';
+                    X2s = [X2s_neg ; X2s_pos];
+                    ks2 = [-ones(sum(d2==direction),1) ; ones(sum(d2==direction),1)];
+                    
+                    model1 = alg.train(X1, ks1);
+                    %progressbar([], [], [], 1/2);
+                    model2 = alg.train(X2, ks2);
+                    %progressbar([], [], [], 2/2);
+                    %progressbar([], [], 1/2);
+                    model1s = alg.train(X1s, ks1);
+                    %progressbar([], [], [], 1/2);
+                    model2s = alg.train(X2s, ks2);
+                    %progressbar([], [], [], 2/2);
+                    %progressbar([], [], 2/2);
+                    
+                    beta1_normed = model1.Beta ./ norm(model1.Beta);
+                    beta2_normed = model2.Beta ./ norm(model2.Beta);
+                    beta1s_normed = model1s.Beta ./ norm(model1s.Beta);
+                    beta2s_normed = model2s.Beta ./ norm(model2s.Beta);
+                    
+                    sc2_neg = X2_neg * beta1_normed;
+                    sc2_pos = X2_pos * beta1_normed;
+                    sc1_neg = X1_neg * beta2_normed;
+                    sc1_pos = X1_pos * beta2_normed;
+                    
+                    sc2s_neg = X2s_neg * beta1s_normed;
+                    sc2s_pos = X2s_pos * beta1s_normed;
+                    sc1s_neg = X1s_neg * beta2s_normed;
+                    sc1s_pos = X1s_pos * beta2s_normed;
+                    
+                    sc2d_neg = X2_neg * beta1s_normed;
+                    sc2d_pos = X2_pos * beta1s_normed;
+                    sc1d_neg = X1_neg * beta2s_normed;
+                    sc1d_pos = X1_pos * beta2s_normed;
+                    
+                    noise_var(k, d_i) = ...
+                        mean([var(sc2_neg) var(sc2_pos)...
+                        var(sc1_neg) var(sc1_pos)]);
+                    m2(k, d_i) = mean([(mean(sc2_neg) - mean(sc2_pos)).^2,...
+                        (mean(sc1_neg) - mean(sc1_pos)).^2]);
+                    
+                    noise_var_s(k, d_i) = ...
+                        mean([var(sc2s_neg) var(sc2s_pos)...
+                        var(sc1s_neg) var(sc1s_pos)]);
+                    m2_s(k, d_i) = mean([(mean(sc2s_neg) - mean(sc2s_pos)).^2,...
+                        (mean(sc1s_neg) - mean(sc1s_pos)).^2]);
+                    
+                    noise_var_d(k, d_i) = ...
+                        mean([var(sc2d_neg) var(sc2d_pos)...
+                        var(sc1d_neg) var(sc1d_pos)]);
+                    m2_d(k, d_i) = mean([(mean(sc2d_neg) - mean(sc2d_pos)).^2,...
+                        (mean(sc1d_neg) - mean(sc1d_pos)).^2]);
+                    
+                    mean_dist2(k, d_i) = norm(mean([X1_neg;X2_neg]) - mean([X1_pos;X2_pos])).^2;
+                    
+                    %progressbar([], d_i/2);
+                end
+                %progressbar(k/(K-1));
+            end
+        end
+        
         function err_res = decode_all(data_tensor, tr_dir, binsize, alg, num_neurons, num_trials)
             [data_tensor, tr_dir] = DecodeTensor.cut_tensor(data_tensor, tr_dir, num_neurons, num_trials);
             [T1, d1, T2, d2, ~] = DecodeTensor.holdout_half(data_tensor, tr_dir);

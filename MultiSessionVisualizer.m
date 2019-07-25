@@ -61,6 +61,8 @@ classdef MultiSessionVisualizer
             [N_fit, N_conf] = Utils.fit_get(series_fits{1}, 'N');
             [N_fit_s, N_conf_s] = Utils.fit_get(series_fits{2}, 'N');
             
+            save decoding_curves_fits.mat sess mouse_names n_sizes imse imse_s series_fits I0_fit I0_conf I0_fit_s I0_conf_s N_fit N_conf N_fit_s N_conf_s
+            
             if make_plots %cancelling unnecessary plots
             MultiSessionVisualizer.plot_series(n_sizes, {imse_s, imse}, {'r', 'b'}, mouse_names, 0.18);
             xlabel 'Number of cells'
