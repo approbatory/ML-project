@@ -14,4 +14,5 @@ for j = 1:n_reps
 end
 res.source = d_.source_path;
 res.filt_index = index;
+res.n_sizes = n_sizes;
 toc
