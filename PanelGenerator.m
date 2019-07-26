@@ -309,8 +309,79 @@ classdef PanelGenerator
         end
         
         function adjacent_decoders
-            load('adjacent_agg_190725-094031_0.mat');
-            keyboard
+            load('adjacent_agg_190725-194911_0.mat');
+            %keyboard
+            n_cutoff = 100;
+            medify = @(z) Utils.cf_(@(y)cellfun(@(x)median(x(:)), y), z);
+            full_line = @Utils.fitaline;
+            asymp_line = @(n,m) Utils.fitaline(n,m,n_cutoff);
+            asymp_line_intercept = @(n,m) Utils.fitaline(n,m,n_cutoff,true);
+            
+            [m2_slopes, m2_slope_confs] = cellfun(@Utils.fitaline, {res.n_sizes}, medify({res.m2}), 'UniformOutput', false);
+            [m2_s_slopes, m2_s_slope_confs] = cellfun(full_line, {res.n_sizes}, medify({res.m2_s}), 'UniformOutput', false);
+            
+            [nv_slopes, nv_slope_confs] = cellfun(asymp_line, {res.n_sizes}, medify({res.nv}), 'UniformOutput', false);
+            [nv_s_slopes, nv_s_slope_confs] = cellfun(asymp_line, {res.n_sizes}, medify({res.nv_s}), 'UniformOutput', false);
+            [nv_s_intercepts, nv_s_intercept_confs] = cellfun(asymp_line_intercept, {res.n_sizes}, medify({res.nv_s}), 'UniformOutput', false);
+            
+            dp2_w = cellfun(@(x,y)x/y, m2_slopes, nv_slopes);
+            dp2_w_conf = cellfun(@(x, xc, y, yc) abs(x/y)*sqrt((xc/x)^2 + (yc/y)^2), m2_slopes, m2_slope_confs, nv_slopes, nv_slope_confs);
+            dp2_ws = cellfun(@(x,y)x/y, m2_s_slopes, nv_s_slopes);
+            dp2_ws_conf = cellfun(@(x, xc, y, yc) abs(x/y)*sqrt((xc/x)^2 + (yc/y)^2), m2_s_slopes, m2_s_slope_confs, nv_s_slopes, nv_s_slope_confs);
+            
+            dp2_ws_slope = cellfun(@(x,y)x/y, m2_s_slopes, nv_s_intercepts);
+            dp2_ws_slope_conf = cellfun(@(x, xc, y, yc) abs(x/y)*sqrt((xc/x)^2 + (yc/y)^2), m2_s_slopes, m2_s_slope_confs, nv_s_intercepts, nv_s_intercept_confs);
+            
+            
+            fit_savefile = 'decoding_curves_fits.mat';
+            if ~exist(fit_savefile, 'file')
+                PanelGenerator.decoding_curves;
+            end
+            load(fit_savefile);
+            
+            good_fit_filter = (I0_conf < I0_fit) &...
+                (I0_conf_s < I0_fit_s) &...
+                (N_conf < N_fit);
+            g_ = good_fit_filter;
+            
+            figure;
+            dotsize = 4;
+            
+            InfoLimit = N_fit.*I0_fit;
+            InfoLimit_conf = abs(InfoLimit).*sqrt((N_conf./N_fit).^2 + (I0_conf./I0_fit).^2);
+            
+            errorbar(InfoLimit(g_), dp2_w(g_), dp2_w_conf(g_), dp2_w_conf(g_),...
+                InfoLimit_conf(g_), InfoLimit_conf(g_), 'LineStyle', 'none', 'Color', 'k', 'CapSize', 1);
+            hold on;
+            scatter(InfoLimit(g_), dp2_w(g_), dotsize, DecodeTensor.mcolor(mouse_names(g_), false), 'filled');
+            
+            
+            [fitresult, adjr2] = Utils.regress_line(I0_fit(g_).*N_fit(g_), dp2_w(g_));
+            h_ = plot(fitresult); legend off
+            h_.Color = 'b';
+            xlim([-Inf 0.15]);
+            text(0.1, 1, sprintf('adj. R^2 = %.2f', adjr2));
+            xlabel 'IMSE limit'
+            ylabel '(d mu)^2 slope / sigma^2 slope'
+            
+
+            figure;
+            dotsize = 4;
+            errorbar(I0_fit(g_), dp2_ws_slope(g_), dp2_ws_slope_conf(g_), dp2_ws_slope_conf(g_),...
+                I0_conf(g_), I0_conf(g_), 'LineStyle', 'none', 'Color', 'k', 'CapSize', 1);
+            hold on;
+            scatter(I0_fit(g_), dp2_ws_slope(g_), dotsize, DecodeTensor.mcolor(mouse_names(g_), false), 'filled');
+            
+            
+            [fitresult, adjr2] = Utils.regress_line(I0_fit(g_), dp2_ws_slope(g_));
+            h_ = plot(fitresult); legend off
+            h_.Color = 'r';
+            %xlim([-Inf 0.15]);
+            text(6e-4, 0.01, sprintf('adj. R^2 = %.2f', adjr2));
+            xlabel 'I_0 fit value'
+            ylabel '(d mu_s)^2 slope / sigma_s^2 intercept'
+            
+            %TODO: DO THESE FITS SEPERATELY ON ALL MICE
         end
         
         function signal_and_noise
