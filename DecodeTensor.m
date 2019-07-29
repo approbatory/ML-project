@@ -1601,6 +1601,13 @@ classdef DecodeTensor < handle
             end
         end
         
+        
+        function n = get_n_neurons_filt(indices)
+            L = load('sheet_paths.mat');
+            n = L.sess_neurons(L.sheet_paths_filt);
+            n = n(indices);
+        end
+        
         function pref = linear_track_path(p)
             persistent data_path;
             if nargin
