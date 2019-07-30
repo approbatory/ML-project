@@ -1,5 +1,122 @@
 classdef PanelGenerator
     methods(Static)
+        function plot_confusion(C_pct, cbar_label)
+            nb = size(C_pct, 1);
+            imagesc(squeeze(mean(C_pct,3)), [0 100]);
+            xlabel 'Predicted bin'
+            ylabel 'Correct bin'
+            axis equal;
+            xlim([1 nb] + [-0.5 0.5]);
+            set(gca, 'XTickLabel', []);%{'60 cm', '120 cm', '60 cm', '120 cm'});
+            set(gca, 'YTickLabel', []);%{'60 cm', '120 cm', '60 cm', '120 cm'});
+            line([nb nb]/2+0.5, ylim, 'Color', 'w');
+            line(xlim, [nb nb]/2+0.5, 'Color', 'w');
+            h_ = colorbar; ylabel(h_, cbar_label, 'Rotation', 270);
+            Utils.specific_format('confusion');
+        end
+        
+    end
+    
+    
+    methods(Static)
+        function decode_demo(temporal_mixing)
+            data_source = DecodeTensor.cons_filt(70, true); %was 70, 10, 34
+            opt = DecodeTensor.default_opt;
+            load(data_source{1});
+            [~, ~, trial_start, trial_end, trial_dir, ~, ks] =...
+                DecodeTensor.new_sel(tracesEvents.position, opt);
+            within_trial = zeros(size(ks));
+            trial_start = trial_start(trial_dir==1);
+            trial_end = trial_end(trial_dir==1);
+            n_trials = numel(trial_start);
+            for i = 1:n_trials
+                within_trial(trial_start(i):trial_end(i)) = i;
+            end
+            %%within_trial = within_trial .* (mod(ks,2)==1);
+            %first_half = (within_trial <= n_trials/2) & (within_trial ~= 0);
+            %second_half = (within_trial > n_trials/2) & (within_trial ~= 0);
+            time_coord = (1:numel(ks))./opt.samp_freq;
+            if temporal_mixing
+                first_half = (mod(within_trial,2) == 1) & (within_trial ~= 0);
+                second_half = (mod(within_trial,2) == 0) & (within_trial ~= 0);
+            else
+                first_half = (within_trial <= n_trials/2) & (within_trial ~= 0);
+                second_half = (within_trial > n_trials/2) & (within_trial ~= 0);
+            end
+            
+            ks_first_half = ks(first_half);
+            ks_second_half = ks(second_half);
+            X_first_half = tracesEvents.rawTraces(first_half, :);
+            X_second_half = tracesEvents.rawTraces(second_half, :);
+            X_first_half_s = shuffle(X_first_half, ks_first_half);
+            X_second_half_s = shuffle(X_second_half, ks_second_half);
+            
+            alg = my_algs('ecoclin');
+            model1 = alg.train(X_first_half, ks_first_half); disp('m1');
+            model1_s = alg.train(X_first_half_s, ks_first_half); disp('m1s');
+            model2 = alg.train(X_second_half, ks_second_half); disp('m2');
+            model2_s = alg.train(X_second_half_s, ks_second_half); disp('m2s');
+            
+            ps_first_half = alg.test(model2, X_first_half);
+            ps_first_half_s = alg.test(model2_s, X_first_half_s);
+            ps_second_half = alg.test(model1, X_second_half);
+            ps_second_half_s = alg.test(model1_s, X_second_half_s);
+            
+            me_ = @(k,p) mean(abs(ceil(k(:)/2)-ceil(p(:)/2))).*opt.bin_width;
+            mse_ = @(k,p) mean((ceil(k(:)/2)-ceil(p(:)/2)).^2).*opt.bin_width.^2;
+            fprintf('Mean error: unsh: %f, sh: %f\n',  me_(ks_first_half, ps_first_half),...
+                me_(ks_first_half, ps_first_half_s));
+            fprintf('Mean error: unsh: %f, sh: %f\n',  me_(ks_second_half, ps_second_half),...
+                me_(ks_second_half, ps_second_half_s));
+            
+            
+            tr_track = within_trial(first_half|second_half);
+            %ks_ = [ks_first_half; ks_second_half];
+            %ps_ = [ps_first_half; ps_second_half];
+            %ps_s_ = [ps_first_half_s; ps_second_half_s];
+            ks_ = ks(within_trial~=0);
+            ps_(first_half) = ps_first_half;
+            ps_(second_half) = ps_second_half;
+            ps_ = ps_(within_trial~=0)';
+            ps_s_(first_half) = ps_first_half_s;
+            ps_s_(second_half) = ps_second_half_s;
+            ps_s_ = ps_s_(within_trial~=0)';
+            
+            for i = 1:max(tr_track)
+                tr_err(i) = me_(ks_(tr_track==i), ps_(tr_track==i));
+                tr_err_s(i) = me_(ks_(tr_track==i), ps_s_(tr_track==i));
+            end
+            
+            figure('FileName', 'figure1_pdf\demo\decoding_demo.pdf');
+            t = (1:numel(ks_first_half))./opt.samp_freq;
+            t_start = 83.5;
+            t_end = 90;
+            
+            hold on;
+            plot(t - t_start, (ceil(ps_first_half/2) - 0.5)*opt.bin_width, '-b');
+            plot(t - t_start, (ceil(ps_first_half_s/2) - 0.5)*opt.bin_width, '-r');
+            plot(t - t_start, (ceil(ks_first_half/2) - 0.5)*opt.bin_width, '-k');
+            trial_boundaries = (find(diff(within_trial(first_half))>0)+0.5)./opt.samp_freq - t_start;
+            for i = 1:numel(trial_boundaries)
+                x_ = trial_boundaries(i);
+                line([x_ x_], ylim, 'Color', 'k', 'LineStyle', '--');
+            end
+            xlim([t_start t_end] - t_start);
+            ylim([-Inf Inf]);
+            xlabel 'Time (s)';
+            ylabel 'Position (cm)';
+            figure_format('boxsize', [0.8 0.7]*1.05); box on;
+            Utils.printto;
+            
+            Utils.pls_plot([X_first_half;X_second_half],...
+                [time_coord(first_half)', ceil(ks_first_half/2), mod(ks_first_half,2);...
+                time_coord(second_half)', ceil(ks_second_half/2),mod(ks_second_half,2)]);
+            Utils.pls_plot([X_first_half_s;X_second_half_s],...
+                [time_coord(first_half)', ceil(ks_first_half/2), mod(ks_first_half,2);...
+                time_coord(second_half)', ceil(ks_second_half/2),mod(ks_second_half,2)]);
+            keyboard;
+        end
+        
         function confusion(remake)
             if ~exist('remake', 'var')
                 remake = false;
@@ -15,57 +132,61 @@ classdef PanelGenerator
             nt = res(1).num_trials;
             C_pct = cat(3, res.C)/nt*100;
             C_s_pct = cat(3, res.C_s)/nt*100;
-            nb = size(C_pct, 1);
+            %nb = size(C_pct, 1);
             
             fname = ap('confusion_unshuffled.pdf');
             if remake || ~exist(fname, 'file')
                 figure('FileName', fname);
-                imagesc(squeeze(mean(C_pct,3)), [0 100]);
-                xlabel 'Predicted bin'
-                ylabel 'Correct bin'
-                axis equal;
-                xlim([1 nb] + [-0.5 0.5]);
-                set(gca, 'XTickLabel', []);%{'60 cm', '120 cm', '60 cm', '120 cm'});
-                set(gca, 'YTickLabel', []);%{'60 cm', '120 cm', '60 cm', '120 cm'});
-                line([nb nb]/2+0.5, ylim, 'Color', 'w');
-                line(xlim, [nb nb]/2+0.5, 'Color', 'w');
-                h_ = colorbar; ylabel(h_, 'Confusion (%)', 'Rotation', 270);
-                Utils.specific_format('confusion');
+                %imagesc(squeeze(mean(C_pct,3)), [0 100]);
+                %xlabel 'Predicted bin'
+                %ylabel 'Correct bin'
+                %axis equal;
+                %xlim([1 nb] + [-0.5 0.5]);
+                %set(gca, 'XTickLabel', []);%{'60 cm', '120 cm', '60 cm', '120 cm'});
+                %set(gca, 'YTickLabel', []);%{'60 cm', '120 cm', '60 cm', '120 cm'});
+                %line([nb nb]/2+0.5, ylim, 'Color', 'w');
+                %line(xlim, [nb nb]/2+0.5, 'Color', 'w');
+                %h_ = colorbar; ylabel(h_, 'Confusion (%)', 'Rotation', 270);
+                %Utils.specific_format('confusion');
+                PanelGenerator.plot_confusion(C_pct, 'Confusion (%)');
                 Utils.printto;
             end
             
             fname = ap('confusion_shuffled.pdf');
             if remake || ~exist(fname, 'file')
                 figure('FileName', fname);
-                imagesc(squeeze(mean(C_s_pct,3)), [0 100]);
-                xlabel 'Predicted bin'
-                ylabel 'Correct bin'
-                axis equal;
-                xlim([1 nb] + [-0.5 0.5]);
-                set(gca, 'XTickLabel', []);%{'60 cm', '120 cm', '60 cm', '120 cm'});
-                set(gca, 'YTickLabel', []);%{'60 cm', '120 cm', '60 cm', '120 cm'});
-                line([nb nb]/2+0.5, ylim, 'Color', 'w');
-                line(xlim, [nb nb]/2+0.5, 'Color', 'w');
-                h_ = colorbar; ylabel(h_, 'Confusion (%)', 'Rotation', 270);
-                Utils.specific_format('confusion');
+                %imagesc(squeeze(mean(C_s_pct,3)), [0 100]);
+                %xlabel 'Predicted bin'
+                %ylabel 'Correct bin'
+                %axis equal;
+                %xlim([1 nb] + [-0.5 0.5]);
+                %set(gca, 'XTickLabel', []);%{'60 cm', '120 cm', '60 cm', '120 cm'});
+                %set(gca, 'YTickLabel', []);%{'60 cm', '120 cm', '60 cm', '120 cm'});
+                %line([nb nb]/2+0.5, ylim, 'Color', 'w');
+                %line(xlim, [nb nb]/2+0.5, 'Color', 'w');
+                %h_ = colorbar; ylabel(h_, 'Confusion (%)', 'Rotation', 270);
+                %Utils.specific_format('confusion');
+                PanelGenerator.plot_confusion(C_s_pct, 'Confusion (%)');
                 Utils.printto;
             end
             
             fname = ap('confusion_diff.pdf');
             if remake || ~exist(fname, 'file')
                 figure('FileName', fname);
-                imagesc(squeeze(mean(C_s_pct,3)) - squeeze(mean(C_pct,3)));
-                xlabel 'Predicted bin'
-                ylabel 'Correct bin'
-                axis equal;
-                xlim([1 nb] + [-0.5 0.5]);
-                set(gca, 'XTickLabel', []);%{'60 cm', '120 cm', '60 cm', '120 cm'});
-                set(gca, 'YTickLabel', []);%{'60 cm', '120 cm', '60 cm', '120 cm'});
-                line([nb nb]/2+0.5, ylim, 'Color', 'k');
-                line(xlim, [nb nb]/2+0.5, 'Color', 'k');
+                %imagesc(squeeze(mean(C_s_pct,3)) - squeeze(mean(C_pct,3)));
+                %xlabel 'Predicted bin'
+                %ylabel 'Correct bin'
+                %axis equal;
+                %xlim([1 nb] + [-0.5 0.5]);
+                %set(gca, 'XTickLabel', []);%{'60 cm', '120 cm', '60 cm', '120 cm'});
+                %set(gca, 'YTickLabel', []);%{'60 cm', '120 cm', '60 cm', '120 cm'});
+                %line([nb nb]/2+0.5, ylim, 'Color', 'k');
+                %line(xlim, [nb nb]/2+0.5, 'Color', 'k');
+                %colormap(bluewhitered);
+                %h_ = colorbar; ylabel(h_, 'Confusion difference (%)', 'Rotation', 270);
+                %Utils.specific_format('confusion');
+                PanelGenerator.plot_confusion(C_s_pct - C_pct, 'Confusion difference (%)');
                 colormap(bluewhitered);
-                h_ = colorbar; ylabel(h_, 'Confusion difference (%)', 'Rotation', 270);
-                Utils.specific_format('confusion');
                 Utils.printto;
             end
             
@@ -311,6 +432,17 @@ classdef PanelGenerator
         function adjacent_decoders
             load('adjacent_agg_190725-094031_0.mat');
             keyboard
+            n_sizes = DecodeTensor.get_n_neurons_filt([res.filt_index]);
+            n_sizes = arrayfun(@(x)[2, 10:10:x, x], n_sizes, 'UniformOutput', false);
+            m2_slope = Utils.cf_(@Utils.fitaline, n_sizes, {res.m2});
+            m2_s_slope = Utils.cf_(@Utils.fitaline, n_sizes, {res.m2_s});
+            
+            n_cutoff = 100;
+            nv_slope = Utils.cf_(@(n,m)Utils.fitaline(n,m,n_cutoff), n_sizes, {res.nv});
+            nv_s_slope = Utils.cf_(@(n,m)Utils.fitaline(n,m,n_cutoff), n_sizes, {res.nv_s});
+            
+            asymp_dp2_w = Utils.cf_(@(x,y)x./y, m2_slope, nv_slope);
+            asymp_dp2_w_s = Utils.cf_(@(x,y)x./y, m2_s_slope, nv_s_slope);
         end
         
         function signal_and_noise
