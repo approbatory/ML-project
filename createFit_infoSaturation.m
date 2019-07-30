@@ -22,6 +22,7 @@ ft = fittype( 'I_0*x/(1+x/N)', 'independent', 'x', 'dependent', 'y' );
 opts = fitoptions( 'Method', 'NonlinearLeastSquares' );
 opts.Display = 'Off';
 opts.StartPoint = [1 100];
+%opts.Lower = [0 0];
 
 % Fit model to data.
 [fitresult, gof] = fit( xData, yData, ft, opts );

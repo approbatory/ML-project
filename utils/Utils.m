@@ -537,7 +537,7 @@ classdef Utils %Common utilities for dealing with neural data
             end
         end
         
-        function bns_groupings(fit_val, fit_val_s, confs, confs_s, mouse_list, is_grouped)
+        function bns_groupings(fit_val, fit_val_s, confs, confs_s, mouse_list, is_grouped, labels)
             if ~exist('is_grouped', 'var')
                 is_grouped = false;
             end
@@ -553,7 +553,10 @@ classdef Utils %Common utilities for dealing with neural data
                 
             end%% TODO finish multiballnstick automator helper function
             if is_grouped
-                grouped_ballnstick({'Unshuffled', 'Shuffled'}, y_, e_, 'coloring', DecodeTensor.mcolor(my_mice));
+                if ~exist('labels', 'var')
+                    labels = {'Unshuffled', 'Shuffled'};
+                end
+                grouped_ballnstick(labels, y_, e_, 'coloring', DecodeTensor.mcolor(my_mice));
             else
                 multiballnstick(Utils.cf_(@(x)x(end-1:end),my_mice), y_, e_, 'coloring', DecodeTensor.mcolor(my_mice));
             end

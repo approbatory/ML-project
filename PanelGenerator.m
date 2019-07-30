@@ -1,8 +1,12 @@
 classdef PanelGenerator
     methods(Static)
-        function plot_confusion(C_pct, cbar_label)
+        function plot_confusion(C_pct, cbar_label, clim_exists)
             nb = size(C_pct, 1);
-            imagesc(squeeze(mean(C_pct,3)), [0 100]);
+            if ~exist('clim_exists', 'var') || clim_exists
+                imagesc(squeeze(mean(C_pct,3)), [0 100]);
+            else
+                imagesc(squeeze(mean(C_pct,3)));
+            end
             xlabel 'Predicted bin'
             ylabel 'Correct bin'
             axis equal;
@@ -13,6 +17,43 @@ classdef PanelGenerator
             line(xlim, [nb nb]/2+0.5, 'Color', 'w');
             h_ = colorbar; ylabel(h_, cbar_label, 'Rotation', 270);
             Utils.specific_format('confusion');
+        end
+        
+        function [n_sizes, imse] = db_imse_reader(conn, setting, sess, samp_size)
+            bc = @DecodeTensor.build_command_sess;
+            q = @Utils.cf_p;
+            res = q(1,@(s)conn.fetch(bc(s, setting, 'MSE', [], 'max')), sess);
+            n_sizes = q(1,@(r)double(cell2mat(r(:,1))), res);
+            imse = q(1,@(r)1./cell2mat(r(:,3)), res);
+            [n_sizes, imse] = Utils.cf_p2(1,...
+                @(n,i)MultiSessionVisualizer.regroup(n, i, samp_size),...
+                n_sizes, imse);
+        end
+        
+        function plot_decoding_curve(sess, sp_, n_sizes, imse_s, I0_fit_s, N_fit_s, color, isrms)
+            if ~exist('isrms', 'var')
+                isrms = false;
+            end
+            if ~isrms
+                pre = @(x)x;
+                cap = 1;
+            else
+                pre = @(x)x.^(-1/2);
+                cap = 0.4;
+            end
+            for j = 1:numel(sess)
+                if ismember(j, sp_)
+                    n = n_sizes{j};
+                    %i = imse{i};
+                    i_s = imse_s{j};
+                    %plot(series_fits{2}{j}, 'r');
+                    n_f = 1:500;
+                    plot(n_f, pre(I0_fit_s(j).*n_f./(1 + n_f./N_fit_s(j))), color);
+                    hold on;
+                    errorbar(n, mean(pre(i_s)), std(pre(i_s))./sqrt(size(i_s,1)),...
+                        color, 'Capsize', cap, 'LineStyle', 'none');
+                end
+            end
         end
         
     end
@@ -59,8 +100,10 @@ classdef PanelGenerator
             
             ps_first_half = alg.test(model2, X_first_half);
             ps_first_half_s = alg.test(model2_s, X_first_half_s);
+            ps_first_half_d = alg.test(model2_s, X_first_half);
             ps_second_half = alg.test(model1, X_second_half);
             ps_second_half_s = alg.test(model1_s, X_second_half_s);
+            ps_second_half_d = alg.test(model1_s, X_second_half);
             
             me_ = @(k,p) mean(abs(ceil(k(:)/2)-ceil(p(:)/2))).*opt.bin_width;
             mse_ = @(k,p) mean((ceil(k(:)/2)-ceil(p(:)/2)).^2).*opt.bin_width.^2;
@@ -108,6 +151,27 @@ classdef PanelGenerator
             figure_format('boxsize', [0.8 0.7]*1.05); box on;
             Utils.printto;
             
+            figure('FileName', 'figure1_pdf\demo\decoding_demo_diagonal.pdf');
+            t = (1:numel(ks_first_half))./opt.samp_freq;
+            t_start = 83.5;
+            t_end = 90;
+            
+            hold on;
+            plot(t - t_start, (ceil(ps_first_half/2) - 0.5)*opt.bin_width, '-b');
+            plot(t - t_start, (ceil(ps_first_half_d/2) - 0.5)*opt.bin_width, '-m');
+            plot(t - t_start, (ceil(ks_first_half/2) - 0.5)*opt.bin_width, '-k');
+            trial_boundaries = (find(diff(within_trial(first_half))>0)+0.5)./opt.samp_freq - t_start;
+            for i = 1:numel(trial_boundaries)
+                x_ = trial_boundaries(i);
+                line([x_ x_], ylim, 'Color', 'k', 'LineStyle', '--');
+            end
+            xlim([t_start t_end] - t_start);
+            ylim([-Inf Inf]);
+            xlabel 'Time (s)';
+            ylabel 'Position (cm)';
+            figure_format('boxsize', [0.8 0.7]*1.05); box on;
+            Utils.printto;
+            
             Utils.pls_plot([X_first_half;X_second_half],...
                 [time_coord(first_half)', ceil(ks_first_half/2), mod(ks_first_half,2);...
                 time_coord(second_half)', ceil(ks_second_half/2),mod(ks_second_half,2)]);
@@ -128,10 +192,12 @@ classdef PanelGenerator
             
             ap = @(x) fullfile(savedir, x);
             
-            load('confusion_single_session_agg_190723-125628_0.mat');
+            %load('confusion_single_session_agg_190723-125628_0.mat');
+            load('confusion_single_session_agg_190729-212222_0.mat'); %%TODO rerun so there is actual randomness
             nt = res(1).num_trials;
             C_pct = cat(3, res.C)/nt*100;
             C_s_pct = cat(3, res.C_s)/nt*100;
+            C_d_pct = cat(3, res.C_d)/nt*100;
             %nb = size(C_pct, 1);
             
             fname = ap('confusion_unshuffled.pdf');
@@ -170,6 +236,14 @@ classdef PanelGenerator
                 Utils.printto;
             end
             
+            fname = ap('confusion_diagonal.pdf');
+            if remake || ~exist(fname, 'file')
+                disp('making diagonal');
+                figure('FileName', fname);
+                PanelGenerator.plot_confusion(C_d_pct, 'Confusion (%)');
+                Utils.printto;
+            end
+            
             fname = ap('confusion_diff.pdf');
             if remake || ~exist(fname, 'file')
                 figure('FileName', fname);
@@ -185,7 +259,7 @@ classdef PanelGenerator
                 %colormap(bluewhitered);
                 %h_ = colorbar; ylabel(h_, 'Confusion difference (%)', 'Rotation', 270);
                 %Utils.specific_format('confusion');
-                PanelGenerator.plot_confusion(C_s_pct - C_pct, 'Confusion difference (%)');
+                PanelGenerator.plot_confusion(C_s_pct - C_pct, 'Confusion difference (%)', false);
                 colormap(bluewhitered);
                 Utils.printto;
             end
@@ -203,6 +277,24 @@ classdef PanelGenerator
                 e_s = diag(squeeze(std(C_s_pct,[],3)))./sqrt(size(C_s_pct,3));
                 errorbar(m_s, e_s, 'r', 'CapSize', 1);
                 errorbar(m - m_s, sqrt(e.^2 + e_s.^2), 'k', 'DisplayName', 'Difference', 'CapSize', 1);
+                line([20 20], ylim, 'Color', 'k');
+                figure_format([0.85 0.85]);
+                Utils.printto;
+            end
+            
+            fname = ap('bin_error_rate_diagonal.pdf');
+            if remake || ~exist(fname, 'file')
+                figure('FileName', fname);
+                m = 100-diag(squeeze(mean(C_pct,3)));
+                e = diag(squeeze(std(C_pct,[],3)))./sqrt(size(C_pct,3));
+                errorbar(m, e, 'b', 'CapSize', 1);
+                xlabel 'Place bin'
+                ylabel 'Error rate (%)'
+                hold on
+                m_d = 100-diag(squeeze(mean(C_d_pct,3)));
+                e_d = diag(squeeze(std(C_d_pct,[],3)))./sqrt(size(C_d_pct,3));
+                errorbar(m_d, e_d, 'm', 'CapSize', 1);
+                errorbar(m_d - m, sqrt(e.^2 + e_d.^2), 'k', 'DisplayName', 'Difference', 'CapSize', 1);
                 line([20 20], ylim, 'Color', 'k');
                 figure_format([0.85 0.85]);
                 Utils.printto;
@@ -229,58 +321,72 @@ classdef PanelGenerator
                 dbfile = 'decoding_all_sess.db';
                 conn = sqlite(dbfile);
                 samp_size = 80;
-                bc = @DecodeTensor.build_command_sess;
+                %bc = @DecodeTensor.build_command_sess;
                 [sess, mouse_names] = DecodeTensor.filt_sess_id_list;
-                q = @Utils.cf_p;
-                res = q(1,@(s)conn.fetch(bc(s, 'unshuffled', 'MSE', [], 'max')), sess);
-                n_sizes = q(1,@(r)double(cell2mat(r(:,1))), res);
-                imse = q(1,@(r)1./cell2mat(r(:,3)), res);
-                [n_sizes, imse] = Utils.cf_p2(1,...
-                    @(n,i)MultiSessionVisualizer.regroup(n, i, samp_size),...
-                    n_sizes, imse);
+                %q = @Utils.cf_p;
+                %res = q(1,@(s)conn.fetch(bc(s, 'unshuffled', 'MSE', [], 'max')), sess);
+                %n_sizes = q(1,@(r)double(cell2mat(r(:,1))), res);
+                %imse = q(1,@(r)1./cell2mat(r(:,3)), res);
+                %[n_sizes, imse] = Utils.cf_p2(1,...
+                %    @(n,i)MultiSessionVisualizer.regroup(n, i, samp_size),...
+                %    n_sizes, imse);
+                [n_sizes, imse] = PanelGenerator.db_imse_reader(conn, 'unshuffled', sess, samp_size);
                 
-                res_s = q(1,@(s)conn.fetch(bc(s, 'shuffled', 'MSE', [], 'max')), sess);
-                n_sizes_s = q(1,@(r)double(cell2mat(r(:,1))), res_s);
-                imse_s = q(1,@(r)1./cell2mat(r(:,3)), res_s);
-                [n_sizes_s, imse_s] = Utils.cf_p2(1,...
-                    @(n,i)MultiSessionVisualizer.regroup(n, i, samp_size),...
-                    n_sizes_s, imse_s);
+                %res_s = q(1,@(s)conn.fetch(bc(s, 'shuffled', 'MSE', [], 'max')), sess);
+                %n_sizes_s = q(1,@(r)double(cell2mat(r(:,1))), res_s);
+                %imse_s = q(1,@(r)1./cell2mat(r(:,3)), res_s);
+                %[n_sizes_s, imse_s] = Utils.cf_p2(1,...
+                %    @(n,i)MultiSessionVisualizer.regroup(n, i, samp_size),...
+                %    n_sizes_s, imse_s);
+                [n_sizes_s, imse_s] = PanelGenerator.db_imse_reader(conn, 'shuffled', sess, samp_size);
+                [n_sizes_d, imse_d] = PanelGenerator.db_imse_reader(conn, 'diagonal', sess, samp_size);
                 assert(isequal(n_sizes, n_sizes_s), 'mismatch between unshuffled and shuffled sampling');
-                
+                assert(isequal(n_sizes, n_sizes_d), 'mismatch between unshuffled and diagonal sampling');
                 %series_fits = q(1,@(s)q(2,@(n,m)createFit_infoSaturation(n(:),mean(m)'), n_sizes, s), {imse, imse_s});
                 
                 [series_fits{1}, series_gof{1}] = Utils.cf_p2(2,@(n,m)createFit_infoSaturation(n(:),mean(m)'), n_sizes, imse);
-                progressbar(0.5/2);
+                progressbar(1/3/2);
                 [series_fits{2}, series_gof{2}] = Utils.cf_p2(2,@(n,m)createFit_infoSaturation(n(:),mean(m)'), n_sizes, imse_s);
-                progressbar(1/2);
+                progressbar(2/3/2);
+                [series_fits{3}, series_gof{3}] = Utils.cf_p2(2,@(n,m)createFit_infoSaturation(n(:),mean(m)'), n_sizes, imse_d);
+                progressbar(3/3/2);
                 [series_exp_fits{1}, series_exp_gof{1}] = Utils.cf_p2(2,@(n,m)createFit_exp(n(:),mean(m)'), n_sizes, imse);
-                progressbar(1.5/2);
+                progressbar(4/3/2);
                 [series_exp_fits{2}, series_exp_gof{2}] = Utils.cf_p2(2,@(n,m)createFit_exp(n(:),mean(m)'), n_sizes, imse_s);
-                progressbar(2/2);
+                progressbar(5/3/2);
+                [series_exp_fits{3}, series_exp_gof{3}] = Utils.cf_p2(2,@(n,m)createFit_exp(n(:),mean(m)'), n_sizes, imse_d);
+                progressbar(6/3/2);
                 [I0_fit, I0_conf] = Utils.fit_get(series_fits{1}, 'I_0');
                 [I0_fit_s, I0_conf_s] = Utils.fit_get(series_fits{2}, 'I_0');
+                [I0_fit_d, I0_conf_d] = Utils.fit_get(series_fits{3}, 'I_0');
                 
                 [N_fit, N_conf] = Utils.fit_get(series_fits{1}, 'N');
                 [N_fit_s, N_conf_s] = Utils.fit_get(series_fits{2}, 'N');
+                [N_fit_d, N_conf_d] = Utils.fit_get(series_fits{3}, 'N');
                 
                 save(save_file, 'sess', 'mouse_names', 'n_sizes',...
-                    'imse', 'imse_s', 'series_fits', 'series_gof', 'I0_fit', 'I0_conf',...
+                    'imse', 'imse_s', 'imse_d', 'series_fits', 'series_gof', 'I0_fit', 'I0_conf',...
                     'I0_fit_s', 'I0_conf_s', 'N_fit', 'N_conf',...
-                    'N_fit_s', 'N_conf_s', 'series_exp_fits', 'series_exp_gof');
+                    'N_fit_s', 'N_conf_s', 'series_exp_fits', 'series_exp_gof',...
+                    'I0_fit_d', 'I0_conf_d', 'N_fit_d', 'N_conf_d');
             else
                 load(save_file);
             end
             
             r2 = cellfun(@(x)x.rsquare, series_gof{1});
             r2_s = cellfun(@(x)x.rsquare, series_gof{2});
+            r2_d = cellfun(@(x)x.rsquare, series_gof{3});
             
             r2_exp = cellfun(@(x)x.rsquare, series_exp_gof{1});
             r2_s_exp = cellfun(@(x)x.rsquare, series_exp_gof{2});
+            r2_d_exp = cellfun(@(x)x.rsquare, series_exp_gof{3});
             
             fprintf('Unshuf R^2: %f - %f, median: %f\n', min(r2), max(r2), median(r2));
             fprintf('Shuf R^2: %f - %f, median: %f\n', min(r2_s), max(r2_s), median(r2_s));
+            fprintf('Diag R^2: %f - %f, median: %f\n', min(r2_d), max(r2_d), median(r2_d));
             fprintf('Unshuf (exp) R^2: %f - %f, median: %f\n', min(r2_exp), max(r2_exp), median(r2_exp));
             fprintf('Shuf (exp) R^2: %f - %f, median: %f\n', min(r2_s_exp), max(r2_s_exp), median(r2_s_exp));
+            fprintf('Diag (exp) R^2: %f - %f, median: %f\n', min(r2_d_exp), max(r2_d_exp), median(r2_d_exp));
             
             
             fname = ap('decoding_curve_fit.pdf');
@@ -292,31 +398,34 @@ classdef PanelGenerator
                 show_filter = ismember(m_, show_mice);
                 sp_ = sp_(show_filter);
                 %MultiSessionVisualizer.plot_single_filtered(n_sizes, {imse_s, imse}, {'r', 'b'}, find(show_filter));
-                for j = 1:numel(sess)
-                    if ismember(j, sp_)
-                        n = n_sizes{j};
-                        %i = imse{i};
-                        i_s = imse_s{j};
-                        %plot(series_fits{2}{j}, 'r');
-                        n_f = 1:500;
-                        plot(n_f, I0_fit_s(j).*n_f./(1 + n_f./N_fit_s(j)), 'r');
-                        hold on;
-                        errorbar(n, mean(i_s), std(i_s)./sqrt(size(i_s,1)),...
-                            'r', 'Capsize', 1, 'LineStyle', 'none');
-                    end
-                end
-                for j = 1:numel(sess)
-                    if ismember(j, sp_)
-                        n = n_sizes{j};
-                        i = imse{j};
-                        %plot(series_fits{1}{j}, 'b');
-                        n_f = 1:500;
-                        plot(n_f, I0_fit(j).*n_f./(1 + n_f./N_fit(j)), 'b');
-                        hold on;
-                        errorbar(n, mean(i), std(i)./sqrt(size(i,1)), 'b',...
-                            'Capsize', 1, 'LineStyle', 'none');
-                    end
-                end
+                %for j = 1:numel(sess)
+                %    if ismember(j, sp_)
+                %        n = n_sizes{j};
+                %        %i = imse{i};
+                %        i_s = imse_s{j};
+                %        %plot(series_fits{2}{j}, 'r');
+                %        n_f = 1:500;
+                %        plot(n_f, I0_fit_s(j).*n_f./(1 + n_f./N_fit_s(j)), 'r');
+                %        hold on;
+                %        errorbar(n, mean(i_s), std(i_s)./sqrt(size(i_s,1)),...
+                %            'r', 'Capsize', 1, 'LineStyle', 'none');
+                %    end
+                %end
+                PanelGenerator.plot_decoding_curve(sess, sp_, n_sizes, imse_s, I0_fit_s, N_fit_s, 'r');
+                %for j = 1:numel(sess)
+                %    if ismember(j, sp_)
+                %        n = n_sizes{j};
+                %        i = imse{j};
+                %        %plot(series_fits{1}{j}, 'b');
+                %        n_f = 1:500;
+                %        plot(n_f, I0_fit(j).*n_f./(1 + n_f./N_fit(j)), 'b');
+                %        hold on;
+                %        errorbar(n, mean(i), std(i)./sqrt(size(i,1)), 'b',...
+                %            'Capsize', 1, 'LineStyle', 'none');
+                %    end
+                %end
+                hold on;
+                PanelGenerator.plot_decoding_curve(sess, sp_, n_sizes, imse, I0_fit, N_fit, 'b');
                 xlabel 'Number of cells'
                 ylabel '1/MSE (cm^{-2})'
                 ylim([0 0.16]);
@@ -327,31 +436,68 @@ classdef PanelGenerator
                 
                 [pref, fn, ext] = fileparts(fname);
                 figure('FileName', fullfile(pref, ['inset' fn ext]));
-                for j = 1:numel(sess)
-                    if ismember(j, sp_)
-                        n = n_sizes{j};
-                        %i = imse{i};
-                        i_s = imse_s{j};
-                        %plot(series_fits{2}{j}, 'r');
-                        n_f = 1:500;
-                        plot(n_f, (I0_fit_s(j).*n_f./(1 + n_f./N_fit_s(j))).^(-1/2), 'r');
-                        hold on;
-                        errorbar(n, mean(i_s.^(-1/2)), std(i_s.^(-1/2))./sqrt(size(i_s,1)),...
-                            'r', 'Capsize', 0.4, 'LineStyle', 'none');
-                    end
-                end
-                for j = 1:numel(sess)
-                    if ismember(j, sp_)
-                        n = n_sizes{j};
-                        i = imse{j};
-                        %plot(series_fits{1}{j}, 'b');
-                        n_f = 1:500;
-                        plot(n_f, (I0_fit(j).*n_f./(1 + n_f./N_fit(j))).^(-1/2), 'b');
-                        hold on;
-                        errorbar(n, mean(i.^(-1/2)), std(i.^(-1/2))./sqrt(size(i,1)), 'b',...
-                            'Capsize', 0.4, 'LineStyle', 'none');
-                    end
-                end
+                %for j = 1:numel(sess)
+                %    if ismember(j, sp_)
+                %        n = n_sizes{j};
+                %        %i = imse{i};
+                %        i_s = imse_s{j};
+                %        %plot(series_fits{2}{j}, 'r');
+                %        n_f = 1:500;
+                %        plot(n_f, (I0_fit_s(j).*n_f./(1 + n_f./N_fit_s(j))).^(-1/2), 'r');
+                %        hold on;
+                %        errorbar(n, mean(i_s.^(-1/2)), std(i_s.^(-1/2))./sqrt(size(i_s,1)),...
+                %            'r', 'Capsize', 0.4, 'LineStyle', 'none');
+                %    end
+                %end
+                PanelGenerator.plot_decoding_curve(sess, sp_, n_sizes, imse_s, I0_fit_s, N_fit_s, 'r', true);
+                %for j = 1:numel(sess)
+                %    if ismember(j, sp_)
+                %        n = n_sizes{j};
+                %        i = imse{j};
+                %        %plot(series_fits{1}{j}, 'b');
+                %        n_f = 1:500;
+                %        plot(n_f, (I0_fit(j).*n_f./(1 + n_f./N_fit(j))).^(-1/2), 'b');
+                %        hold on;
+                %        errorbar(n, mean(i.^(-1/2)), std(i.^(-1/2))./sqrt(size(i,1)), 'b',...
+                %            'Capsize', 0.4, 'LineStyle', 'none');
+                %    end
+                %end
+                hold on;
+                PanelGenerator.plot_decoding_curve(sess, sp_, n_sizes, imse, I0_fit, N_fit, 'b', true);
+                xlabel 'Number of cells'
+                ylabel 'RMS Error (cm)'
+                ylim([2 50]);
+                set(gca, 'YScale', 'log');
+                set(gca, 'YTick', [1 2 5 10 20 50]);
+                legend off
+                figure_format('boxsize', [0.6 0.8], 'fontsize', 5);
+                Utils.printto;
+            end
+            
+            fname = ap('decoding_curve_fit_diagonal');
+            if p.Results.remake || ~exist(fname, 'file')
+                figure('FileName', fname);
+                show_mice = {'Mouse2022', 'Mouse2024', 'Mouse2028'};
+                
+                [~,m_,sp_] = DecodeTensor.special_sess_id_list;
+                show_filter = ismember(m_, show_mice);
+                sp_ = sp_(show_filter);
+                PanelGenerator.plot_decoding_curve(sess, sp_, n_sizes, imse_d, I0_fit_d, N_fit_d, 'm');
+                hold on;
+                PanelGenerator.plot_decoding_curve(sess, sp_, n_sizes, imse, I0_fit, N_fit, 'b');
+                xlabel 'Number of cells'
+                ylabel '1/MSE (cm^{-2})'
+                ylim([0 0.16]);
+                legend off
+                %figure_format([0.8125 1.5]);
+                figure_format([2 2.5]);
+                Utils.printto;
+                
+                [pref, fn, ext] = fileparts(fname);
+                figure('FileName', fullfile(pref, ['inset' fn ext]));
+                PanelGenerator.plot_decoding_curve(sess, sp_, n_sizes, imse_d, I0_fit_d, N_fit_d, 'm', true);
+                hold on;
+                PanelGenerator.plot_decoding_curve(sess, sp_, n_sizes, imse, I0_fit, N_fit, 'b', true);
                 xlabel 'Number of cells'
                 ylabel 'RMS Error (cm)'
                 ylim([2 50]);
@@ -373,12 +519,33 @@ classdef PanelGenerator
                 Utils.printto;
             end
             
+            fname = ap('grouped_I0_fit_diag.pdf');
+            if p.Results.remake || ~exist(fname, 'file')
+                figure('FileName', fname);
+                Utils.bns_groupings(I0_fit, I0_fit_d, I0_conf, I0_conf_d, mouse_names, true, {'Unshuffled', 'Diagonal'});
+                ylim([-Inf Inf]);
+                ylabel(sprintf('I_0 fit value\n(cm^{-2}neuron^{-1})'));
+                figure_format;
+                Utils.fix_exponent(gca, 'Y', 0);
+                Utils.printto;
+            end
+            
             fname = ap('grouped_N_fit.pdf');
             if p.Results.remake || ~exist(fname, 'file')
                 figure('FileName', fname);
                 Utils.bns_groupings(N_fit, N_fit_s, N_conf, N_conf_s, mouse_names, true);
                 set(gca, 'YScale', 'log');
                 %ylim([-Inf Inf]);
+                ylabel(sprintf('N fit value\n(neuron)'));
+                figure_format;
+                Utils.printto;
+            end
+            
+            fname = ap('grouped_N_fit_diag.pdf');
+            if p.Results.remake || ~exist(fname, 'file')
+                figure('FileName', fname);
+                Utils.bns_groupings(N_fit, N_fit_d, N_conf, N_conf_d, mouse_names, true, {'Unshuffled', 'Diagonal'});
+                set(gca, 'YScale', 'log');
                 ylabel(sprintf('N fit value\n(neuron)'));
                 figure_format;
                 Utils.printto;
