@@ -1,5 +1,5 @@
 %function [p, h] = ballnstick(lab1, lab2, y1, y2, e1, e2)
-function [p, h] = ballnstick(lab1, lab2, y1, y2, varargin)
+function [p_val, h] = ballnstick(lab1, lab2, y1, y2, varargin)
 p = inputParser;
 p.addOptional('e1', []);
 p.addOptional('e2', []);
@@ -8,6 +8,7 @@ p.addOptional('coloring', {}, @iscell);
 p.addOptional('jitter', 0.3, @isnumeric);
 p.addOptional('err_scale', 0.5, @isnumeric);
 p.addOptional('relative_err', false, @islogical);
+p.addOptional('logscale', false, @islogical);
 p.parse(varargin{:});
 e1 = p.Results.e1;
 e2 = p.Results.e2;
@@ -64,17 +65,25 @@ set(gca, 'XTick', [1 2]);
 set(gca, 'XTickLabel', {lab1, lab2});
 xlim([0.5 2.5]);
 
-[p, h] = signrank(y1, y2);
+[p_val, h] = signrank(y1, y2);
 
-if p < 0.001
-    signif_text = '***';
-elseif p < 0.01
-    signif_text = '**';
-elseif p < 0.05
-    signif_text = '*';
-else
-    signif_text = 'n.s';
+%if p < 0.001
+%    signif_text = '***';
+%elseif p < 0.01
+%    signif_text = '**';
+%elseif p < 0.05
+%    signif_text = '*';
+%else
+%    signif_text = 'n.s';
+%end
+signif_text = Utils.pstar(p_val);
+if p.Results.logscale
+    set(gca, 'YScale', 'log');
 end
 yl_ = ylim;
-text(1.5, yl_(1) + 0.8*diff(yl_), signif_text, 'HorizontalAlignment', 'center');
+if p.Results.logscale
+    text(1.5, 10.^(log10(yl_(1)) + 0.8*diff(log10(yl_))), signif_text, 'HorizontalAlignment', 'center');
+else
+    text(1.5, yl_(1) + 0.8*diff(yl_), signif_text, 'HorizontalAlignment', 'center');
+end
 end

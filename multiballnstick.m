@@ -1,8 +1,11 @@
-function multiballnstick(labels, ys, errs, varargin)
+function [p_val, h] = multiballnstick(labels, ys, errs, varargin)
 p = inputParser;
 p.addOptional('coloring', {}, @iscell);
 p.addOptional('capsize', 1, @isscalar);
 p.addOptional('jitter', 0.3, @isscalar);
+p.addParameter('medline_color', 'b', @ischar);
+p.addParameter('medline_color_alt', 'r', @ischar);
+p.addParameter('logscale', false, @islogical);
 p.parse(varargin{:});
 %shape of all inputs should be 2 x n
 n = size(labels, 2);
@@ -29,8 +32,26 @@ for i = 1:n
     end
 end
 
-l_ = refline(0, median([ys{1,:}])); l_.Color = 'b'; l_.LineStyle = ':';
-l_ = refline(0, median([ys{2,:}])); l_.Color = 'r'; l_.LineStyle = ':';
+y_pooled_1 = [ys{1,:}];
+y_pooled_2 = [ys{2,:}];
+
+l_ = refline(0, median(y_pooled_1)); l_.Color = p.Results.medline_color; l_.LineStyle = ':';
+l_ = refline(0, median(y_pooled_2)); l_.Color = p.Results.medline_color_alt; l_.LineStyle = ':';
+
+[p_val, h] = signrank(y_pooled_1, y_pooled_2);
+signif_text = Utils.pstar(p_val);
+
+if p.Results.logscale
+    set(gca, 'YScale', 'log');
+end
+
+yl_ = ylim;
+xl_ = xlim;
+if p.Results.logscale
+    text(mean(xl_), 10.^(log10(yl_(1)) + 0.8*diff(log10(yl_))), signif_text, 'HorizontalAlignment', 'center');
+else
+    text(mean(xl_), yl_(1) + 0.8*diff(yl_), signif_text, 'HorizontalAlignment', 'center');
+end
 
 set(gca, 'XTick', 1:n);
 set(gca, 'XTickLabel', labels(1,:));

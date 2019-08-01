@@ -277,28 +277,52 @@ classdef Utils %Common utilities for dealing with neural data
             non_peak_mean = mean(trace(non_peak_frames));
         end
         
-        function [XS, stats] = pls_plot(X, signals, stats, xl_, yl_)
-            if exist('stats', 'var')
-                XS = (X - mean(X)) * stats.W;
+        %function [XS, stats] = pls_plot(X, signals, stats, xl_, yl_, )
+        function [XS, stats] = pls_plot(X, signals, varargin)
+            p = inputParser;
+            p.addOptional('stats', [], @isstruct);
+            p.addOptional('xl_', [], @isnumeric);
+            p.addOptional('yl_', [], @isnumeric);
+            p.addOptional('alpha', 0.05, @isscalar);
+            p.addOptional('threeD', false, @islogical);
+            p.parse(varargin{:});
+            
+            if ~isempty(p.Results.stats)
+                XS = (X - mean(X)) * p.Results.stats.W;
             else
-                [~, ~, XS, ~, ~, ~, ~, stats] = plsregress(X, zscore(signals), 2);
+                if p.Results.threeD
+                    [~, ~, XS, ~, ~, ~, ~, stats] = plsregress(X, zscore(signals), 3);
+                else
+                    [~, ~, XS, ~, ~, ~, ~, stats] = plsregress(X, zscore(signals), 2);
+                end
             end
             origin = -mean(X) * stats.W;
             figure;
             num_sig = size(signals,2);
             for i = 1:num_sig
                 subplot(1,num_sig,i);
-                scatter(XS(:,1), XS(:,2), 10, signals(:,i),...
-                    'filled', 'MarkerFaceAlpha', 0.05);
-                hold on;
-                scatter(origin(1), origin(2), 20, 'r');
-                xlabel PLS1; ylabel PLS2; title '2D PLS projections'
-                axis equal;
-                if exist('xl_', 'var')
-                    xlim(xl_);
+                if p.Results.threeD
+                    scatter3(XS(:,1), XS(:,2), XS(:,3), 10, signals(:,i),...
+                        'filled', 'MarkerFaceAlpha', p.Results.alpha);
+                    hold on;
+                    scatter3(origin(1), origin(2), origin(3), 20, 'r');
+                    xlabel PLS1; ylabel PLS2; zlabel PLS3; title '3D PLS projections'
+                    axis equal;
+                else
+                    scatter(XS(:,1), XS(:,2), 10, signals(:,i),...
+                        'filled', 'MarkerFaceAlpha', p.Results.alpha);
+                    hold on;
+                    scatter(origin(1), origin(2), 20, 'r');
+                    xlabel PLS1; ylabel PLS2; title '2D PLS projections'
+                    axis equal;
                 end
-                if exist('yl_', 'var')
-                    ylim(yl_);
+                
+                
+                if ~isempty(p.Results.xl_)
+                    xlim(p.Results.xl_);
+                end
+                if ~isempty(p.Results.yl_)
+                    ylim(p.Results.yl_);
                 end
             end
         end
@@ -430,7 +454,7 @@ classdef Utils %Common utilities for dealing with neural data
             expo = exp_form(e_loc+1:end);
             expo_num = str2double(expo);
             if ispc
-                r = [base, '·10^{', sprintf('%d', expo_num), '}'];
+                r = [base, 'ï¿½10^{', sprintf('%d', expo_num), '}'];
             else
                 r = [base, 'Â·10^{', sprintf('%d', expo_num), '}'];
             end
@@ -537,9 +561,12 @@ classdef Utils %Common utilities for dealing with neural data
             end
         end
         
-        function bns_groupings(fit_val, fit_val_s, confs, confs_s, mouse_list, is_grouped, labels)
+        function bns_groupings(fit_val, fit_val_s, confs, confs_s, mouse_list, is_grouped, labels, logscale)
             if ~exist('is_grouped', 'var')
                 is_grouped = false;
+            end
+            if ~exist('logscale', 'var')
+                logscale = false;
             end
             a_ = {fit_val, fit_val_s, confs, confs_s, mouse_list};
             assert(all(cellfun(@(x,y)isequal(size(x),size(y)), a_, circshift(a_,1))), 'all input sizes must match');
@@ -556,9 +583,15 @@ classdef Utils %Common utilities for dealing with neural data
                 if ~exist('labels', 'var')
                     labels = {'Unshuffled', 'Shuffled'};
                 end
-                grouped_ballnstick(labels, y_, e_, 'coloring', DecodeTensor.mcolor(my_mice));
+                grouped_ballnstick(labels, y_, e_, 'coloring', DecodeTensor.mcolor(my_mice), 'logscale', logscale);
             else
-                multiballnstick(Utils.cf_(@(x)x(end-1:end),my_mice), y_, e_, 'coloring', DecodeTensor.mcolor(my_mice));
+                if strcmp(labels{2}, 'Diagonal')
+                    color_alt = 'm';
+                else
+                    color_alt = 'r';
+                end
+                multiballnstick(Utils.cf_(@(x)x(end-1:end),my_mice), y_, e_,...
+                    'coloring', DecodeTensor.mcolor(my_mice), 'medline_color_alt', color_alt, 'logscale', logscale);
             end
         end
         

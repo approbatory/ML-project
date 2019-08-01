@@ -1,4 +1,7 @@
-function multi_figure_format
+function multi_figure_format(varargin)
+p = inputParser;
+p.addOptional('fix_expo', {}, @iscell);
+p.parse(varargin{:});
 
 my_font = 'Helvetica LT Std';
 my_font_size = 6*6/6.4;
@@ -19,6 +22,9 @@ for i = 1:numel(axs)
     ax.YLabel.FontName = my_font;
     ax.XLabel.FontSize = my_font_size;
     ax.YLabel.FontSize = my_font_size;
+    if ~isempty(p.Results.fix_expo)
+        Utils.fix_exponent(ax, p.Results.fix_expo{:});
+    end
     for j = 1:numel(ax.Children)
         child = ax.Children(j);
         if strcmp(child.Type, 'text')

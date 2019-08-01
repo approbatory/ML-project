@@ -449,6 +449,9 @@ classdef MultiSessionVisualizer
             if ~exist('max_y_val', 'var')
                 max_y_val = Inf;
             end
+            if numel(max_y_val) > 1
+                max_y_val = max_y_val(end);
+            end
             figure;
             mouse_names = unique(mouse_list);
             num_mice = numel(mouse_names);
