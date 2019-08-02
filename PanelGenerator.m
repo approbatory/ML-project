@@ -194,7 +194,7 @@ classdef PanelGenerator
         
         function aux_decoding_curves(fname, sess, mouse_names, n_sizes, imse, imse_alt,...
                 I0_fit, I0_fit_alt, N_fit, N_fit_alt, color, color_alt,...
-                ylim_imse, ylim_rms, ylim_multi)
+                ylim_imse, ylim_rms, ylim_multi, non_inset)
             %For two series of IMSE curves (i.e. unshuffled-shuffled, or
             %unshuffled-diagonal), plot selected sessions as IMSE, RMS, along with the fit curve and
             %plot all sessions by mouse.
@@ -253,7 +253,11 @@ classdef PanelGenerator
             set(gca, 'YScale', 'log');
             set(gca, 'YTick', [1 2 5 10 20 50]);
             legend off
-            figure_format('boxsize', [0.6 0.8], 'fontsize', 5);
+            if exist('non_inset', 'var') && non_inset
+                figure_format;
+            else
+                figure_format('boxsize', [0.6 0.8], 'fontsize', 5);
+            end
             Utils.printto;
             
             MultiSessionVisualizer.plot_series(n_sizes, {imse_alt, imse}, {color_alt, color}, mouse_names, ylim_multi);
@@ -651,7 +655,7 @@ classdef PanelGenerator
             if p.Results.remake || ~exist(fname, 'file')
                 PanelGenerator.aux_decoding_curves(fname, sess, mouse_names, n_sizes, imse, imse_d,...
                     I0_fit, I0_fit_d, N_fit, N_fit_d, 'b', 'm',...
-                    [0 0.05], [2 50], [0 Inf]);
+                    [0 0.05], [4 50], [0 Inf], true);
             end
             
             fname = ap('grouped_I0_fit.pdf');
