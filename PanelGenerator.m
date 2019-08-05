@@ -320,7 +320,7 @@ classdef PanelGenerator
         end
         
         function aux_regressions(fname, x, y, x_conf, y_conf, mouse_list,...
-                color, text_coord, xlab, ylab, fix_expo, savedir_main, savedir_sup)
+                color, text_coord, xlab, ylab, fix_expo, savedir_main, savedir_sup, special_xlim)
             [~, a_, b_] = fileparts(fname);
             fname = [a_ b_];
             
@@ -330,6 +330,9 @@ classdef PanelGenerator
                 'text_coord', text_coord);
             xlabel(xlab);
             ylabel(ylab);
+            if exist('special_xlim', 'var')
+                xlim(special_xlim);
+            end
             figure_format('factor', 1.6);
             if fix_expo
                 Utils.fix_exponent(gca, 'x', 0);
@@ -863,7 +866,7 @@ classdef PanelGenerator
             PanelGenerator.aux_regressions('limit_vs_dp2_w.pdf', InfoLimit(g_), dp2_w(g_),...
                 InfoLimit_conf(g_), dp2_w_conf(g_), mouse_names(g_), 'b',...
                 [0.08 1], 'I_0N (cm^{-2})', '(Dm)^2 slope / s^2 slope',...
-                false, 'figure2_pdf/adjacent', 'supplements_pdf/adjacent');
+                false, 'figure2_pdf/adjacent', 'supplements_pdf/adjacent', [-Inf 0.15]);
             
             
             %figure;
