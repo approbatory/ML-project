@@ -289,6 +289,7 @@ classdef Utils %Common utilities for dealing with neural data
             
             if ~isempty(p.Results.stats)
                 XS = (X - mean(X)) * p.Results.stats.W;
+                stats = p.Results.stats;
             else
                 if p.Results.threeD
                     [~, ~, XS, ~, ~, ~, ~, stats] = plsregress(X, zscore(signals), 3);
