@@ -289,6 +289,7 @@ classdef Utils %Common utilities for dealing with neural data
             
             if ~isempty(p.Results.stats)
                 XS = (X - mean(X)) * p.Results.stats.W;
+                stats = p.Results.stats;
             else
                 if p.Results.threeD
                     [~, ~, XS, ~, ~, ~, ~, stats] = plsregress(X, zscore(signals), 3);
@@ -454,7 +455,7 @@ classdef Utils %Common utilities for dealing with neural data
             expo = exp_form(e_loc+1:end);
             expo_num = str2double(expo);
             if ispc
-                r = [base, 'ï¿½10^{', sprintf('%d', expo_num), '}'];
+                r = [base, '·10^{', sprintf('%d', expo_num), '}'];
             else
                 r = [base, 'Â·10^{', sprintf('%d', expo_num), '}'];
             end
