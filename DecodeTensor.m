@@ -23,6 +23,12 @@ classdef DecodeTensor < handle
             d = DecodeTensor.cons_filt(dispatch_index, true);
             DecodeTensor.decode_series(d{1}, d{2}, DecodeTensor.default_opt);
         end
+
+	function dispatch_datasize_filt(dispatch_index)
+	    %index is from 1 to 107
+	    d = DecodeTensor.cons_filt(dispatch_index, true);
+	    DecodeTensor.decode_datasize_series(d{1}, d{2}, DecodeTensor.default_opt);
+	end
         
         function decode_series(source_path, mouse_id, opt)
             %%Decoding performance as a function of number of neurons
@@ -173,7 +179,7 @@ classdef DecodeTensor < handle
             opt.bin_width = opt.total_length/opt.n_bins;
             
             %extra
-            opt.d_trials = 30;
+            opt.d_trials = 10;
             opt.first_half = false;
             opt.pad_seconds = 0.8;
             opt.discard_incomplete_trials = true;
@@ -1159,29 +1165,31 @@ classdef DecodeTensor < handle
             for i = 1:numel(trials_series)
                 sample_id = randi(2^16);
                 n_tri = trials_series(i);
-                [mean_err, MSE] = DecodeTensor.decode_tensor(data_tensor, tr_dir, opt.bin_width, alg, false,...
-                    num_neurons, n_tri);
+                
+		err_res = DecodeTensor.decode_all(data_tensor, tr_dir, opt.bin_width, alg, num_neurons, n_tri);
+		%[mean_err, MSE] = DecodeTensor.decode_tensor(data_tensor, tr_dir, opt.bin_width, alg, false,...
+                %    num_neurons, n_tri);
                 db_queue{i,1} = ...
-                    {mouse_id, session_id, 'unshuffled', num_neurons, n_tri, opt.restrict_cell_distance, mean_err, MSE, sample_id};
-                fprintf('n_tri=%d\tmean_err = %.2f\n', n_tri, mean_err);
+                    {mouse_id, session_id, 'unshuffled', num_neurons, n_tri, opt.restrict_cell_distance, err_res.mean_err.unshuffled, err_res.MSE.unshuffled, sample_id};
+                fprintf('n_tri=%d\tmean_err = %.2f\n', n_tri, err_res.mean_err.unshuffled);
                 
-                [mean_err_s, MSE_s] = DecodeTensor.decode_tensor(data_tensor, tr_dir, opt.bin_width, alg, true,...
-                    num_neurons, n_tri);
+                %[mean_err_s, MSE_s] = DecodeTensor.decode_tensor(data_tensor, tr_dir, opt.bin_width, alg, true,...
+                %    num_neurons, n_tri);
                 db_queue{i,2} = ...
-                    {mouse_id, session_id, 'shuffled', num_neurons, n_tri, opt.restrict_cell_distance, mean_err_s, MSE_s, sample_id};
-                fprintf('n_tri=%d\tmean_err_s = %.2f\n', n_tri, mean_err_s);
+                    {mouse_id, session_id, 'shuffled', num_neurons, n_tri, opt.restrict_cell_distance, err_res.mean_err.shuffled, err_res.MSE.shuffled, sample_id};
+                fprintf('n_tri=%d\tmean_err_s = %.2f\n', n_tri, err_res.mean_err.shuffled);
                 
-                [mean_err_d, MSE_d] = DecodeTensor.decode_tensor(data_tensor, tr_dir, opt.bin_width, alg_diag, false,...
-                    num_neurons, n_tri);
+                %[mean_err_d, MSE_d] = DecodeTensor.decode_tensor(data_tensor, tr_dir, opt.bin_width, alg_diag, false,...
+                %    num_neurons, n_tri);
                 db_queue{i,3} = ...
-                    {mouse_id, session_id, 'diagonal', num_neurons, n_tri, opt.restrict_cell_distance, mean_err_d, MSE_d, sample_id};
-                fprintf('n_tri=%d\tmean_err_d = %.2f\n\n', n_tri, mean_err_d);
+                    {mouse_id, session_id, 'diagonal', num_neurons, n_tri, opt.restrict_cell_distance, err_res.mean_err.diagonal, err_res.MSE.diagonal, sample_id};
+                fprintf('n_tri=%d\tmean_err_d = %.2f\n\n', n_tri, err_res.mean_err.diagonal);
             end
             
-            if ~exist('records', 'dir')
-                mkdir('records');
+            if ~exist('records_datasize', 'dir')
+                mkdir('records_datasize');
             end
-            save(sprintf('records/decoding_record_datasize_%s.mat', timestring), 'db_queue');
+            save(sprintf('records_datasize/decoding_record_datasize_%s.mat', timestring), 'db_queue');
         end
         
         function dispatch_datasize(dispatch_index, padded, distance_cutoff)
