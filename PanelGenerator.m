@@ -973,7 +973,7 @@ classdef PanelGenerator
         
         function signal_and_noise
             normed = true;
-            filt_num = false;
+            filt_num = true;
             
             load('SnN1000_agg_190708-235729_0.mat');
             [~, mouse_list] = DecodeTensor.filt_sess_id_list;
@@ -1010,15 +1010,35 @@ classdef PanelGenerator
             [sms_slope, sms_conf] = Utils.fit_get(series_fits{3}, 'p1');%'r_f');
             [sms_intercept, sms_intercept_conf] = Utils.fit_get(series_fits{3}, 'p2');
             
-            figure('FileName', 'figure2_pdf/signal_and_noise/noise_rate_of_change.pdf');
-            Utils.bns_groupings(sm_slope, sms_slope, sm_conf, sms_conf, mouse_list, true);
+            if filt_num
+                figure('FileName', 'figure2_pdf/signal_and_noise_filt_num/noise_rate_of_change.pdf');
+            else
+                figure('FileName', 'figure2_pdf/signal_and_noise/noise_rate_of_change.pdf');
+            end
+            kick_out = ismember(mouse_list, {'Mouse2010', 'Mouse2011', 'Mouse2012', 'Mouse2021'});
+            Utils.bns_groupings(sm_slope(~kick_out), sms_slope(~kick_out), sm_conf(~kick_out), sms_conf(~kick_out), mouse_list(~kick_out), true);
             ylim([-Inf Inf]);
             ylabel(sprintf('s^2 along Dm\nrate of change'));
             figure_format('factor', 1.6);
             Utils.printto;
+            
+            if filt_num
+                figure('FileName', 'supplements_pdf/signal_and_noise_filt_num/multi_noise_rate_of_change.pdf');
+            else
+                figure('FileName', 'supplements_pdf/signal_and_noise/multi_noise_rate_of_change.pdf');
+            end
+            Utils.bns_groupings(sm_slope, sms_slope, sm_conf, sms_conf, mouse_list, false);
+            ylim([-Inf Inf]);
+            ylabel(sprintf('s^2 along Dm\nrate of change'));
+            Utils.specific_format('MBNS');
+            Utils.printto;
             %Utils.create_svg(gcf, 'figure2_svg', 'grouped_noise_rate_of_change');
             
-            figure('FileName', 'figure2_pdf/signal_and_noise/noise_curves.pdf');
+            if filt_num
+                figure('FileName', 'figure2_pdf/signal_and_noise_filt_num/noise_curves.pdf');
+            else
+                figure('FileName', 'figure2_pdf/signal_and_noise/noise_curves.pdf');
+            end
             show_mice = {'Mouse2022', 'Mouse2024', 'Mouse2028'};
             
             [~,m_,sp_] = DecodeTensor.special_sess_id_list;
@@ -1062,7 +1082,11 @@ classdef PanelGenerator
                 (N_upper < N_fit_value);
             g_ = good_fit_filter;
             disp(find(~g_));
-            figure('FileName', 'figure2_pdf/signal_and_noise/imse_limit_regression.pdf');
+            if filt_num
+                figure('FileName', 'figure2_pdf/signal_and_noise_filt_num/imse_limit_regression.pdf');
+            else
+                figure('FileName', 'figure2_pdf/signal_and_noise/imse_limit_regression.pdf');
+            end
             %scatter(I0_fit_value.*N_fit_value, 1./sm_slope, 4, 'b');
             limit_uncertainty = sqrt((I0_fit_value.*(N_upper)).^2 + (N_fit_value.*(I0_upper)).^2);
             inv_sm_slope_uncertainty = sm_conf ./ sm_slope.^2;
@@ -1083,8 +1107,11 @@ classdef PanelGenerator
             %Utils.create_svg(gcf, 'figure2_svg', 'imse_limit_regression');
             Utils.printto;
             
-            
-            figure('FileName', 'figure2_pdf/signal_and_noise/I0_value_regression.pdf');
+            if filt_num
+                figure('FileName', 'figure2_pdf/signal_and_noise_filt_num/I0_value_regression.pdf');
+            else
+                figure('FileName', 'figure2_pdf/signal_and_noise/I0_value_regression.pdf');
+            end
             %scatter(I0_fit_value_s, 1./sms_intercept, 'r');
             hold on;
             inv_intercept_errb = sms_intercept_conf./sms_intercept.^2;

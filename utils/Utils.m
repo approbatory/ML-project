@@ -455,7 +455,7 @@ classdef Utils %Common utilities for dealing with neural data
             expo = exp_form(e_loc+1:end);
             expo_num = str2double(expo);
             if ispc
-                r = [base, '·10^{', sprintf('%d', expo_num), '}'];
+                r = [base, 'ï¿½10^{', sprintf('%d', expo_num), '}'];
             else
                 r = [base, 'Â·10^{', sprintf('%d', expo_num), '}'];
             end
@@ -586,6 +586,9 @@ classdef Utils %Common utilities for dealing with neural data
                 end
                 grouped_ballnstick(labels, y_, e_, 'coloring', DecodeTensor.mcolor(my_mice), 'logscale', logscale);
             else
+                if ~exist('labels', 'var')
+                    labels = {'Unshuffled', 'Shuffled'};
+                end
                 if strcmp(labels{2}, 'Diagonal')
                     color_alt = 'm';
                 else
