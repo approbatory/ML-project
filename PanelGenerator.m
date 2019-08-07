@@ -726,6 +726,73 @@ classdef PanelGenerator
             [~,m_,sp_] = DecodeTensor.special_sess_id_list;
             show_filter = ismember(m_, show_mice);
             sp_ = sp_(show_filter);
+            m_ = m_(show_filter);
+            figure('FileName', 'supplements_pdf/medload/medload_rasters.pdf');
+            for i = 1:numel(sp_)
+                subplot(1,numel(sp_)+1, i);
+                mean_median_loadings = squeeze(mean(abs(res(sp_(i)).median_loadings)));
+                min_d = 30;
+                ns = res(sp_(i)).n_sizes;
+                im_data = (mean_median_loadings(ns >= min_d,1:min_d));
+                %padded_im_data = nan(16 - size(im_data,1), size(im_data,2));
+                %imagesc([im_data;padded_im_data], [-1.6 log10(0.3)]);
+                surf(1:min_d, ns(ns>=min_d), im_data, 'EdgeColor', 'none');
+                view(2);
+                
+                %set(gca, 'XScale', 'log');
+                %set(gca, 'YScale', 'log');
+                set(gca, 'ColorScale', 'log');
+                caxis([0.03 0.25]);
+                xlim([1 min_d]);
+                ylim([min_d+10, 500]);
+                xlabel 'Correlation PC'
+                ylabel 'Number of cells'
+                title(m_(i), 'FontName', 'Helvetica', 'FontSize', 6, 'FontWeight', 'normal');
+                
+                set(gca, 'FontSize', 6);
+                set(gca, 'FontName', 'Helvetica');
+                set(gca, 'TickLength', [0.02 0.02]);
+                colorbar;
+                %set(gca, 'YTick', [1 2 4 8 16 32 64].*min_d);
+                %rectangle('Position',...
+                %    0.5+[0 size(im_data,1) size(im_data,2) (48 - size(im_data,1))],...
+                %    'FaceColor', 'w', 'EdgeColor', 'k', 'LineStyle', 'none');
+                %set(gca, 'YTickLabel', 10*cellfun(@str2num, get(gca, 'YTickLabel')));
+                box off;
+                if i > 1
+                    axis off;
+                end
+                %colorbar;
+            end
+            subplot(1, numel(sp_)+1, numel(sp_)+1);
+            mean_median_loadings_s = squeeze(mean(abs(res(sp_(1)).median_loadings_s)));
+            min_d = 30;
+            ns = res(sp_(1)).n_sizes;
+            im_data = (mean_median_loadings_s(ns >= min_d,1:min_d));
+            surf(1:min_d, ns(ns>=min_d), im_data, 'EdgeColor', 'none');
+            view(2);
+            %set(gca, 'YScale', 'log');
+            set(gca, 'ColorScale', 'log');
+            caxis([0.03 0.25]);
+            xlim([1 min_d]);
+            ylim([min_d+10, 500]);
+            xlabel 'Correlation PC'
+            ylabel 'Number of cells'
+            title('Shuffled', 'FontName', 'Helvetica', 'FontSize', 6, 'FontWeight', 'normal', 'Color', 'r');
+            
+            set(gca, 'FontSize', 6);
+            set(gca, 'FontName', 'Helvetica');
+            set(gca, 'TickLength', [0.02 0.02]);
+            set(gca, 'YTick', [1 2 4 8 16 32 64].*min_d);
+            box off
+            axis off
+            colorbar;
+            set(gcf, 'Units', 'inches');
+            set(gcf, 'Position', [8.5521    6.2292    8.3125    1.6146]);
+            colormap redblue;
+            Utils.printto;
+            keyboard;
+            
             figure('FileName', 'figure2_pdf/medload/medload_curves.pdf');
             MultiSessionVisualizer.plot_single_filtered(n_sizes, series, {'b', 'r'}, sp_);
             set(gca, 'XScale', 'log');

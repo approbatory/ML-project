@@ -69,8 +69,8 @@ classdef Movie
                                 % do nothing, invalid command
                             else
                                 frame_counter = frameChange;
-                                title(sprintf('Frame: %d, Time: %.2fs, B',...
-                                    frame_counter, frame_counter*p.Results.dt));
+                                title(sprintf('Frame: %d/%d, Time: %.2fs/%.2fs, B',...
+                                    frame_counter, info.n_frames, frame_counter*p.Results.dt, info.n_frames*p.Results.dt));
                                 drawnow;
                                 %buffer = Movie.load_h5(fname, frame_counter - 1 + [1 chunk_size], 'movie_dataset', p.Results.movie_dataset);
                                 buffer = h5read(fname, p.Results.movie_dataset, [1 1 frame_counter], [info.x_pixels, info.y_pixels, chunk_size]);
@@ -90,11 +90,11 @@ classdef Movie
                 loop_time = tic;
                 %drawme(buffer(:,:,pos(frame_counter)));
                 if mod(frame_counter - buffer_off + 1, reload_chunk) == 0
-                    title(sprintf('Frame: %d, Time: %.2fs, B',...
-                        frame_counter, frame_counter*p.Results.dt));
+                    title(sprintf('Frame: %d/%d, Time: %.2fs/%.2fs, B',...
+                                    frame_counter, info.n_frames, frame_counter*p.Results.dt, info.n_frames*p.Results.dt));
                 else
-                    title(sprintf('Frame: %d, Time: %.2fs, P',...
-                        frame_counter, frame_counter*p.Results.dt));
+                    title(sprintf('Frame: %d/%d, Time: %.2fs/%.2fs, P',...
+                                    frame_counter, info.n_frames, frame_counter*p.Results.dt, info.n_frames*p.Results.dt));
                 end
                 if p.Results.dff
                     set(h, 'CData', (double(buffer(:,:,pos(frame_counter, buffer_off))) - F0)./F0);
