@@ -319,6 +319,30 @@ classdef PanelGenerator
             Utils.printto('supplements_pdf/param_bns', ['multi_' fn ext]);
         end
         
+        function aux_many_regress(x_cell, y_cell, x_conf_cell, y_conf_cell, mouse_list, x_lab_cell, y_lab_cell)
+            n_rows = numel(x_cell);
+            n_cols = numel(y_cell);
+            assert(numel(x_conf_cell)==n_rows);assert(numel(y_conf_cell)==n_cols);assert(numel(x_lab_cell)==n_rows);assert(numel(y_lab_cell)==n_cols);
+            figure;
+            for r = 1:n_rows
+                for c = 1:n_cols
+                    subplot(n_rows, n_cols, sub2ind([n_cols n_rows], c,r));
+                    my_x = x_cell{r};
+                    my_x_conf = x_conf_cell{r};
+                    my_x_lab = x_lab_cell{r};
+                    my_y = y_cell{c};
+                    my_y_conf = y_conf_cell{c};
+                    my_y_lab = y_lab_cell{c};
+                    
+                    adjr2 = PanelGenerator.plot_regress(my_x, my_y, my_x_conf, my_y_conf, mouse_list, 'k');
+                    xlabel(my_x_lab);
+                    ylabel(my_y_lab);
+                    title(sprintf('adj. R^2 = %.2f', adjr2));
+                end
+            end
+            
+        end
+        
         function aux_regressions(fname, x, y, x_conf, y_conf, mouse_list,...
                 color, text_coord, xlab, ylab, fix_expo, savedir_main, savedir_sup, special_xlim)
             [~, a_, b_] = fileparts(fname);
@@ -334,8 +358,8 @@ classdef PanelGenerator
                 xlim(special_xlim);
             end
             figure_format('factor', 1.6);
-            if fix_expo
-                Utils.fix_exponent(gca, 'x', 0);
+            if ~isequal(fix_expo, false)
+                Utils.fix_exponent(gca, fix_expo, 0);
             end
             Utils.printto(savedir_main, fname);
             
@@ -346,8 +370,8 @@ classdef PanelGenerator
             xlabel(xlab);
             ylabel(ylab);
             figure_format('factor', 1.6);
-            if fix_expo
-                Utils.fix_exponent(gca, 'x', 0);
+            if ~isequal(fix_expo, false)
+                Utils.fix_exponent(gca, fix_expo, 0);
             end
             Utils.printto(savedir_sup, ['avg_' fname]);
             
@@ -875,20 +899,30 @@ classdef PanelGenerator
             asymp_line = @(n,m) Utils.fitaline(n,m,n_cutoff);
             asymp_line_intercept = @(n,m) Utils.fitaline(n,m,n_cutoff,true);
             
-            [m2_slopes, m2_slope_confs] = cellfun(@Utils.fitaline, {res.n_sizes}, medify({res.m2}), 'UniformOutput', false);
+            [m2_slopes, m2_slope_confs] = cellfun(full_line, {res.n_sizes}, medify({res.m2}), 'UniformOutput', false);
             [m2_s_slopes, m2_s_slope_confs] = cellfun(full_line, {res.n_sizes}, medify({res.m2_s}), 'UniformOutput', false);
+            [m2_d_slopes, m2_d_slope_confs] = cellfun(full_line, {res.n_sizes}, medify({res.m2_d}), 'UniformOutput', false);
             
             [nv_slopes, nv_slope_confs] = cellfun(asymp_line, {res.n_sizes}, medify({res.nv}), 'UniformOutput', false);
             [nv_s_slopes, nv_s_slope_confs] = cellfun(asymp_line, {res.n_sizes}, medify({res.nv_s}), 'UniformOutput', false);
+            [nv_d_slopes, nv_d_slope_confs] = cellfun(asymp_line, {res.n_sizes}, medify({res.nv_d}), 'UniformOutput', false);
+            [nv_intercepts, nv_intercept_confs] = cellfun(asymp_line_intercept, {res.n_sizes}, medify({res.nv}), 'UniformOutput', false);
             [nv_s_intercepts, nv_s_intercept_confs] = cellfun(asymp_line_intercept, {res.n_sizes}, medify({res.nv_s}), 'UniformOutput', false);
+            [nv_d_intercepts, nv_d_intercept_confs] = cellfun(asymp_line_intercept, {res.n_sizes}, medify({res.nv_d}), 'UniformOutput', false);
             
             dp2_w = cellfun(@(x,y)x/y, m2_slopes, nv_slopes);
             dp2_w_conf = cellfun(@(x, xc, y, yc) abs(x/y)*sqrt((xc/x)^2 + (yc/y)^2), m2_slopes, m2_slope_confs, nv_slopes, nv_slope_confs);
             dp2_ws = cellfun(@(x,y)x/y, m2_s_slopes, nv_s_slopes);
             dp2_ws_conf = cellfun(@(x, xc, y, yc) abs(x/y)*sqrt((xc/x)^2 + (yc/y)^2), m2_s_slopes, m2_s_slope_confs, nv_s_slopes, nv_s_slope_confs);
+            dp2_wd = cellfun(@(x,y)x/y, m2_d_slopes, nv_d_slopes);
+            dp2_wd_conf = cellfun(@(x, xc, y, yc) abs(x/y)*sqrt((xc/x)^2 + (yc/y)^2), m2_d_slopes, m2_d_slope_confs, nv_d_slopes, nv_d_slope_confs);
             
+            dp2_w_slope = cellfun(@(x,y)x/y, m2_slopes, nv_intercepts);
+            dp2_w_slope_conf = cellfun(@(x, xc, y, yc) abs(x/y)*sqrt((xc/x)^2 + (yc/y)^2), m2_slopes, m2_slope_confs, nv_intercepts, nv_intercept_confs);
             dp2_ws_slope = cellfun(@(x,y)x/y, m2_s_slopes, nv_s_intercepts);
             dp2_ws_slope_conf = cellfun(@(x, xc, y, yc) abs(x/y)*sqrt((xc/x)^2 + (yc/y)^2), m2_s_slopes, m2_s_slope_confs, nv_s_intercepts, nv_s_intercept_confs);
+            dp2_wd_slope = cellfun(@(x,y)x/y, m2_d_slopes, nv_d_intercepts);
+            dp2_wd_slope_conf = cellfun(@(x, xc, y, yc) abs(x/y)*sqrt((xc/x)^2 + (yc/y)^2), m2_d_slopes, m2_d_slope_confs, nv_d_intercepts, nv_d_intercept_confs);
             
             
             fit_savefile = 'decoding_curves_fits.mat';
@@ -897,83 +931,107 @@ classdef PanelGenerator
             end
             load(fit_savefile);
             
-            good_fit_filter = (I0_conf < I0_fit) &...
-                (I0_conf_s < I0_fit_s) &...
-                (N_conf < N_fit);
+            good_fit_filter = (I0_conf < 0.5*I0_fit) &...
+                (I0_conf_s < 0.5*I0_fit_s) &...
+                (N_conf < 0.5*N_fit);% & (N_fit < 500) & (cellfun(@max, {res.n_sizes}) >= 300); %200
             g_ = good_fit_filter;
-            
+            %g_ = true(size(g_));
             
             %figure;
             InfoLimit = N_fit.*I0_fit;
             InfoLimit_conf = abs(InfoLimit).*sqrt((N_conf./N_fit).^2 + (I0_conf./I0_fit).^2);
-            %PanelGenerator.plot_regress(InfoLimit(g_), dp2_w(g_),...
-            %    InfoLimit_conf(g_), dp2_w_conf(g_), mouse_names(g_), 'b',...
-            %    'xlim', [-Inf 0.15], 'text_coords', [0.08 1]);
-            %xlabel('I_0N (cm^{-2})');
-            %ylabel '(Dm)^2 slope / s^2 slope'
-            %figure_format('factor', 1.6);
-            %Utils.printto('figure2_pdf/adjacent', 'limit_vs_dp2_w.pdf');
-            %
-            %figure;
-            %PanelGenerator.plot_regress_averaged(InfoLimit(g_), dp2_w(g_),...
-            %    InfoLimit_conf(g_), dp2_w_conf(g_), mouse_names(g_), 'b',...
-            %    'xlim', [-Inf 0.15], 'text_coords', [0.08 1]);
-            %xlabel('I_0N (cm^{-2})');
-            %ylabel '(Dm)^2 slope / s^2 slope'
-            %figure_format('factor', 1.6);
-            %Utils.printto('supplements_pdf/adjacent', 'avg_limit_vs_dp2_w.pdf');
-            %
-            %figure;
-            %PanelGenerator.plot_regress_series(InfoLimit(g_), dp2_w(g_),...
-            %    InfoLimit_conf(g_), dp2_w_conf(g_), mouse_names(g_), 'b');
-            %xlabel('I_0N (cm^{-2})');
-            %ylabel '(Dm)^2 slope / s^2 slope'
-            %multi_figure_format;
-            %Utils.printto('supplements_pdf/adjacent', 'multi_limit_vs_dp2_w.pdf');
-            PanelGenerator.aux_regressions('limit_vs_dp2_w.pdf', InfoLimit(g_), dp2_w(g_),...
-                InfoLimit_conf(g_), dp2_w_conf(g_), mouse_names(g_), 'b',...
-                [0.08 1], 'I_0N (cm^{-2})', '(Dm)^2 slope / s^2 slope',...
-                false, 'figure2_pdf/adjacent', 'supplements_pdf/adjacent', [-Inf 0.15]);
+            
+            x_cell = Utils.cf_(@(x)x(g_), {dp2_w, dp2_ws, dp2_wd, dp2_w_slope, dp2_ws_slope, dp2_wd_slope});
+            x_conf_cell = Utils.cf_(@(x)x(g_), {dp2_w_conf, dp2_ws_conf, dp2_wd_conf, dp2_w_slope_conf, dp2_ws_slope_conf, dp2_wd_slope_conf});
+            x_lab_cell = {'dp2_w', 'dp2_{ws}', 'dp2_{wd}', 'dp2_w slope', 'dp2_{ws} slope', 'dp2_{wd} slope'};
+            
+            y_cell = Utils.cf_(@(x)x(g_), {I0_fit, N_fit, InfoLimit});
+            y_conf_cell = Utils.cf_(@(x)x(g_), {I0_conf, N_conf, InfoLimit_conf});
+            y_lab_cell = {'I_0', 'N', 'I_0N'};
+            
+            PanelGenerator.aux_many_regress(x_cell(1:2:end), y_cell(1:2:end), x_conf_cell(1:2:end), y_conf_cell(1:2:end), mouse_names(g_), x_lab_cell(1:2:end), y_lab_cell(1:2:end));
+            
+            figure; PanelGenerator.plot_regress(I0_fit(g_), InfoLimit(g_), I0_conf(g_), InfoLimit_conf(g_), mouse_names(g_), 'k');
+            xlabel I_0; ylabel I_0N
+            
+            figure; PanelGenerator.plot_regress(dp2_wd(g_), dp2_w(g_), dp2_wd_conf(g_), dp2_w_conf(g_), mouse_names(g_), 'k');
+            xlabel 'dp2_{wd}'; ylabel 'dp2_w';
+            fprintf('Using n = %d samples\n', sum(g_));
             
             
-            %figure;
-            %PanelGenerator.plot_regress(I0_fit(g_), dp2_ws_slope(g_),...
-            %    I0_conf(g_), dp2_ws_slope_conf(g_), mouse_names(g_), 'r',...
-            %    'text_coord', [6e-4 0.01]);
-            %xlabel(sprintf('I_0 fit value\n(cm^{-2}neuron^{-1})'));
-            %ylabel '(Dm_s)^2 slope / s_s^2 intercept'
-            %figure_format('factor', 1.6);
-            %Utils.fix_exponent(gca, 'x', 0);
-            %Utils.printto('figure2_pdf/adjacent', 'I0_vs_dp2_ws_slope.pdf');
-            %
-            %figure;
-            %PanelGenerator.plot_regress_averaged(I0_fit(g_), dp2_ws_slope(g_),...
-            %    I0_conf(g_), dp2_ws_slope_conf(g_), mouse_names(g_), 'r',...
-            %    'text_coord', [6e-4 0.01]);
-            %xlabel(sprintf('I_0 fit value\n(cm^{-2}neuron^{-1})'));
-            %ylabel '(Dm_s)^2 slope / s_s^2 intercept'
-            %figure_format('factor', 1.6);
-            %Utils.fix_exponent(gca, 'x', 0);
-            %Utils.printto('supplements_pdf/adjacent', 'avg_I0_vs_dp2_ws_slope.pdf');
-            %
-            %figure;
-            %PanelGenerator.plot_regress_series(I0_fit(g_), dp2_ws_slope(g_),...
-            %    I0_conf(g_), dp2_ws_slope_conf(g_), mouse_names(g_), 'r');
-            %xlabel(sprintf('I_0 fit value\n(cm^{-2}neuron^{-1})'));
-            %ylabel '(Dm_s)^2 slope / s_s^2 intercept'
-            %multi_figure_format('fix_expo', {'x', 0});
-            %Utils.printto('supplements_pdf/adjacent', 'multi_I0_vs_dp2_ws_slope.pdf');
-            PanelGenerator.aux_regressions('I0_vs_dp2_ws_slope.pdf', I0_fit(g_), dp2_ws_slope(g_),...
-                I0_conf(g_), dp2_ws_slope_conf(g_), mouse_names(g_), 'r',...
-                [6e-4 0.01], sprintf('I_0 fit value\n(cm^{-2}neuron^{-1})'),...
-                '(Dm_s)^2 slope / s_s^2 intercept', true, 'figure2_pdf/adjacent',...
+
+            
+            
+            
+            figure('FileName', 'figure2_pdf/signal_and_noise/noise_curves_adjacent.pdf');
+            
+            show_mice = {'Mouse2022', 'Mouse2024', 'Mouse2028'};
+            
+            [~,m_,sp_] = DecodeTensor.special_sess_id_list;
+            show_filter = ismember(m_, show_mice);
+            sp_ = sp_(show_filter);
+            %[md2_slopes, ~] = cellfun(full_line, {res.n_sizes}, medify({res.md2}), 'UniformOutput', false);
+            n_f_ = @(x) Utils.cf_(@(y,z)y./z, medify(x), m2_d_slopes);
+            MultiSessionVisualizer.plot_single_filtered({res.n_sizes}, {n_f_({res.m2_d}), n_f_({res.nv_d}), n_f_({res.nv_s})}, {'k', 'b', 'r'}, sp_);
+            xlabel 'Number of cells'
+            
+            ylabel(sprintf('Noise variance/K\n(in units of cells)'));
+            
+            text(20, 370/2, '(Dm)^2', 'Color', 'k', 'HorizontalAlignment', 'left');
+            text(20, 470/2, 's^2', 'Color', 'b', 'HorizontalAlignment', 'left');
+            text(20, 570/2, 's^2 (Shuffled)', 'Color', 'r', 'HorizontalAlignment', 'left');
+            %figure_format('factor', 1.3);
+            figure_format([1 1.4], 'factor', 1.2);
+            Utils.printto;
+            
+
+            
+            figure('FileName', 'figure2_pdf/signal_and_noise/noise_rate_of_change_adjacent.pdf');
+            kick_out = ismember(mouse_names, {'Mouse2010', 'Mouse2011', 'Mouse2012', 'Mouse2021'});
+            kick_out = kick_out & false;
+            Utils.bns_groupings(cell2mat(nv_d_slopes(~kick_out))./cell2mat(m2_d_slopes(~kick_out)), cell2mat(nv_s_slopes(~kick_out))./cell2mat(m2_d_slopes(~kick_out)), cell2mat(nv_d_slope_confs(~kick_out))./cell2mat(m2_d_slopes(~kick_out)), cell2mat(nv_s_slope_confs(~kick_out))./cell2mat(m2_d_slopes(~kick_out)), mouse_names(~kick_out), true);
+            ylim([-Inf Inf]);
+            ylabel(sprintf('s^2 rate of change'));
+            figure_format('factor', 1.6);
+            Utils.printto;
+            
+       
+            figure('FileName', 'supplements_pdf/signal_and_noise/multi_noise_rate_of_change_adjacent.pdf');
+            Utils.bns_groupings(cell2mat(nv_d_slopes)./cell2mat(m2_d_slopes), cell2mat(nv_s_slopes)./cell2mat(m2_d_slopes), cell2mat(nv_d_slope_confs)./cell2mat(m2_d_slopes), cell2mat(nv_s_slope_confs)./cell2mat(m2_d_slopes), mouse_names, false);
+            ylim([-Inf Inf]);
+            ylabel(sprintf('s^2 rate of change'));
+            Utils.specific_format('MBNS');
+            Utils.printto;
+            
+            
+
+            PanelGenerator.aux_regressions('limit_vs_dp2_wd.pdf', dp2_wd(g_), InfoLimit(g_),...
+                dp2_wd_conf(g_), InfoLimit_conf(g_), mouse_names(g_), 'b',...
+                [1 0.08], '(Dm)^2 slope / s^2 slope', 'I_0N (cm^{-2})',...
+                false, 'figure2_pdf/adjacent', 'supplements_pdf/adjacent');
+            
+
+            PanelGenerator.aux_regressions('I0_vs_dp2_ws_slope.pdf', dp2_ws_slope(g_), I0_fit(g_),...
+                dp2_ws_slope_conf(g_), I0_conf(g_), mouse_names(g_), 'r',...
+                [0.01 6e-4], '(Dm_s)^2 slope / s_s^2 intercept',...
+                sprintf('I_0 fit value\n(cm^{-2}neuron^{-1})'), 'y', 'figure2_pdf/adjacent',...
                 'supplements_pdf/adjacent');
+            
+            PanelGenerator.aux_regressions('I0_vs_limit.pdf', I0_fit(g_), InfoLimit(g_),...
+                I0_conf(g_), InfoLimit_conf(g_), mouse_names(g_), 'k',...
+                [6e-4 0.08], sprintf('I_0 fit value\n(cm^{-2}neuron^{-1})'),...
+                'I_0N (cm^{-2})', 'x', 'figure2_pdf/adjacent', 'supplements_pdf/adjacent');
+            
+            PanelGenerator.aux_regressions('dp2_ws_slope_vs_dp2_wd.pdf', dp2_ws_slope(g_),...
+                dp2_wd(g_), dp2_ws_slope_conf(g_), dp2_wd_conf(g_), mouse_names(g_), 'k',...
+                [0.01 1], '(Dm_s)^2 slope / s_s^2 intercept',...
+                '(Dm)^2 slope / s^2 slope', false, 'figure2_pdf/adjacent', 'supplements_pdf/adjacent');
             
         end
         
         function signal_and_noise
             normed = true;
-            filt_num = true;
+            filt_num = false;
             
             load('SnN1000_agg_190708-235729_0.mat');
             [~, mouse_list] = DecodeTensor.filt_sess_id_list;
@@ -1077,9 +1135,9 @@ classdef PanelGenerator
             [I0_fit_value_s, I0_upper_s] = Utils.fit_get(fitresult_s, 'I_0');
             [N_fit_value, N_upper] = Utils.fit_get(fitresult, 'N');
             
-            good_fit_filter = (I0_upper < I0_fit_value) &...
-                (I0_upper_s < I0_fit_value_s) &...
-                (N_upper < N_fit_value);
+            good_fit_filter = (I0_conf < 0.5*I0_fit) &...
+                (I0_conf_s < 0.5*I0_fit_s) &...
+                (N_conf < 0.5*N_fit);% & (N_fit < 500) & (cellfun(@max, {res.n_sizes}) >= 300); %200
             g_ = good_fit_filter;
             disp(find(~g_));
             if filt_num
