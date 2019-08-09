@@ -3,24 +3,28 @@ classdef Movie
         function stream(fname, varargin)
             p = inputParser;
             p.addParameter('MemChunk', 1e9);
-            p.addParameter('ReloadChunk', 200e6);
+            p.addParameter('ReloadChunk', 1);
             p.addParameter('movie_dataset', '/1');
             p.addParameter('dt', 1/20);
             p.addParameter('dff', false, @islogical);
             p.addParameter('debug_frame', false, @islogical);
             p.parse(varargin{:});
             
+            assert(exist(fname, 'file')~=0, 'Provided file %s was not found', fname);
             assert(p.Results.ReloadChunk <= p.Results.MemChunk, 'ReloadChunk must be <= MemChunk');
             [chunk_size, info] = Movie.allowed_chunksize(fname, p.Results.MemChunk,...
                 'movie_dataset', p.Results.movie_dataset);
             reload_chunk =  Movie.allowed_chunksize(fname, p.Results.ReloadChunk,...
                 'movie_dataset', p.Results.movie_dataset);
-            chunk_size = max(1, chunk_size);
-            reload_chunk = max(1, reload_chunk);
+            chunk_size = min(info.n_frames, max(1, chunk_size));
+            reload_chunk = min(chunk_size, max(1, reload_chunk));
             
             fprintf('Loading buffer of size %d, reload every %d\n', chunk_size, reload_chunk);
             %buffer = Movie.load_h5(fname, [1 chunk_size], 'movie_dataset', p.Results.movie_dataset);
+            
             buffer = h5read(fname, p.Results.movie_dataset, [1 1 1], [info.x_pixels, info.y_pixels, chunk_size]);
+            %buffer = zeros(info.x_pixels, info.y_pixels, chunk_size, 'single');
+            %buffer = read_allowed(1, chunk_size, buffer);
             if p.Results.dff
                 F0 = mean(buffer,3);
             end
@@ -73,7 +77,9 @@ classdef Movie
                                     frame_counter, info.n_frames, frame_counter*p.Results.dt, info.n_frames*p.Results.dt));
                                 drawnow;
                                 %buffer = Movie.load_h5(fname, frame_counter - 1 + [1 chunk_size], 'movie_dataset', p.Results.movie_dataset);
-                                buffer = h5read(fname, p.Results.movie_dataset, [1 1 frame_counter], [info.x_pixels, info.y_pixels, chunk_size]);
+                                %assert(frame_counter + chunk_size - 1 <= info.n_frames, 'trying to read past last frame');
+                                %buffer = h5read(fname, p.Results.movie_dataset, [1 1 frame_counter], [info.x_pixels, info.y_pixels, chunk_size]);
+                                buffer = read_allowed(frame_counter, chunk_size, buffer);
                                 if p.Results.debug_frame
                                     test_buffer = full_movie_frames(frame_counter - 1 + (1:chunk_size));
                                 end
@@ -113,8 +119,10 @@ classdef Movie
                     r1 = buffer_counter + 1;
                     r2 = min(buffer_counter + reload_chunk, info.n_frames);
                     buffer_range = r1:r2;
-                    buffer(:,:,pos(buffer_range, buffer_off)) =...
-                        h5read(fname, p.Results.movie_dataset, [1 1 r1], [info.x_pixels, info.y_pixels, (r2-r1+1)]);
+                    buffer = read_allowed(r1, r2-r1+1, buffer, pos(buffer_range, buffer_off));
+                    %buffer(:,:,pos(buffer_range, buffer_off)) =...
+                    %    read_allowed(r1, r2-r1+1);
+                        %h5read(fname, p.Results.movie_dataset, [1 1 r1], [info.x_pixels, info.y_pixels, (r2-r1+1)]);
                         %Movie.load_h5(fname, [r1 r2],...
                         %'movie_dataset', p.Results.movie_dataset);
                     if p.Results.debug_frame
@@ -137,6 +145,25 @@ classdef Movie
             
             function keypress(key,~)
                 command_code = get(key, 'CurrentCharacter');
+            end
+            
+            function b = read_allowed(start_frame, chunk, b, b_range)
+                if start_frame > info.n_frames
+                    return;
+                end
+                if ~exist('range', 'var')
+                    b_range = 1:chunk;
+                    assert(chunk <= size(b,3));
+                end
+                end_frame = min(info.n_frames, start_frame + chunk - 1);
+                fixed_chunk = end_frame - start_frame + 1;
+                assert(start_frame + fixed_chunk - 1 <= info.n_frames, 'trying to read past last frame');
+                padding = zeros(info.x_pixels, info.y_pixels, chunk - fixed_chunk);
+                if chunk - fixed_chunk ~= 0
+                    fprintf('Applying padding of size %d\n', chunk - fixed_chunk);
+                end
+                assert(numel(b_range) == chunk);
+                b(:,:,b_range) = cat(3, h5read(fname, p.Results.movie_dataset, [1 1 start_frame], [info.x_pixels, info.y_pixels, fixed_chunk]), padding);
             end
         end
         

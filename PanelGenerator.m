@@ -895,6 +895,7 @@ classdef PanelGenerator
             %keyboard
             n_cutoff = 100;
             medify = @(z) Utils.cf_(@(y)cellfun(@(x)median(x(:)), y), z);
+            %medify = @(z) Utils.cf_(@(y)cellfun(@(x)mean(x(:)), y), z);
             full_line = @Utils.fitaline;
             asymp_line = @(n,m) Utils.fitaline(n,m,n_cutoff);
             asymp_line_intercept = @(n,m) Utils.fitaline(n,m,n_cutoff,true);
@@ -949,7 +950,9 @@ classdef PanelGenerator
             y_conf_cell = Utils.cf_(@(x)x(g_), {I0_conf, N_conf, InfoLimit_conf});
             y_lab_cell = {'I_0', 'N', 'I_0N'};
             
-            PanelGenerator.aux_many_regress(x_cell(1:2:end), y_cell(1:2:end), x_conf_cell(1:2:end), y_conf_cell(1:2:end), mouse_names(g_), x_lab_cell(1:2:end), y_lab_cell(1:2:end));
+            %PanelGenerator.aux_many_regress(x_cell(1:2:end), y_cell(1:2:end), x_conf_cell(1:2:end), y_conf_cell(1:2:end), mouse_names(g_), x_lab_cell(1:2:end), y_lab_cell(1:2:end));
+            PanelGenerator.aux_many_regress(x_cell, y_cell, x_conf_cell, y_conf_cell, mouse_names(g_), x_lab_cell, y_lab_cell);
+            keyboard;
             
             figure; PanelGenerator.plot_regress(I0_fit(g_), InfoLimit(g_), I0_conf(g_), InfoLimit_conf(g_), mouse_names(g_), 'k');
             xlabel I_0; ylabel I_0N
@@ -1144,57 +1147,64 @@ classdef PanelGenerator
             [I0_fit_value_s, I0_upper_s] = Utils.fit_get(fitresult_s, 'I_0');
             [N_fit_value, N_upper] = Utils.fit_get(fitresult, 'N');
             
-            good_fit_filter = (I0_conf < 0.5*I0_fit) &...
-                (I0_conf_s < 0.5*I0_fit_s) &...
-                (N_conf < 0.5*N_fit);% & (N_fit < 500) & (cellfun(@max, {res.n_sizes}) >= 300); %200
+            good_fit_filter = (I0_upper < 0.5*I0_fit_value) &...
+                (I0_upper_s < 0.5*I0_fit_value_s) &...
+                (N_upper < 0.5*N_fit_value);% & (N_fit < 500) & (cellfun(@max, {res.n_sizes}) >= 300); %200
             g_ = good_fit_filter;
             disp(find(~g_));
             if filt_num
-                figure('FileName', 'figure2_pdf/signal_and_noise_filt_num/imse_limit_regression.pdf');
+                fname = 'imse_limit_regression_filtnum.pdf';
             else
-                figure('FileName', 'figure2_pdf/signal_and_noise/imse_limit_regression.pdf');
+                fname = 'imse_limit_regression.pdf';
             end
             %scatter(I0_fit_value.*N_fit_value, 1./sm_slope, 4, 'b');
             limit_uncertainty = sqrt((I0_fit_value.*(N_upper)).^2 + (N_fit_value.*(I0_upper)).^2);
             inv_sm_slope_uncertainty = sm_conf ./ sm_slope.^2;
             hold on;
             
-            errorbar(I0_fit_value(g_).*N_fit_value(g_), 1./sm_slope(g_), inv_sm_slope_uncertainty(g_), inv_sm_slope_uncertainty(g_),...
-                limit_uncertainty(g_), limit_uncertainty(g_), 'LineStyle', 'none', 'Color', 'k', 'CapSize', 1);
-            scatter(I0_fit_value(g_).*N_fit_value(g_), 1./sm_slope(g_), dotsize, DecodeTensor.mcolor(mouse_names(g_), false), 'filled');
-            [fitresult, adjr2] = Utils.regress_line(I0_fit_value(g_).*N_fit_value(g_), 1./sm_slope(g_));
-            h_ = plot(fitresult); legend off
-            h_.Color = 'b';
-            xlim([-Inf 0.15]);
-            text(0.1, 1, sprintf('adj. R^2 = %.2f', adjr2));
-            xlabel 'IMSE limit I_0N';
-            ylabel(sprintf('Inverse s^2\nrate of change'));
-            fprintf('imse limit regression, N = %d\n', numel(I0_fit_value(g_)));
-            figure_format('factor', 1.6);
-            %Utils.create_svg(gcf, 'figure2_svg', 'imse_limit_regression');
-            Utils.printto;
+            %errorbar(I0_fit_value(g_).*N_fit_value(g_), 1./sm_slope(g_), inv_sm_slope_uncertainty(g_), inv_sm_slope_uncertainty(g_),...
+            %    limit_uncertainty(g_), limit_uncertainty(g_), 'LineStyle', 'none', 'Color', 'k', 'CapSize', 1);
+            %scatter(I0_fit_value(g_).*N_fit_value(g_), 1./sm_slope(g_), dotsize, DecodeTensor.mcolor(mouse_names(g_), false), 'filled');
+            %[fitresult, adjr2] = Utils.regress_line(I0_fit_value(g_).*N_fit_value(g_), 1./sm_slope(g_));
+            %h_ = plot(fitresult); legend off
+            %h_.Color = 'b';
+            %xlim([-Inf 0.15]);
+            %text(0.1, 1, sprintf('adj. R^2 = %.2f', adjr2));
+            %xlabel 'IMSE limit I_0N';
+            %ylabel(sprintf('Inverse s^2\nrate of change'));
+            %fprintf('imse limit regression, N = %d\n', numel(I0_fit_value(g_)));
+            %figure_format('factor', 1.6);
+            %%Utils.create_svg(gcf, 'figure2_svg', 'imse_limit_regression');
+            %Utils.printto;
+            PanelGenerator.aux_regressions(fname, 1./sm_slope(g_), I0_fit_value(g_).*N_fit_value(g_),...
+                inv_sm_slope_uncertainty(g_), limit_uncertainty(g_), mouse_names(g_), 'b',...
+                [4 0.08], sprintf('Inverse s^2/K\nrate of change'), 'I_0N (cm^{-2})',...
+                false, 'figure2_pdf/signal_and_noise', 'supplements_pdf/signal_and_noise');
+            
             
             if filt_num
-                figure('FileName', 'figure2_pdf/signal_and_noise_filt_num/I0_value_regression.pdf');
+                fname = 'I0_value_regression_filtnum.pdf';
             else
-                figure('FileName', 'figure2_pdf/signal_and_noise/I0_value_regression.pdf');
+                fname = 'I0_value_regression.pdf';
             end
             %scatter(I0_fit_value_s, 1./sms_intercept, 'r');
-            hold on;
+            %hold on;
             inv_intercept_errb = sms_intercept_conf./sms_intercept.^2;
+            PanelGenerator.aux_regressions(fname, 1./sms_intercept(g_), I0_fit_value(g_), inv_intercept_errb(g_), I0_upper(g_), mouse_names(g_), 'r',...
+                [0 6e-4], sprintf('Inverse s^2/K intercept'), sprintf('I_0 fit value\n(cm^{-2}neuron^{-1})'), 'y', 'figure2_pdf/signal_and_noise', 'supplements_pdf/signal_and_noise');
             
-            errorbar(I0_fit_value_s(g_), 1./sms_intercept(g_), inv_intercept_errb(g_), inv_intercept_errb(g_), I0_upper_s(g_), I0_upper_s(g_), 'LineStyle', 'none', 'Color', 'k', 'CapSize', 1);
-            scatter(I0_fit_value_s(g_), 1./sms_intercept(g_), dotsize, DecodeTensor.mcolor(mouse_names(g_), false), 'filled');
-            [fitresult, adjr2] = Utils.regress_line(I0_fit_value_s(g_), 1./sms_intercept(g_));
-            plot(fitresult); legend off
-            text(7e-4, 0.055, sprintf('adj. R^2 = %.2f', adjr2));
-            xlabel 'I_0 fit value'
-            ylabel 'Asymptotic 1/s^2'
-            set(gca, 'XTickLabel', arrayfun(@Utils.my_fmt, get(gca, 'XTick') ,'UniformOutput', false));
-            fprintf('I0 value regression, N = %d\n', numel(I0_fit_value_s(g_)));
-            figure_format('factor', 1.6);
-            %Utils.create_svg(gcf, 'figure2_svg', 'I0_value_regression');
-            Utils.printto;
+            %errorbar(I0_fit_value_s(g_), 1./sms_intercept(g_), inv_intercept_errb(g_), inv_intercept_errb(g_), I0_upper_s(g_), I0_upper_s(g_), 'LineStyle', 'none', 'Color', 'k', 'CapSize', 1);
+            %scatter(I0_fit_value_s(g_), 1./sms_intercept(g_), dotsize, DecodeTensor.mcolor(mouse_names(g_), false), 'filled');
+            %[fitresult, adjr2] = Utils.regress_line(I0_fit_value_s(g_), 1./sms_intercept(g_));
+            %plot(fitresult); legend off
+            %text(7e-4, 0.055, sprintf('adj. R^2 = %.2f', adjr2));
+            %xlabel 'I_0 fit value'
+            %ylabel 'Asymptotic 1/s^2'
+            %set(gca, 'XTickLabel', arrayfun(@Utils.my_fmt, get(gca, 'XTick') ,'UniformOutput', false));
+            %fprintf('I0 value regression, N = %d\n', numel(I0_fit_value_s(g_)));
+            %figure_format('factor', 1.6);
+            %%Utils.create_svg(gcf, 'figure2_svg', 'I0_value_regression');
+            %Utils.printto;
         end
     end
 end
