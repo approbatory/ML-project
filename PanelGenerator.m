@@ -866,7 +866,7 @@ classdef PanelGenerator
             set(gcf, 'Position', [8.5521    6.2292    8.3125    1.6146]);
             colormap redblue;
             Utils.printto;
-            keyboard;
+            %keyboard;
             
             figure('FileName', 'figure2_pdf/medload/medload_curves.pdf');
             MultiSessionVisualizer.plot_single_filtered(n_sizes, series, {'b', 'r'}, sp_);
@@ -898,11 +898,11 @@ classdef PanelGenerator
             figure('FileName', 'figure2_pdf/medload/inset.pdf');
             Utils.bns_groupings(rate_f, rate_f_s, rate_f_conf, rate_f_s_conf, mouse_name, true);
             hold on;
-            line(xlim-0.5, [0 0], 'Color', 'k', 'LineStyle', '-');
+            %line(xlim-0.5, [0 0], 'Color', 'k', 'LineStyle', '-');
             line(xlim, [-0.5 -0.5], 'Color', 'k', 'LineStyle', ':');
             ylabel 'Fit exponent'
             ylim([-Inf Inf]);
-            set(gca, 'XTickLabels', {'Unsh.', 'Sh.'});
+            set(gca, 'XTickLabels', {'Real', 'Shuf.'});
             %figure_format([0.8 1]/2, 'fontsize', 4);
             Utils.specific_format('inset');
             Utils.printto;
@@ -1003,7 +1003,7 @@ classdef PanelGenerator
             
             %PanelGenerator.aux_many_regress(x_cell(1:2:end), y_cell(1:2:end), x_conf_cell(1:2:end), y_conf_cell(1:2:end), mouse_names(g_), x_lab_cell(1:2:end), y_lab_cell(1:2:end));
             PanelGenerator.aux_many_regress(x_cell, y_cell, x_conf_cell, y_conf_cell, mouse_names(g_), x_lab_cell, y_lab_cell);
-            keyboard;
+            %keyboard;
             
             figure; PanelGenerator.plot_regress(I0_fit(g_), InfoLimit(g_), I0_conf(g_), InfoLimit_conf(g_), mouse_names(g_), 'k');
             xlabel I_0; ylabel I_0N
@@ -1029,13 +1029,13 @@ classdef PanelGenerator
             MultiSessionVisualizer.plot_single_filtered({res.n_sizes}, {n_f_({res.m2_d}), n_f_({res.nv_d}), n_f_({res.nv_s})}, {'k', 'b', 'r'}, sp_);
             xlabel 'Number of cells'
             
-            ylabel(sprintf('Noise variance/K\n(in units of cells)'));
+            ylabel(sprintf('s^2/K (num. of cells)'));
             
             text(20, 370/2, '(Dm)^2', 'Color', 'k', 'HorizontalAlignment', 'left');
             text(20, 470/2, 's^2', 'Color', 'b', 'HorizontalAlignment', 'left');
-            text(20, 570/2, 's^2 (Shuffled)', 'Color', 'r', 'HorizontalAlignment', 'left');
+            text(20, 570/2, 's^2', 'Color', 'r', 'HorizontalAlignment', 'left');
             %figure_format('factor', 1.3);
-            figure_format([1 1.4], 'factor', 1.2);
+            figure_format([1 1.4], 'factor', 1);
             Utils.printto;
             
 
@@ -1045,8 +1045,8 @@ classdef PanelGenerator
             kick_out = kick_out & false;
             Utils.bns_groupings(cell2mat(nv_d_slopes(~kick_out))./cell2mat(m2_d_slopes(~kick_out)), cell2mat(nv_s_slopes(~kick_out))./cell2mat(m2_d_slopes(~kick_out)), cell2mat(nv_d_slope_confs(~kick_out))./cell2mat(m2_d_slopes(~kick_out)), cell2mat(nv_s_slope_confs(~kick_out))./cell2mat(m2_d_slopes(~kick_out)), mouse_names(~kick_out), true);
             ylim([-Inf Inf]);
-            ylabel(sprintf('s^2 rate of change'));
-            figure_format('factor', 1.6);
+            ylabel(sprintf('s^2/K slope'));
+            figure_format([0.666 1.4]);
             Utils.printto;
             
        

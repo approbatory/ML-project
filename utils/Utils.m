@@ -582,12 +582,12 @@ classdef Utils %Common utilities for dealing with neural data
             end%% TODO finish multiballnstick automator helper function
             if is_grouped
                 if ~exist('labels', 'var')
-                    labels = {'Unshuffled', 'Shuffled'};
+                    labels = {'Real', 'Shuffled'};
                 end
                 grouped_ballnstick(labels, y_, e_, 'coloring', DecodeTensor.mcolor(my_mice), 'logscale', logscale);
             else
                 if ~exist('labels', 'var')
-                    labels = {'Unshuffled', 'Shuffled'};
+                    labels = {'Real', 'Shuffled'};
                 end
                 if strcmp(labels{2}, 'Diagonal')
                     color_alt = 'm';
@@ -665,7 +665,7 @@ classdef Utils %Common utilities for dealing with neural data
                     set(gca, 'TickLength', [0.005 0]);
                     
                 case 'inset'
-                    figure_format([0.4 0.25], 'fontsize', 5);
+                    figure_format([0.4 0.375], 'fontsize', 5);
                     
                 case 'confusion'
                     figure_format('boxsize', [0.75 0.85]); box on;
