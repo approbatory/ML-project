@@ -639,9 +639,9 @@ classdef Utils %Common utilities for dealing with neural data
             print(fig, '-dpdf', fullfile(pdf_special_dir_name, [name '.pdf']));
         end
         
-        function printto(varargin)
-        end%TODO undo disability
-        function printto_disabled(save_dir, fname)
+        %function printto(varargin)
+        %end%TODO undo disability
+        function printto(save_dir, fname)
             if ~exist('save_dir', 'var')
                 save_dir = '.';
             end

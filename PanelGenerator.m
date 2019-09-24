@@ -387,6 +387,43 @@ classdef PanelGenerator
             end
             Utils.printto(savedir_sup, ['multi_' fname]);
         end
+        
+        function val_reporter(v1, v2, c1, c2, lab1, lab2, mouse_names, post_func)
+            ea = @(v,c) sqrt(1.96.^2.*var(v)/numel(v) + mean(c.^2));
+            names_uniq = unique(mouse_names);
+            
+            [agg_v1, agg_v2, agg_c1, agg_c2] = deal(zeros(1, numel(names_uniq)));
+            for m_i = 1:numel(names_uniq)
+                m_name = names_uniq{m_i};
+                filt = strcmp(mouse_names, m_name);
+                
+                agg_v1(m_i) = mean(v1(filt));
+                agg_c1(m_i) = ea(v1(filt), c1(filt));
+                
+                agg_v2(m_i) = mean(v2(filt));
+                agg_c2(m_i) = ea(v2(filt), c2(filt));
+            end
+            
+            mv1 = mean(agg_v1);
+            mv2 = mean(agg_v2);
+            
+            mc1 = ea(agg_v1, agg_c1);
+            mc2 = ea(agg_v2, agg_c2);
+            
+            if ~exist('post_func', 'var')
+                fprintf('Value of %s across mice: %e +- %e (95%% conf)\n', lab1, mv1, mc1);
+                fprintf('Value of %s across mice: %e +- %e (95%% conf)\n', lab2, mv2, mc2);
+            else
+                mv1_avg = post_func(mv1);
+                mv2_avg = post_func(mv2);
+                mv1_lower = post_func(mv1 - mc1);
+                mv2_lower = post_func(mv2 - mc2);
+                mv1_upper = post_func(mv1 + mc1);
+                mv2_upper = post_func(mv2 + mc2);
+                fprintf('Value of %s, postfunc: %e - %e, mid: %e\n', lab1, mv1_lower, mv1_upper, mv1_avg);
+                fprintf('Value of %s, postfunc: %e - %e, mid: %e\n', lab2, mv2_lower, mv2_upper, mv2_avg);
+            end
+        end
     end
     
     
@@ -463,13 +500,14 @@ classdef PanelGenerator
             
             figure('FileName', 'figure1_pdf\demo\decoding_demo.pdf');
             t = (1:numel(ks_first_half))./opt.samp_freq;
-            t_start = 83.5;
-            t_end = 90;
+            t_start = 83.5 + 2.05; %which to show
+            t_end = 83.5 + 4.05;%90;
             
             hold on;
-            plot(t - t_start, (ceil(ps_first_half/2) - 0.5)*opt.bin_width, '-b');
-            plot(t - t_start, (ceil(ps_first_half_s/2) - 0.5)*opt.bin_width, '-r');
-            plot(t - t_start, (ceil(ks_first_half/2) - 0.5)*opt.bin_width, '-k');
+            h(1) = plot(t - t_start, (ceil(ps_first_half/2) - 0.5)*opt.bin_width, '-b');
+            h(2) = plot(t - t_start, (ceil(ps_first_half_s/2) - 0.5)*opt.bin_width, '-r');
+            h(3) = plot(t - t_start, (ceil(ks_first_half/2) - 0.5)*opt.bin_width, '-k');
+            
             trial_boundaries = (find(diff(within_trial(first_half))>0)+0.5)./opt.samp_freq - t_start;
             for i = 1:numel(trial_boundaries)
                 x_ = trial_boundaries(i);
@@ -479,18 +517,21 @@ classdef PanelGenerator
             ylim([-Inf Inf]);
             xlabel 'Time (s)';
             ylabel 'Position (cm)';
+            legend(h, 'Real', 'Shuffled', 'Place bin');
+            legend boxoff
             figure_format('boxsize', [0.8 0.7]*1.05); box on;
             Utils.printto;
             
             figure('FileName', 'figure1_pdf\demo\decoding_demo_diagonal.pdf');
             t = (1:numel(ks_first_half))./opt.samp_freq;
-            t_start = 83.5;
-            t_end = 90;
+            %t_start = 83.5;
+            %t_end = 90;
             
             hold on;
-            plot(t - t_start, (ceil(ps_first_half/2) - 0.5)*opt.bin_width, '-b');
-            plot(t - t_start, (ceil(ps_first_half_d/2) - 0.5)*opt.bin_width, '-m');
-            plot(t - t_start, (ceil(ks_first_half/2) - 0.5)*opt.bin_width, '-k');
+            h(1) = plot(t - t_start, (ceil(ps_first_half/2) - 0.5)*opt.bin_width, '-b');
+            h(2) = plot(t - t_start, (ceil(ps_first_half_d/2) - 0.5)*opt.bin_width, '-m');
+            h(3) = plot(t - t_start, (ceil(ks_first_half/2) - 0.5)*opt.bin_width, '-k');
+            
             trial_boundaries = (find(diff(within_trial(first_half))>0)+0.5)./opt.samp_freq - t_start;
             for i = 1:numel(trial_boundaries)
                 x_ = trial_boundaries(i);
@@ -500,16 +541,19 @@ classdef PanelGenerator
             ylim([-Inf Inf]);
             xlabel 'Time (s)';
             ylabel 'Position (cm)';
+            legend(h, 'Real', 'Diagonal', 'Place bin');
+            legend boxoff
             figure_format('boxsize', [0.8 0.7]*1.05); box on;
             Utils.printto;
             
-            [~, stats] = Utils.pls_plot([X_first_half;X_second_half],...
-                [time_coord(first_half)', ceil(ks_first_half/2), mod(ks_first_half,2);...
-                time_coord(second_half)', ceil(ks_second_half/2),mod(ks_second_half,2)]);
-            Utils.pls_plot([X_first_half_s;X_second_half_s],...
-                [time_coord(first_half)', ceil(ks_first_half/2), mod(ks_first_half,2);...
-                time_coord(second_half)', ceil(ks_second_half/2),mod(ks_second_half,2)], 'stats', stats, 'xl_', xlim, 'yl_', ylim);
-            keyboard;
+            if false
+                [~, stats] = Utils.pls_plot([X_first_half;X_second_half],...
+                    [time_coord(first_half)', ceil(ks_first_half/2), mod(ks_first_half,2);...
+                    time_coord(second_half)', ceil(ks_second_half/2),mod(ks_second_half,2)]);
+                Utils.pls_plot([X_first_half_s;X_second_half_s],...
+                    [time_coord(first_half)', ceil(ks_first_half/2), mod(ks_first_half,2);...
+                    time_coord(second_half)', ceil(ks_second_half/2),mod(ks_second_half,2)], 'stats', stats, 'xl_', xlim, 'yl_', ylim);
+            end
         end
         
         function confusion(remake)
@@ -696,6 +740,8 @@ classdef PanelGenerator
                 %Utils.printto;
                 PanelGenerator.aux_param_bns(fname, I0_fit, I0_fit_s, I0_conf, I0_conf_s, mouse_names,...
                     {'Unshuffled', 'Shuffled'}, sprintf('I_0 fit value\n(cm^{-2}neuron^{-1})'), [-Inf Inf], true, false);
+                PanelGenerator.val_reporter(I0_fit, I0_fit_s, I0_conf, I0_conf_s, 'I_0', 'I_0 (shuf)', mouse_names);
+                
             end
             
             fname = ap('grouped_I0_fit_diag.pdf');
@@ -709,6 +755,7 @@ classdef PanelGenerator
                 %Utils.printto;
                 PanelGenerator.aux_param_bns(fname, I0_fit, I0_fit_d, I0_conf, I0_conf_d, mouse_names,...
                     {'Unshuffled', 'Diagonal'}, sprintf('I_0 fit value\n(cm^{-2}neuron^{-1})'), [-Inf Inf], true, false);
+                PanelGenerator.val_reporter(I0_fit, I0_fit_d, I0_conf, I0_conf_d, 'I_0', 'I_0 (diag)', mouse_names);
             end
             
             fname = ap('grouped_N_fit.pdf');
@@ -722,6 +769,8 @@ classdef PanelGenerator
                 %Utils.printto;
                 PanelGenerator.aux_param_bns(fname, N_fit, N_fit_s, N_conf, N_conf_s, mouse_names,...
                     {'Unshuffled', 'Shuffled'}, sprintf('N fit value\n(neuron)'), [], false, true);
+                PanelGenerator.val_reporter(N_fit, N_fit_s, N_conf, N_conf_s, 'N', 'N (shuf)', mouse_names);
+                PanelGenerator.val_reporter(log(N_fit), log(N_fit_s), N_conf./N_fit, N_conf_s./N_fit_s, 'log(N)', 'log(N) (shuf)', mouse_names, @exp);
             end
             
             fname = ap('grouped_N_fit_diag.pdf');
@@ -734,6 +783,8 @@ classdef PanelGenerator
                 %Utils.printto;
                 PanelGenerator.aux_param_bns(fname, N_fit, N_fit_d, N_conf, N_conf_d, mouse_names,...
                     {'Unshuffled', 'Diagonal'}, sprintf('N fit value\n(neuron)'), [], false, true);
+                PanelGenerator.val_reporter(N_fit, N_fit_d, N_conf, N_conf_d, 'N', 'N (diag)', mouse_names);
+                PanelGenerator.val_reporter(log(N_fit), log(N_fit_d), N_conf./N_fit, N_conf_d./N_fit_d, 'log(N)', 'log(N) (diag)', mouse_names, @exp);
             end
         end
         
