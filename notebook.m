@@ -98,4 +98,72 @@ Utils.printto('figure1_pdf/demo', 'saturation_curve.pdf');
 %% resulting in linearly rising noise variance in the coding direction
 % (a) Two-dimensional projection of real (left) and shuffled (right) neural data using partial least squares regression on position and direction of motion.
 % Color coded by place bin (bottom).
+d = DecodeTensor.cons_filt(70);
+[X, ks] = d.get_dataset;
+X_shuf = shuffle(X, ks);
+X_z = zscore(X);
+X_shuf_z = zscore(X_shuf);
+[XS, stats, origin] = Utils.pls_short(X_z, [ceil(ks/2), mod(ks,2)]);
+XS_s = (X_shuf_z - mean(X_shuf_z)) * stats.W;
+origin_s = -mean(X_shuf_z) * stats.W;
 
+figure;
+scatter(XS(:,1), XS(:,2), 8, Utils.colorcode(ceil(ks/2)), 'filled', 'MarkerFaceAlpha', 0.02); hold on;
+scatter(origin(1), origin(2), 10, 'k');
+xlabel PLS1; ylabel PLS2;
+axis equal; axis tight;
+xl_ = xlim;
+yl_ = ylim;
+set(gca, 'XTick', []);
+set(gca, 'YTick', []);
+figure_format('boxsize', [1 1.2], 'fontsize', 6);
+print('-dpng', '-r1800', 'figure2_pdf/demo/PLS_adjacent.png');
+
+figure;
+scatter(XS_s(:,1), XS_s(:,2), 8, Utils.colorcode(ceil(ks/2)), 'filled', 'MarkerFaceAlpha', 0.02); hold on;
+scatter(origin_s(1), origin_s(2), 10, 'k');
+xlabel PLS1; ylabel PLS2;
+axis equal; axis tight;
+xlim(xl_); ylim(yl_);
+set(gca, 'XTick', []);
+set(gca, 'YTick', []);
+figure_format('boxsize', [1 1.2], 'fontsize', 6);
+print('-dpng', '-r1800', 'figure2_pdf/demo/PLS_adjacent_shuf.png');
+
+%%
+% (c) Absolute cosine of the angle between the principal noise correlation mode most aligned with the signal direction,
+% as a function of ensemble size. Real data (blue) and shuffled data (red) from three mice. Showing the median over place bins.
+% Shaded region represents 95% confidence interval over 20 random subsets of cells.
+% (Top schematic) Illustration of the effect of a correlation mode remaining aligned with a specific direction as one adds a new dimension (blue).
+% For isotropic noise the alignment will decay as the inverse square root of dimension (red).
+% (Inset) The average slope of the curves on the log-log plot, computed beyond an ensemble size of 50 and representing a power-law exponent.
+% Values for 107 sessions from 12 mice, aggregated within each mouse. Errorbars denote aggregated 95% confidence intervals.
+% Color denotes mouse identity as in Figure 1g,h. Shuffling reduces the exponent (P < 0.001, Wilcoxon signed rank test).
+
+%<depends on precomputed MedLoad_agg_190705-171806_0.mat>
+PanelGenerator.medload;
+
+%%
+% (d) Projected noise variance and squared distance between mean responses (signal strength, black)
+% for discrimination between adjacent place bins, as a function of ensemble size.
+% Projecting real data (blue) and shuffled data (red) onto the direction of a correlation-insensitive classifier,
+% and showing the median values over place bins. Values are normalized by the slope of the squared signal strength.
+% Shown for three mice. Shaded regions are 95% confidence intervals over 20 random subsets of cells and train-test divisions for the classifier.
+
+% 105 samples, not 107 because 2 sessions did not satisfy parameter
+% confidences being < 0.5 * parameter values
+
+%<depends on precomputed adjacent_agg_190725-194911_0.mat>
+PanelGenerator.adjacent_decoders;
+
+%%
+% (e) The slope of the normalized noise variance from d for real and shuffled data, computed beyond ensemble sizes of 100.
+% Values, errorbars, and color scheme obtained, aggregated, and presented as in c.
+% Shuffling drastically reduces the slopes (P < 0.001, Wilcoxon signed rank test).
+% (f) Linear slope coefficients I0, from Figure 1g, plotted against the inverse of the y-intercept value of the normalized noise variance from e, using shuffled data.
+% Shown from 105 sessions from 12 mice, and color-coded by mouse identity. Errorbars are 95% confidence intervals from the fits.
+% The variables are directly correlated (R2=0.47).
+% (g) Asymptotic IMSE values I0N, computed from fitted parameters as in Figure 1g,h, plotted against the inverse of the slope of the normalized noise variance from e, using real data.
+% Sessions, color scheme, and errorbars as in f. The variables are directly correlated (R2=0.43).
+
+%< plots generated under d>
