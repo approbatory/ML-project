@@ -428,10 +428,21 @@ classdef PanelGenerator
     
     
     methods(Static)
-        function decode_demo(temporal_mixing)
+        function decode_demo(varargin) %temporal_mixing
+            p = inputParser;
+            p.addParameter('temporal_mixing', true, @islogical);
+            p.addParameter('ied', false, @islogical);
+            p.addParameter('make_fig', true, @islogical);
+            p.addParameter('pls', false, @islogical);
+            p.parse(varargin{:});
+            
             data_source = DecodeTensor.cons_filt(70, true); %was 70, 10, 34
             opt = DecodeTensor.default_opt;
             load(data_source{1});
+            traces = tracesEvents.rawTraces;
+            if p.Results.ied
+                traces = iterative_event_detection(traces);
+            end
             [~, ~, trial_start, trial_end, trial_dir, ~, ks] =...
                 DecodeTensor.new_sel(tracesEvents.position, opt);
             within_trial = zeros(size(ks));
@@ -445,7 +456,7 @@ classdef PanelGenerator
             %first_half = (within_trial <= n_trials/2) & (within_trial ~= 0);
             %second_half = (within_trial > n_trials/2) & (within_trial ~= 0);
             time_coord = (1:numel(ks))./opt.samp_freq;
-            if temporal_mixing
+            if p.Results.temporal_mixing
                 first_half = (mod(within_trial,2) == 1) & (within_trial ~= 0);
                 second_half = (mod(within_trial,2) == 0) & (within_trial ~= 0);
             else
@@ -455,8 +466,8 @@ classdef PanelGenerator
             
             ks_first_half = ks(first_half);
             ks_second_half = ks(second_half);
-            X_first_half = tracesEvents.rawTraces(first_half, :);
-            X_second_half = tracesEvents.rawTraces(second_half, :);
+            X_first_half = traces(first_half, :);
+            X_second_half = traces(second_half, :);
             X_first_half_s = shuffle(X_first_half, ks_first_half);
             X_second_half_s = shuffle(X_second_half, ks_second_half);
             
@@ -498,6 +509,7 @@ classdef PanelGenerator
                 tr_err_s(i) = me_(ks_(tr_track==i), ps_s_(tr_track==i));
             end
             
+            
             figure('FileName', 'figure1_pdf\demo\decoding_demo.pdf');
             t = (1:numel(ks_first_half))./opt.samp_freq;
             t_start = 83.5 + 2.05; %which to show
@@ -520,7 +532,9 @@ classdef PanelGenerator
             legend(h, 'Real', 'Shuffled', 'Place bin');
             legend boxoff
             figure_format('boxsize', [0.8 0.7]*1.05); box on;
-            Utils.printto;
+            if p.Results.make_fig
+                Utils.printto;
+            end
             
             figure('FileName', 'figure1_pdf\demo\decoding_demo_diagonal.pdf');
             t = (1:numel(ks_first_half))./opt.samp_freq;
@@ -544,9 +558,11 @@ classdef PanelGenerator
             legend(h, 'Real', 'Diagonal', 'Place bin');
             legend boxoff
             figure_format('boxsize', [0.8 0.7]*1.05); box on;
-            Utils.printto;
+            if p.Results.make_fig
+                Utils.printto;
+            end
             
-            if false
+            if p.Results.pls
                 [~, stats] = Utils.pls_plot([X_first_half;X_second_half],...
                     [time_coord(first_half)', ceil(ks_first_half/2), mod(ks_first_half,2);...
                     time_coord(second_half)', ceil(ks_second_half/2),mod(ks_second_half,2)]);
