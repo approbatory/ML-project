@@ -1,16 +1,17 @@
 function figure_format(varargin)
 p = inputParser;
 p.addOptional('boxsize', [0.8125 0.585].*0.98, @(x) isnumeric(x) && (numel(x) == 2));
-p.addOptional('factor', 1, @isscalar);
-p.addOptional('lwid', 0.5, @isscalar);
-p.addOptional('fontsize', 6, @isscalar);
+p.addParameter('factor', 1, @isscalar);
+p.addParameter('fig_factor', 1.6, @isscalar);
+p.addParameter('lwid', 0.5, @isscalar);
+p.addParameter('fontsize', 6, @isscalar);
 p.parse(varargin{:});
 
 my_font = 'Helvetica';
 
 hf = gcf;
 hf.Units = 'inches';
-hf.Position = [hf.Position(1:2), p.Results.boxsize.*1.6.*p.Results.factor];
+hf.Position = [hf.Position(1:2), p.Results.boxsize.*p.Results.fig_factor.*p.Results.factor];
 
 
 
