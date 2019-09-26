@@ -455,7 +455,7 @@ classdef Utils %Common utilities for dealing with neural data
             expo = exp_form(e_loc+1:end);
             expo_num = str2double(expo);
             if ispc
-                r = [base, '·10^{', sprintf('%d', expo_num), '}'];
+                r = [base, 'ï¿½10^{', sprintf('%d', expo_num), '}'];
             else
                 r = [base, 'Â·10^{', sprintf('%d', expo_num), '}'];
             end
@@ -582,10 +582,13 @@ classdef Utils %Common utilities for dealing with neural data
             end%% TODO finish multiballnstick automator helper function
             if is_grouped
                 if ~exist('labels', 'var')
-                    labels = {'Unshuffled', 'Shuffled'};
+                    labels = {'Real', 'Shuffled'};
                 end
                 grouped_ballnstick(labels, y_, e_, 'coloring', DecodeTensor.mcolor(my_mice), 'logscale', logscale);
             else
+                if ~exist('labels', 'var')
+                    labels = {'Real', 'Shuffled'};
+                end
                 if strcmp(labels{2}, 'Diagonal')
                     color_alt = 'm';
                 else
@@ -636,6 +639,8 @@ classdef Utils %Common utilities for dealing with neural data
             print(fig, '-dpdf', fullfile(pdf_special_dir_name, [name '.pdf']));
         end
         
+        %function printto(varargin)
+        %end%TODO undo disability
         function printto(save_dir, fname)
             if ~exist('save_dir', 'var')
                 save_dir = '.';
@@ -660,7 +665,7 @@ classdef Utils %Common utilities for dealing with neural data
                     set(gca, 'TickLength', [0.005 0]);
                     
                 case 'inset'
-                    figure_format([0.4 0.25], 'fontsize', 5);
+                    figure_format([0.4 0.375], 'fontsize', 5);
                     
                 case 'confusion'
                     figure_format('boxsize', [0.75 0.85]); box on;

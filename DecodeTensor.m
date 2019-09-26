@@ -23,12 +23,12 @@ classdef DecodeTensor < handle
             d = DecodeTensor.cons_filt(dispatch_index, true);
             DecodeTensor.decode_series(d{1}, d{2}, DecodeTensor.default_opt);
         end
-
-	function dispatch_datasize_filt(dispatch_index)
-	    %index is from 1 to 107
-	    d = DecodeTensor.cons_filt(dispatch_index, true);
-	    DecodeTensor.decode_datasize_series(d{1}, d{2}, DecodeTensor.default_opt);
-	end
+        
+        function dispatch_datasize_filt(dispatch_index)
+            %index is from 1 to 107
+            d = DecodeTensor.cons_filt(dispatch_index, true);
+            DecodeTensor.decode_datasize_series(d{1}, d{2}, DecodeTensor.default_opt);
+        end
         
         function decode_series(source_path, mouse_id, opt)
             %%Decoding performance as a function of number of neurons
@@ -61,7 +61,7 @@ classdef DecodeTensor < handle
             session_id = session_id{1}(2:end-1);
             if opt.restrict_cell_distance == 0
                 [data_tensor, tr_dir] = DecodeTensor.tensor_loader(source_path, mouse_id, opt);
-            
+                
                 num_neurons = size(data_tensor, 1);
             else
                 [data_tensor, tr_dir, cell_coords] = DecodeTensor.tensor_loader(source_path, mouse_id, opt);
@@ -253,13 +253,13 @@ classdef DecodeTensor < handle
             % opt.n_bins = number of bins to use, e.g. 20
             load(source_path);
             track_coord = tracesEvents.position(:,1);
-            if any(strcmp(opt.neural_data_type, {'FST_events', 'FST_filled', 'FST_padded'}))
+            if any(strcmp(opt.neural_data_type, {'FST_events', 'FST_filled', 'FST_padded', 'IED'}))
                 fieldname = 'rawTraces';
             else
                 fieldname = opt.neural_data_type;
             end
             if isfield(tracesEvents, fieldname)
-            X = tracesEvents.(fieldname);
+                X = tracesEvents.(fieldname);
             else
                 error('No such field %s. Options are rawTraces, rawProb, spikeDeconv, FST_events, FST_filled, FST_padded', fieldname);
             end
@@ -279,6 +279,9 @@ classdef DecodeTensor < handle
                 X_bin_full_padded = conv2(X, ones(opt.pad_seconds*20,1), 'full');
                 X_bin_full_padded = X_bin_full_padded(1:size(X,1),:);
                 X = X_bin_full_padded;
+            end
+            if strcmp(opt.neural_data_type, 'IED')
+                X = iterative_event_detection(X);
             end
             
             if opt.first_half
@@ -549,7 +552,7 @@ classdef DecodeTensor < handle
             
             mid_start = opt.ends;
             mid_end = opt.total_length - opt.ends;
-
+            
             track_bins = ceil(opt.n_bins.*(cm_coord - mid_start)./(mid_end - mid_start));
             track_bins(track_bins < 1) = 0;
             track_bins(track_bins > opt.n_bins) = opt.n_bins + 1;
@@ -767,7 +770,7 @@ classdef DecodeTensor < handle
             % neurons, bins, and trials. For each trial, all the samples
             % with an associated bin are averaged and entered
             % into the tensor. The neural traces are calculated from
-            % the filters produced by CellMax (“rawTraces�? field).
+            % the filters produced by CellMax (“rawTraces�? field).
             %
             % Source: DecodeTensor.construct_tensor :
             % (raw traces, 1:n_bins bin trace, n_bins, ...
@@ -1034,7 +1037,7 @@ classdef DecodeTensor < handle
                     te_X_B = X_B(test_division,:);
                     
                     tr_ks = [zeros(1,size(tr_X_A,1))...
-                              ones(1,size(tr_X_B,1))];
+                        ones(1,size(tr_X_B,1))];
                     tr_X = [tr_X_A ; tr_X_B];
                     tr_X_shuf = shuffle(tr_X, tr_ks);
                     
@@ -1047,7 +1050,7 @@ classdef DecodeTensor < handle
                     [~, probs_A] = model.predict(te_X_A);
                     [~, probs_B] = model.predict(te_X_B);
                     probs_correct = [probs_A(:,1) ; probs_B(:,2)];
-
+                    
                     records{i,1} = {mouse_id, 'unshuffled', bin_A, bin_B, mean(probs_correct)};
                     
                     [~, probs_A] = model_shuf.predict(te_X_A);
@@ -1104,7 +1107,7 @@ classdef DecodeTensor < handle
             
             if opt.restrict_cell_distance == 0
                 [data_tensor, tr_dir] = DecodeTensor.tensor_loader(source_path, mouse_id, opt);
-            
+                
                 num_neurons = size(data_tensor, 1);
             else
                 [data_tensor, tr_dir, cell_coords] = DecodeTensor.tensor_loader(source_path, mouse_id, opt);
@@ -1166,8 +1169,8 @@ classdef DecodeTensor < handle
                 sample_id = randi(2^16);
                 n_tri = trials_series(i);
                 
-		err_res = DecodeTensor.decode_all(data_tensor, tr_dir, opt.bin_width, alg, num_neurons, n_tri);
-		%[mean_err, MSE] = DecodeTensor.decode_tensor(data_tensor, tr_dir, opt.bin_width, alg, false,...
+                err_res = DecodeTensor.decode_all(data_tensor, tr_dir, opt.bin_width, alg, num_neurons, n_tri);
+                %[mean_err, MSE] = DecodeTensor.decode_tensor(data_tensor, tr_dir, opt.bin_width, alg, false,...
                 %    num_neurons, n_tri);
                 db_queue{i,1} = ...
                     {mouse_id, session_id, 'unshuffled', num_neurons, n_tri, opt.restrict_cell_distance, err_res.mean_err.unshuffled, err_res.MSE.unshuffled, sample_id};
@@ -1347,7 +1350,7 @@ classdef DecodeTensor < handle
         
         function muti_struct = measure_muti(dispatch_index, data_size)
             [source_path, mouse_name] = DecodeTensor.default_datasets(dispatch_index);
-            opt = DecodeTensor.default_opt; 
+            opt = DecodeTensor.default_opt;
             opt.neural_data_type = 'FST_events';
             [data_tensor, tr_dir] = DecodeTensor.tensor_loader(source_path, mouse_name, opt);
             [X, ks] = DecodeTensor.tensor2dataset(data_tensor, tr_dir);
@@ -1450,7 +1453,7 @@ classdef DecodeTensor < handle
                     [coeff{i_d, i_b}, latent{i_d, i_b}] = pcacov(Noise_Cov{i_d, i_b});
                     Noise_Cov_s{i_d, i_b} = cov(X_noise_s);
                     %if using_corr
-                   c %    Noise_Cov_s{i_d, i_b} = eye(total_neurons);
+                    c %    Noise_Cov_s{i_d, i_b} = eye(total_neurons);
                     %end
                     %if using_corr
                     %    SD = sqrt(diag(Noise_Cov_s{i_d, i_b}));
@@ -1575,7 +1578,7 @@ classdef DecodeTensor < handle
             
             res.mean_noise_corr_shuf = mean(noise_corr_shuf,3);
             res.RMS_noise_corr_shuf = mean(RMS_noise_corr_shuf);
-
+            
         end
         
         function o = cons(index, no_create)
@@ -1644,11 +1647,11 @@ classdef DecodeTensor < handle
         
         function [l, m, indices] = special_sess_id_list
             l =  {'091246', '073912', '105544', '121404', '104915',...
-                  '125138', '093722', '115921', '104559', '104705',...
-                  '103035', '105003'};
+                '125138', '093722', '115921', '104559', '104705',...
+                '103035', '105003'};
             m = {'Mouse2023', 'Mouse2024', 'Mouse2028', 'Mouse2010',...
-                 'Mouse2012', 'Mouse2019', 'Mouse2022', 'Mouse2026',...
-                 'Mouse2011', 'Mouse2021', 'Mouse2025', 'Mouse2029'};
+                'Mouse2012', 'Mouse2019', 'Mouse2022', 'Mouse2026',...
+                'Mouse2011', 'Mouse2021', 'Mouse2025', 'Mouse2029'};
             l_filt_sess = DecodeTensor.filt_sess_id_list;
             indices = zeros(1,numel(l));
             for i = 1:numel(l)
@@ -1663,8 +1666,8 @@ classdef DecodeTensor < handle
         
         function c = mcolor(mouse_list, varargin)
             m = {'Mouse2023', 'Mouse2024', 'Mouse2028', 'Mouse2010',...
-                 'Mouse2012', 'Mouse2019', 'Mouse2022', 'Mouse2026',...
-                 'Mouse2011', 'Mouse2021', 'Mouse2025', 'Mouse2029'};
+                'Mouse2012', 'Mouse2019', 'Mouse2022', 'Mouse2026',...
+                'Mouse2011', 'Mouse2021', 'Mouse2025', 'Mouse2029'};
             m = unique(m);
             c = Utils.names_to_colors(mouse_list, m, varargin{:});
         end
