@@ -11,8 +11,8 @@ try
     %test_selector(str2num(source));
     %DecodeTensor.dispatch_datasize(str2double(source));
     %DecodeTensor.dispatch(str2double(source), is_padded, distance_cutoff);
-    %%DecodeTensor.dispatch_filt(str2double(source));
-    DecodeTensor.dispatch_datasize_filt(str2double(source));
+    DecodeTensor.dispatch_filt(str2double(source), 'IED');
+    %%DecodeTensor.dispatch_datasize_filt(str2double(source));
 catch me
     fprintf('%s / %s\n', me.identifier, me.message);
 end

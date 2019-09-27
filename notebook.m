@@ -98,7 +98,7 @@ Utils.printto('figure1_pdf/demo', 'saturation_curve.pdf');
 %% resulting in linearly rising noise variance in the coding direction
 % (a) Two-dimensional projection of real (left) and shuffled (right) neural data using partial least squares regression on position and direction of motion.
 % Color coded by place bin (bottom).
-d = DecodeTensor.cons_filt(70);
+d = DecodeTensor.cons_filt(70); %DecodeTensor(6, 'IED');
 [X, ks] = d.get_dataset;
 X_shuf = shuffle(X, ks);
 X_z = zscore(X);
