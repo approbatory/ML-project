@@ -23,7 +23,7 @@ classdef DecodeTensor < handle
             d = DecodeTensor.cons_filt(dispatch_index, true);
             opt = DecodeTensor.default_opt;
             if exist('data_type', 'var')
-                opt.neuron_data_type = data_type;
+                opt.neural_data_type = data_type;
             end
             DecodeTensor.decode_series(d{1}, d{2}, opt);
         end
@@ -33,7 +33,7 @@ classdef DecodeTensor < handle
             d = DecodeTensor.cons_filt(dispatch_index, true);
             opt = DecodeTensor.default_opt;
             if exist('data_type', 'var')
-                opt.neuron_data_type = data_type;
+                opt.neural_data_type = data_type;
             end
             DecodeTensor.decode_datasize_series(d{1}, d{2}, opt);
         end
