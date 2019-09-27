@@ -18,16 +18,24 @@ classdef DecodeTensor < handle
             DecodeTensor.decode_series(source_path, mouse_name, opt);
         end
         
-        function dispatch_filt(dispatch_index)
+        function dispatch_filt(dispatch_index, data_type)
             %index is from 1 to 107
             d = DecodeTensor.cons_filt(dispatch_index, true);
-            DecodeTensor.decode_series(d{1}, d{2}, DecodeTensor.default_opt);
+            opt = DecodeTensor.default_opt;
+            if exist('data_type', 'var')
+                opt.neural_data_type = data_type;
+            end
+            DecodeTensor.decode_series(d{1}, d{2}, opt);
         end
         
-        function dispatch_datasize_filt(dispatch_index)
+        function dispatch_datasize_filt(dispatch_index, data_type)
             %index is from 1 to 107
             d = DecodeTensor.cons_filt(dispatch_index, true);
-            DecodeTensor.decode_datasize_series(d{1}, d{2}, DecodeTensor.default_opt);
+            opt = DecodeTensor.default_opt;
+            if exist('data_type', 'var')
+                opt.neural_data_type = data_type;
+            end
+            DecodeTensor.decode_datasize_series(d{1}, d{2}, opt);
         end
         
         function decode_series(source_path, mouse_id, opt)
