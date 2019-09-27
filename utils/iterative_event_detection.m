@@ -4,11 +4,14 @@ p.addRequired('traces', @(x) size(x,1)>size(x,2));
 p.addParameter('z_val', 3, @isscalar);
 p.addParameter('fps', 20, @isscalar);
 p.addParameter('kern_size', 8, @isscalar);
+p.addParameter('med_window_size', 201, @isscalar);
 p.parse(traces, varargin{:});
 
 z_val = p.Results.z_val;
 
 fps = p.Results.fps;
+
+traces = traces - medfilt1(traces, p.Results.med_window_size);
 
 events = zeros(size(traces));
 
