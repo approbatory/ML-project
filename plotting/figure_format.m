@@ -5,14 +5,16 @@ p.addParameter('factor', 1, @isscalar);
 p.addParameter('fig_factor', 1.6, @isscalar);
 p.addParameter('lwid', 0.5, @isscalar);
 p.addParameter('fontsize', 6, @isscalar);
+p.addParameter('modfig', true, @islogical);
 p.parse(varargin{:});
 
 my_font = 'Helvetica';
 
-hf = gcf;
-hf.Units = 'inches';
-hf.Position = [hf.Position(1:2), p.Results.boxsize.*p.Results.fig_factor.*p.Results.factor];
-
+if p.Results.modfig
+    hf = gcf;
+    hf.Units = 'inches';
+    hf.Position = [hf.Position(1:2), p.Results.boxsize.*p.Results.fig_factor.*p.Results.factor];
+end
 
 
 ax = gca;
@@ -37,9 +39,11 @@ for i = 1:numel(ax.Children)
     end
 end
 
-ax_children = hf.Children;
-for i = 1:numel(ax_children)
-    if ~isequal(ax_children(i), ax)
-        ax_children(i).Color = 'k';
+if p.Results.modfig
+    ax_children = hf.Children;
+    for i = 1:numel(ax_children)
+        if ~isequal(ax_children(i), ax)
+            ax_children(i).Color = 'k';
+        end
     end
 end
