@@ -29,7 +29,7 @@ n = {res.n_sizes};
 n_minus_one = Utils.cf_(@(x)x-1, n);
 
 signal = medify({res.m2_d});
-[signal_slope, signal_slope_conf] = cellfun(@Utils.fitaline, n, signal, 'UniformOutput', false);
+[signal_slope, signal_slope_conf] = cellfun(asymp_line, n, signal, 'UniformOutput', false);
 [signal_intercept, signal_intercept_conf] = cellfun(intercept, n_minus_one, signal, 'UniformOutput', false);
 
 noise = medify({res.nv_d});
