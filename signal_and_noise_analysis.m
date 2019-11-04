@@ -50,49 +50,66 @@ snr_shuf = cellfun(@rdivide, signal, noise_shuf, 'UniformOutput', false);
 [intercept_snr_shuf, intercept_snr_shuf_conf] = cellfun(@uncertain_divide, signal_slope, signal_slope_conf, noise_shuf_intercept, noise_shuf_intercept_conf);
 
 dff2_lim = [0 1.5];
+%%
+margins_h = 0.01*2^3;
+margins_v = 0.01*2^3+0.01;
+spacing_h = 0.02*2^2 + 0.03;
+spacing_v = 0.02*2^3;
+Q = ComputeSubplotPositions(2, 3, [], margins_h, margins_h-0.06, spacing_h, margins_v-0.04, margins_v+0.01, spacing_v);
+%ShowComputedSubplotPositions(Q);
 
 %action
 figure(1);
-subplot(2,3,1);
+ResizeFigure(figure(1), 12, 7, 'centimeters');
+
+subplotp(Q, 1);
 MultiSessionVisualizer.plot_single_filtered(n, {signal}, {'k'}, filt_sess_indices);
 ylim(dff2_lim);
 curve_plot_formatting('DFF^2', 'Signal');
+panel_format;
 
-subplot(2,3,2);
+subplotp(Q, 2);
 MultiSessionVisualizer.plot_single_filtered(n, {noise, noise_shuf}, {'b', 'r'}, filt_sess_indices);
 curve_plot_formatting('DFF^2', 'Noise');
 ylim(dff2_lim);
+panel_format;
 
-subplot(2,3,3);
+subplotp(Q, 3);
 MultiSessionVisualizer.plot_single_filtered(n, {snr, snr_shuf}, {'b', 'r'}, filt_sess_indices);
 curve_plot_formatting('SNR^2', 'Signal/Noise');
+panel_format;
 
-subplot(2,3,4);
+subplotp(Q, 4);
 Utils.bns_groupings(asymp_snr, asymp_snr_shuf, asymp_snr_conf, asymp_snr_shuf_conf, mouse_names, true, {'Real', 'Shuffled'}, true);
 ylabel('Signal slope / Noise slope');
+panel_format;
 
 %change this to actually measure cell by cell the SNR of that cell
-figure(2);
-Utils.bns_groupings(intercept_snr, intercept_snr_shuf, intercept_snr_conf, intercept_snr_shuf_conf, mouse_names, false, {'Real', 'Shuffled'}, false);
-ylabel('Single cell signal / Single cell noise');
-
-figure(1);
-subplot(2,3,5);
+%figure(2);
+%Utils.bns_groupings(intercept_snr, intercept_snr_shuf, intercept_snr_conf, intercept_snr_shuf_conf, mouse_names, false, {'Real', 'Shuffled'}, false);
+%ylabel('Single cell signal / Single cell noise');
+%
+%figure(1);
+subplotp(Q, 5);
 PanelGenerator.plot_regress_averaged(intercept_snr_shuf(g_), I0_fit_s(g_),...
-    intercept_snr_shuf_conf(g_), I0_conf_s(g_), mouse_names(g_), 'r', 'text_coord', [0.1 0.2e-3]);
+    intercept_snr_shuf_conf(g_), I0_conf_s(g_), mouse_names(g_), 'r', 'text_coord', [0.07 0.2e-3]);
 xlabel('Single cell signal / Single cell noise');
-ylabel('I_0');
-xlim([-Inf Inf]);
-ylim([-Inf Inf]);
+ylabel(sprintf('I_0 fit value (cm^{-2}%sneuron^{-1})', Utils.dot));
+xlim([-Inf 0.15]);
+ylim([-Inf 1e-3]);
+Utils.fix_exponent(gca , 'y', 0)
+panel_format;
 
-subplot(2,3,6);
+subplotp(Q, 6);
 InfoLimit = N_fit.*I0_fit;
 InfoLimit_conf = abs(InfoLimit).*sqrt((N_conf./N_fit).^2 + (I0_conf./I0_fit).^2);
 PanelGenerator.plot_regress_averaged(asymp_snr(g_), InfoLimit(g_),...
     asymp_snr_conf(g_), InfoLimit_conf(g_), mouse_names(g_), 'b',...
-    'text_coord', [2 -0.03]);
+    'text_coord', [2 0]);
 xlabel('Signal slope / Noise slope');
 ylabel('I_0N (cm^{-2})');
+ylim([-Inf 0.15]);
+panel_format;
 %%
 
 function filt_indices = select_from_mice(mice_to_show)

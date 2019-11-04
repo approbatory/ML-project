@@ -461,6 +461,14 @@ classdef Utils %Common utilities for dealing with neural data
             end
         end
         
+        function d = dot
+            if ispc
+                d = '�';
+            else
+                d = '·';
+            end
+        end
+        
         function [N_vals, N_confs] = partial_fits(n, m)
             n_points = numel(n);
             N_vals = zeros(1, n_points);
