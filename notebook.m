@@ -167,3 +167,8 @@ PanelGenerator.adjacent_decoders;
 % Sessions, color scheme, and errorbars as in f. The variables are directly correlated (R2=0.43).
 
 %< plots generated under d>
+
+%% Figure 3 | Noise variance in the spatial encoding direction increases linearly with ensemble size.
+signal_and_noise_analysis;
+
+% (a) 

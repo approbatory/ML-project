@@ -1,10 +1,12 @@
-function panel_format
+function panel_format(ax)
 
 my_font = 'Arial';
 my_font_size = 6;
 my_line_width = 0.5;
 
-ax = gca;
+if ~exist('ax', 'var')
+    ax = gca;
+end
 ax.FontName = my_font;
 ax.FontSize = my_font_size;
 ax.Box = 'off';

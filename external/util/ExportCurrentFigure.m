@@ -25,6 +25,6 @@ else
   fullName = sprintf('fig%s_%s', figureId, figureName);
 end
 fullName = strrep(fullName,' ','_');
-eval(sprintf('! rm -f %s.*', fullName));
+%eval(sprintf('! rm -f %s.*', fullName)); %don't run rm --Omer
 eval(sprintf('export_fig ''%s'' -%s', fullName, outputFormat));
 fprintf('Exported "%s.%s".\n', fullName, outputFormat);

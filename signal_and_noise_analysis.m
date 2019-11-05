@@ -13,6 +13,20 @@ good_fit_filter = (I0_conf < 0.5*I0_fit) &...
     (N_conf < 0.5*N_fit);% & (N_fit < 500) & (cellfun(@max, {res.n_sizes}) >= 300); %200
 g_ = good_fit_filter;
 
+%% precompute single cell dp2
+save_fname = 'single_cell_dp2.mat';
+if ~exist(save_fname, 'file')
+    parfor i = 1:107
+        [single_dp2(i), single_dp2_sem(i)] = DecodeTensor.cons_filt(i).single_cell_d_primes2;
+        fprintf('*');
+    end
+    fprintf('\ndone\n');
+    save(save_fname, 'single_dp2', 'single_dp2_sem');
+else
+    load(save_fname);
+end
+
+
 %% splash zone
 %prelude
 medify = @(z) Utils.cf_(@(y)cellfun(@(x)median(x(:)), y), z);
@@ -20,6 +34,7 @@ cutoff = 100;
 asymp_line = @(n,m) Utils.fitaline(n,m,cutoff);
 intercept = @(n,m) Utils.fitaline(n,m,0,true);
 %show_mice = {'Mouse2022', 'Mouse2024', 'Mouse2028'};
+[~, m_, sp_] = DecodeTensor.special_sess_id_list;
 show_mice = m_;
 filt_sess_indices = select_from_mice(show_mice);
 
@@ -49,67 +64,47 @@ snr_shuf = cellfun(@rdivide, signal, noise_shuf, 'UniformOutput', false);
 [intercept_snr, intercept_snr_conf] = cellfun(@uncertain_divide, signal_slope, signal_slope_conf, noise_intercept, noise_intercept_conf);
 [intercept_snr_shuf, intercept_snr_shuf_conf] = cellfun(@uncertain_divide, signal_slope, signal_slope_conf, noise_shuf_intercept, noise_shuf_intercept_conf);
 
+
+%% plotting
+p = Pub(12, 7, 'rows', 2, 'columns', 3);
 dff2_lim = [0 1.5];
-%%
-margins_h = 0.01*2^3;
-margins_v = 0.01*2^3+0.01;
-spacing_h = 0.02*2^2 + 0.03;
-spacing_v = 0.02*2^3;
-Q = ComputeSubplotPositions(2, 3, [], margins_h, margins_h-0.06, spacing_h, margins_v-0.04, margins_v+0.01, spacing_v);
-%ShowComputedSubplotPositions(Q);
 
-%action
-figure(1);
-ResizeFigure(figure(1), 12, 7, 'centimeters');
-
-subplotp(Q, 1);
+p.panel(1, 'xlab', 'Number of cells', 'ylab', 'DFF^2', 'title', 'Signal');
 MultiSessionVisualizer.plot_single_filtered(n, {signal}, {'k'}, filt_sess_indices);
 ylim(dff2_lim);
-curve_plot_formatting('DFF^2', 'Signal');
-panel_format;
 
-subplotp(Q, 2);
+p.panel(2, 'xlab', 'Number of cells', 'ylab', 'DFF^2', 'title', 'Noise');
 MultiSessionVisualizer.plot_single_filtered(n, {noise, noise_shuf}, {'b', 'r'}, filt_sess_indices);
-curve_plot_formatting('DFF^2', 'Noise');
 ylim(dff2_lim);
-panel_format;
+text(100, 1, 'Real', 'Color', 'b');
+text(400, 0.4, 'Shuffled', 'Color', 'r');
 
-subplotp(Q, 3);
+p.panel(3, 'xlab', 'Number of cells', 'ylab', 'SNR^2', 'title', 'Signal/Noise');
 MultiSessionVisualizer.plot_single_filtered(n, {snr, snr_shuf}, {'b', 'r'}, filt_sess_indices);
-curve_plot_formatting('SNR^2', 'Signal/Noise');
-panel_format;
+text(50, 6.2, 'Shuffled', 'Color', 'r');
+text(400, 2, 'Real', 'Color', 'b');
 
-subplotp(Q, 4);
+p.panel(4, 'ylab', 'Signal slope / Noise slope');
 Utils.bns_groupings(asymp_snr, asymp_snr_shuf, asymp_snr_conf, asymp_snr_shuf_conf, mouse_names, true, {'Real', 'Shuffled'}, true);
-ylabel('Signal slope / Noise slope');
-panel_format;
 
-%change this to actually measure cell by cell the SNR of that cell
-%figure(2);
-%Utils.bns_groupings(intercept_snr, intercept_snr_shuf, intercept_snr_conf, intercept_snr_shuf_conf, mouse_names, false, {'Real', 'Shuffled'}, false);
-%ylabel('Single cell signal / Single cell noise');
-%
-%figure(1);
-subplotp(Q, 5);
-PanelGenerator.plot_regress_averaged(intercept_snr_shuf(g_), I0_fit_s(g_),...
-    intercept_snr_shuf_conf(g_), I0_conf_s(g_), mouse_names(g_), 'r', 'text_coord', [0.07 0.2e-3]);
-xlabel('Single cell signal / Single cell noise');
-ylabel(sprintf('I_0 fit value (cm^{-2}%sneuron^{-1})', Utils.dot));
-xlim([-Inf 0.15]);
+p.panel(5, 'xlab', 'Single cell signal / Single cell noise',...
+    'ylab', sprintf('I_0 fit value (cm^{-2}%sneuron^{-1})', Utils.dot));
+PanelGenerator.plot_regress_averaged(single_dp2(g_), I0_fit_s(g_),...
+    1.96.*single_dp2_sem(g_), I0_conf_s(g_), mouse_names(g_), 'r', 'text_coord', [0.023 0.05e-3]);
+xlim([-Inf Inf]);
 ylim([-Inf 1e-3]);
-Utils.fix_exponent(gca , 'y', 0)
-panel_format;
+Utils.fix_exponent(gca , 'y', 0);
 
-subplotp(Q, 6);
+p.panel(6, 'xlab', 'Signal slope / Noise slope', 'ylab', 'I_0N fit value (cm^{-2})');
 InfoLimit = N_fit.*I0_fit;
 InfoLimit_conf = abs(InfoLimit).*sqrt((N_conf./N_fit).^2 + (I0_conf./I0_fit).^2);
 PanelGenerator.plot_regress_averaged(asymp_snr(g_), InfoLimit(g_),...
     asymp_snr_conf(g_), InfoLimit_conf(g_), mouse_names(g_), 'b',...
     'text_coord', [2 0]);
-xlabel('Signal slope / Noise slope');
-ylabel('I_0N (cm^{-2})');
 ylim([-Inf 0.15]);
-panel_format;
+
+p.format;
+p.print('figure3_pdf', 'SignalNoise');
 %%
 
 function filt_indices = select_from_mice(mice_to_show)
@@ -120,13 +115,6 @@ filt_indices = sp_(show_filter);
 
 end
 
-%maybe use sina's code for matlab plots
-function curve_plot_formatting(ylab, titl)
-xlabel 'Number of cells'
-ylabel(ylab);
-title(titl);
-%figure_format([1 1.4], 'modfig', false);%([1 1.4]);
-end
 
 function [quotient, quotient_uncertainty] = uncertain_divide(x, xc, y, yc)
 quotient = x./y;
