@@ -268,7 +268,7 @@ classdef PanelGenerator
         end
         
         function aux_param_bns(fname, param, param_alt, param_conf, param_conf_alt,...
-                mouse_names, x_labels, y_label, y_lim, fix_expo, log_scale)
+                mouse_names, x_labels, y_label, y_lim, fix_expo, log_scale, yticks)
             %Make both grouped ball-and-stick plots and a set of
             %ball-and-stick plots for each mouse comparing param and
             %param_alt in a paired comparison
@@ -297,6 +297,10 @@ classdef PanelGenerator
 
             if ~isempty(y_lim)
                 ylim(y_lim);
+            end
+            
+            if exist('yticks', 'var') && ~isempty(yticks)
+                set(gca, 'YTick', yticks);
             end
             
             ylabel(y_label);
@@ -760,6 +764,22 @@ classdef PanelGenerator
                 
             end
             
+            
+            fname = ap('grouped_I0N_fit.pdf');
+            if p.Results.remake || ~exist(fname, 'file')
+                InfoLimit = N_fit.*I0_fit;
+                InfoLimit_conf = abs(InfoLimit).*sqrt((N_conf./N_fit).^2 + (I0_conf./I0_fit).^2);
+                
+                InfoLimit_s = N_fit_s.*I0_fit_s;
+                InfoLimit_conf_s = abs(InfoLimit_s).*sqrt((N_conf_s./N_fit_s).^2 + (I0_conf_s./I0_fit_s).^2);
+                
+                PanelGenerator.aux_param_bns(fname, InfoLimit, InfoLimit_s, InfoLimit_conf, InfoLimit_conf_s, mouse_names,...
+                    {'Unshuffled', 'Shuffled'}, sprintf('I_0N fit value\n(cm^{-2})'), [1e-3 Inf], false, true, [1e-2 1e0 1e2]);
+                PanelGenerator.val_reporter(InfoLimit, InfoLimit_s, InfoLimit_conf, InfoLimit_conf_s, 'I_0N', 'I_0N (shuf)', mouse_names);
+                PanelGenerator.val_reporter(log(InfoLimit), log(InfoLimit_s), InfoLimit_conf./InfoLimit, InfoLimit_conf_s./InfoLimit_s, 'log(I_0N)', 'log(I_0N) (shuf)', mouse_names, @exp);
+                
+            end
+            
             fname = ap('grouped_I0_fit_diag.pdf');
             if p.Results.remake || ~exist(fname, 'file')
                 %figure('FileName', fname);
@@ -774,6 +794,7 @@ classdef PanelGenerator
                 PanelGenerator.val_reporter(I0_fit, I0_fit_d, I0_conf, I0_conf_d, 'I_0', 'I_0 (diag)', mouse_names);
             end
             
+            
             fname = ap('grouped_N_fit.pdf');
             if p.Results.remake || ~exist(fname, 'file')
                 %figure('FileName', fname);
@@ -787,6 +808,14 @@ classdef PanelGenerator
                     {'Unshuffled', 'Shuffled'}, sprintf('N fit value\n(neuron)'), [], false, true);
                 PanelGenerator.val_reporter(N_fit, N_fit_s, N_conf, N_conf_s, 'N', 'N (shuf)', mouse_names);
                 PanelGenerator.val_reporter(log(N_fit), log(N_fit_s), N_conf./N_fit, N_conf_s./N_fit_s, 'log(N)', 'log(N) (shuf)', mouse_names, @exp);
+            end
+            
+            fname = ap('grouped_n99_fit.pdf');
+            if p.Results.remake || ~exist(fname, 'file')
+                PanelGenerator.aux_param_bns(fname, 99*N_fit, 99*N_fit_s, 99*N_conf, 99*N_conf_s, mouse_names,...
+                    {'Unshuffled', 'Shuffled'}, sprintf('Size at 99%% max.\n(neuron)'), [100 Inf], false, true, [1e2 1e4 1e6 1e8]);
+                PanelGenerator.val_reporter(99*N_fit, 99*N_fit_s, 99*N_conf, 99*N_conf_s, '99N', '99N (shuf)', mouse_names);
+                PanelGenerator.val_reporter(log(99*N_fit), log(99*N_fit_s), N_conf./N_fit, N_conf_s./N_fit_s, 'log(99N)', 'log(99N) (shuf)', mouse_names, @exp);
             end
             
             fname = ap('grouped_N_fit_diag.pdf');
