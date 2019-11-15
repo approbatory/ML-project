@@ -227,7 +227,7 @@ classdef Movie
             p.parse(varargin{:});
             
             [movie_numeric_type_size, x_pixels, y_pixels, ~] = ...
-                Movie.data_info(fname, p.Results.movie_dataset);
+                Movie.data_info(fname, 'movie_dataset', p.Results.movie_dataset);
             
             n_frames_for_chunk = Movie.frame_chunk_size(p.Results.MemChunk, movie_numeric_type_size, (x_pixels*y_pixels));
             dff_movie(fname, '', 'movie_dataset', p.Results.movie_dataset, 'frame_chunk_size', n_frames_for_chunk, 'F0', p.Results.F0);

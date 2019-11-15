@@ -1,4 +1,8 @@
 function output = extractor_aggregator(varargin)
+addpath(genpath('~/EXTRACT'));
+addpath(genpath('~/analysis'));
+addpath(genpath('~/ML-Project'));
+
 [S, T, summary] = deal(cell(1,nargin));
 
 for i = 1:nargin
