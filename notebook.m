@@ -81,6 +81,8 @@ set(gca, 'YTickLabel', {'I_0N/2', 'I_0N'});
 %line([0 500], [50 50], 'LineStyle', ':', 'Color', 'k');
 text(200, 20, 'I_0n/(1+n/N)', 'Color', 'b');
 text(200, 165, 'I_0n', 'Color', 'r');
+text(350, 100, '99% I_0N', 'Color', 'g', 'VerticalAlignment', 'bottom');
+l_ = refline(0, 99); l_.Color = 'g'; l_.LineStyle = ':';
 xlabel 'Number of cells'
 ylabel '1/MSE'
 figure_format;

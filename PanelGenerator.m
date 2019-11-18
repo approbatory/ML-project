@@ -246,6 +246,7 @@ classdef PanelGenerator
             PanelGenerator.plot_decoding_curve(sess, sp_, n_sizes, imse_alt, I0_fit_alt, N_fit_alt, color_alt, true);
             hold on;
             PanelGenerator.plot_decoding_curve(sess, sp_, n_sizes, imse, I0_fit, N_fit, color, true);
+            l_ = refline(0, 5); l_.Color = 'k'; l_.LineStyle = ':';
             xlabel 'Number of cells'
             ylabel 'RMS Error (cm)'
             %ylim([2 50]);
