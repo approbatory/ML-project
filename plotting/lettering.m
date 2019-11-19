@@ -1,6 +1,4 @@
-function lettering(letter)
-x_shift = -0.08;
-y_shift = 0.11;
+function lettering(letter, x_shift, y_shift)
 
 
 annotation('textbox', get(gca, 'Position') + [x_shift y_shift 0 0],...
