@@ -849,6 +849,7 @@ classdef PanelGenerator
             sp_ = sp_(show_filter);
             m_ = m_(show_filter);
             figure('FileName', 'supplements_pdf/medload/medload_rasters.pdf');
+            colorscale = 'log';
             for i = 1:numel(sp_)
                 subplot(1,numel(sp_)+1, i);
                 mean_median_loadings = squeeze(mean(abs(res(sp_(i)).median_loadings)));
@@ -862,13 +863,13 @@ classdef PanelGenerator
                 
                 %set(gca, 'XScale', 'log');
                 %set(gca, 'YScale', 'log');
-                set(gca, 'ColorScale', 'log');
+                set(gca, 'ColorScale', colorscale);
                 caxis([0.03 0.25]);
                 xlim([1 min_d]);
                 ylim([min_d+10, 500]);
-                xlabel 'Correlation PC'
+                xlabel 'Fluctuation mode, i'
                 ylabel 'Number of cells'
-                title(m_(i), 'FontName', 'Helvetica', 'FontSize', 6, 'FontWeight', 'normal');
+                title(sprintf('Mouse %s', m_{i}(end-1:end)), 'FontName', 'Helvetica', 'FontSize', 6, 'FontWeight', 'normal', 'Color', 'b');
                 
                 set(gca, 'FontSize', 6);
                 set(gca, 'FontName', 'Helvetica');
@@ -881,7 +882,10 @@ classdef PanelGenerator
                 %set(gca, 'YTickLabel', 10*cellfun(@str2num, get(gca, 'YTickLabel')));
                 box off;
                 if i > 1
-                    axis off;
+                    box off
+                    xlabel ''
+                    ylabel ''
+                    set(gca, 'YTick', []);
                 end
                 %colorbar;
             end
@@ -893,12 +897,12 @@ classdef PanelGenerator
             surf(1:min_d, ns(ns>=min_d), im_data, 'EdgeColor', 'none');
             view(2);
             %set(gca, 'YScale', 'log');
-            set(gca, 'ColorScale', 'log');
+            set(gca, 'ColorScale', colorscale);
             caxis([0.03 0.25]);
             xlim([1 min_d]);
             ylim([min_d+10, 500]);
-            xlabel 'Correlation PC'
-            ylabel 'Number of cells'
+            %xlabel 'Fluctuation mode, i'
+            %ylabel 'Number of cells'
             title('Shuffled', 'FontName', 'Helvetica', 'FontSize', 6, 'FontWeight', 'normal', 'Color', 'r');
             
             set(gca, 'FontSize', 6);
@@ -906,13 +910,15 @@ classdef PanelGenerator
             set(gca, 'TickLength', [0.02 0.02]);
             set(gca, 'YTick', [1 2 4 8 16 32 64].*min_d);
             box off
-            axis off
+            %axis off
+            xlabel ''; ylabel '';
+            set(gca, 'YTick', []);
             colorbar;
             set(gcf, 'Units', 'inches');
             set(gcf, 'Position', [8.5521    6.2292    8.3125    1.6146]);
-            colormap redblue;
+            colormap parula;
             Utils.printto;
-            %keyboard;
+            keyboard;
             
             figure('FileName', 'figure2_pdf/medload/medload_curves.pdf');
             MultiSessionVisualizer.plot_single_filtered(n_sizes, series, {'b', 'r'}, sp_);
