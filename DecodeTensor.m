@@ -308,6 +308,94 @@ classdef DecodeTensor < handle
             end
         end
         
+        
+        function results_table = adjacent_metrics(data_tensor, tr_dir, num_neurons, num_trials)
+            [data_tensor, tr_dir] = DecodeTensor.cut_tensor(data_tensor, tr_dir, num_neurons, num_trials);
+            [T1, d1, T2, d2, ~] = DecodeTensor.holdout_half(data_tensor, tr_dir);
+            T1s = DecodeTensor.shuffle_tensor(T1, d1);
+            T2s = DecodeTensor.shuffle_tensor(T2, d2);
+            [N, K, T] = size(T1);
+            
+            results_table = cell2table(repmat({zeros(1,(K-1)*2)}, 3,6),...
+                'VariableNames', {'se', 'ce', 'ue', 'sr', 'cr', 'ur'},...
+                'RowNames', {'f', 'd', 'm'});
+            
+            n_ize = @(x) x./norm(x);
+            ndir = @(x, S) dot(x, S * x(:));
+            alg = my_algs('linsvm');
+            for k = 1:K-1
+                for d_i = 1:2
+                    dirs = [-1 1];
+                    direction = dirs(d_i);
+                    
+                    X1_neg = squeeze(T1(:, k, d1==direction))';
+                    X1_pos = squeeze(T1(:, k+1, d1==direction))';
+                    X1 = [X1_neg ; X1_pos];
+                    X1s_neg = squeeze(T1s(:, k, d1==direction))';
+                    X1s_pos = squeeze(T1s(:, k+1, d1==direction))';
+                    X1s = [X1s_neg ; X1s_pos];
+                    ks1 = [-ones(sum(d1==direction),1) ; ones(sum(d1==direction),1)];
+                    
+                    X2_neg = squeeze(T2(:, k, d2==direction))';
+                    X2_pos = squeeze(T2(:, k+1, d2==direction))';
+                    %X2 = [X2_neg ; X2_pos];
+                    X2s_neg = squeeze(T2s(:, k, d2==direction))';
+                    X2s_pos = squeeze(T2s(:, k+1, d2==direction))';
+                    %X2s = [X2s_neg ; X2s_pos];
+                    %ks2 = [-ones(sum(d2==direction),1) ; ones(sum(d2==direction),1)];
+                    
+                    model = alg.train(X1, ks1);
+                    model_d = alg.train(X1s, ks1);
+                    model_mu = mean(X1_pos) - mean(X1_neg);
+                    
+                    w_normed = n_ize(model.Beta);
+                    wd_normed = n_ize(model_d.Beta);
+                    dmu_normed = n_ize(model_mu)';
+                    
+                    for code_c = results_table.Properties.VariableNames
+                        code = code_c{1};
+                        switch code(2)
+                            case 'r'
+                                X_neg = X1_neg;
+                                X_pos = X1_pos;
+                                Xs_neg = X1s_neg;
+                                Xs_pos = X1s_pos;
+                            case 'e'
+                                X_neg = X2_neg;
+                                X_pos = X2_pos;
+                                Xs_neg = X2s_neg;
+                                Xs_pos = X2s_pos;
+                            otherwise
+                                error('only options are r and e for train and test');
+                        end
+                        %my_dmu = mean(X_pos) - mean(X_neg);
+                        %my_sigma = (cov(X_pos) + cov(X_neg))/2;
+                        %my_sigma_s = (cov(Xs_pos) + cov(Xs_neg))/2;
+                        switch code(1)
+                            case 's'
+                                my_dmu = mean(X_pos) - mean(X_neg);
+                                results_table{'f', code}(2*(k-1)+d_i) = dot(w_normed, my_dmu);
+                                results_table{'d', code}(2*(k-1)+d_i) = dot(wd_normed, my_dmu);
+                                results_table{'m', code}(2*(k-1)+d_i) = dot(dmu_normed, my_dmu);
+                            case 'c'
+                                my_sigma = (cov(X_pos) + cov(X_neg))/2;
+                                results_table{'f', code}(2*(k-1)+d_i) = ndir(w_normed, my_sigma);
+                                results_table{'d', code}(2*(k-1)+d_i) = ndir(wd_normed, my_sigma);
+                                results_table{'d', code}(2*(k-1)+d_i) = ndir(dmu_normed, my_sigma);
+                            case 'u'
+                                my_sigma_s = (cov(Xs_pos) + cov(Xs_neg))/2;
+                                results_table{'f', code}(2*(k-1)+d_i) = ndir(w_normed, my_sigma_s);
+                                results_table{'d', code}(2*(k-1)+d_i) = ndir(wd_normed, my_sigma_s);
+                                results_table{'d', code}(2*(k-1)+d_i) = ndir(dmu_normed, my_sigma_s);
+                            otherwise
+                                error('only options are s,c, and u for signal, correlated noise, uncorrelated noise');
+                        end
+                    end
+                end
+            end
+        end
+        
+        
         function [noise_var, noise_var_s, noise_var_d, m2, m2_s, m2_d, mean_dist2]...
                 = adjacent_decoder_noise(data_tensor, tr_dir, num_neurons, num_trials)
             [data_tensor, tr_dir] = DecodeTensor.cut_tensor(data_tensor, tr_dir, num_neurons, num_trials);
