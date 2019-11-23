@@ -63,24 +63,30 @@ PanelGenerator.decoding_curves(true);
 % information-limited code (blue) and an equivalent decorrelated code (red).
 % The parameter I0 represents linear slope at small ensemble size. 
 % N is the ensemble size at which Fisher information is half compared to the decorrelated code.
+I0_ = 1;
+N_ = 100;
+n_max = 5*N_;
+I_max = 2*I0_*N_;
 
 figure;
-x_vals = 1:500;
-I_func = @(n) n./(1 + n./100);
+x_vals = 1:n_max;
+I_func = @(n) I0_.*n./(1 + n./N_);
 plot(x_vals, I_func(x_vals), 'b'); hold on;
 plot(x_vals, x_vals, 'r');
-ylim([0 200]);
-xlim([0 500]);
-l_ = refline(0, 100); l_.Color = 'k';
-set(gca, 'XTick', 0:100:500);
+ylim([0 I_max]);
+xlim([0 n_max]);
+l_ = refline(0, I0_*N_); l_.Color = 'k';
+set(gca, 'XTick', 0:N_:n_max);
 set(gca, 'XTickLabel', {'0', 'N', '2N', '3N', '4N', '5N'});
 m_ = 1;
-set(gca, 'YTick', [m_./(m_+1).*100, 100]);
+set(gca, 'YTick', [m_./(m_+1).*I0_*N_, N_]);
 set(gca, 'YTickLabel', {'I_0N/2', 'I_0N'});
 %line([100 100], [0 500], 'LineStyle', ':', 'Color', 'k');
 %line([0 500], [50 50], 'LineStyle', ':', 'Color', 'k');
-text(200, 20, 'I_0n/(1+n/N)', 'Color', 'b');
-text(200, 165, 'I_0n', 'Color', 'r');
+text(2*N_, 0.2*I0_*N_, 'I_0n/(1+n/N)', 'Color', 'b');
+text(2*N_, 1.65*I0_*N_, 'I_0n', 'Color', 'r');
+text(3.5*N_, I0_*N_, '99% I_0N', 'Color', 'g', 'VerticalAlignment', 'bottom');
+l_ = refline(0, 0.99*I0_*N_); l_.Color = 'g'; l_.LineStyle = ':';
 xlabel 'Number of cells'
 ylabel '1/MSE'
 figure_format;
@@ -130,6 +136,13 @@ set(gca, 'YTick', []);
 figure_format('boxsize', [1 1.2], 'fontsize', 6);
 print('-dpng', '-r1800', 'figure2_pdf/demo/PLS_adjacent_shuf.png');
 
+figure;
+my_colors = Utils.colorcode(1:20);
+for b_i = 1:20
+    rectangle('Position', [b_i 0 1 0.5], 'FaceColor', my_colors(b_i,:), 'EdgeColor', 'none');
+end
+axis equal; axis tight; axis off;
+Utils.printto('figure2_pdf/demo/', 'colorbar.pdf');
 %%
 % (c) Absolute cosine of the angle between the principal noise correlation mode most aligned with the signal direction,
 % as a function of ensemble size. Real data (blue) and shuffled data (red) from three mice. Showing the median over place bins.

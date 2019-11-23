@@ -21,8 +21,8 @@ p.addParameter('F0', []);
 p.parse(varargin{:});
 
 if isempty(movie_out)
-    [~, name] = fileparts(movie_in);
-    movie_out = sprintf('%s_dff.hdf5', name);
+    %[~, name] = fileparts(movie_in);
+    movie_out = sprintf('%s_dff.hdf5', movie_in);
     fprintf('dff_movie: Output movie will be saved as "%s"\n', movie_out);
 end
 

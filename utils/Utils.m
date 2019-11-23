@@ -337,7 +337,9 @@ classdef Utils %Common utilities for dealing with neural data
         end
         
         function res = colorcode(integer_array)
-            l_ = lines;
+            %color_block = [1 0 0; 0 0.75 0.75; 0.75 0 0.75; 0 1 0; 0 0 1; 0.75 0.75 0];
+            color_block = [1 0 0; 0 0 0; 0 0 1; 0 0 0; 0 1 0; 0 0 0];
+            l_ = repmat(color_block, 64, 1);%lines;
             integer_array = integer_array - min(integer_array) + 1;
             res = l_(integer_array, :);
         end

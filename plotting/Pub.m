@@ -18,7 +18,7 @@ classdef Pub < handle
             p.addParameter('vmargint', 0.09, @isscalar);
             p.addParameter('vmarginb', 0.1, @isscalar);
             p.addParameter('hspacing', 0.11, @isscalar);
-            p.addParameter('vspacing', 0.16, @isscalar);
+            p.addParameter('vspacing', 0.20, @isscalar);
             p.addParameter('layout', []);
             p.addParameter('rows', 1, @isscalar);
             p.addParameter('columns', 1, @isscalar);
@@ -40,6 +40,8 @@ classdef Pub < handle
             p.addParameter('xlab', '', @ischar);
             p.addParameter('ylab', '', @ischar);
             p.addParameter('title', '', @ischar);
+            p.addParameter('x_shift', -0.08, @isscalar);
+            p.addParameter('y_shift', 0.11, @isscalar);
             p.parse(index, varargin{:});
             r = p.Results;
             
@@ -48,7 +50,7 @@ classdef Pub < handle
             o.subplots{index} = ax;
             
             
-            lettering(r.letter);
+            lettering(r.letter, r.x_shift, r.y_shift);
             
             o.xlabs{index} = r.xlab;
             xlabel(ax, r.xlab);

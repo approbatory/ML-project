@@ -69,33 +69,34 @@ snr_shuf = cellfun(@rdivide, signal, noise_shuf, 'UniformOutput', false);
 p = Pub(12, 7, 'rows', 2, 'columns', 3);
 dff2_lim = [0 1.5];
 
-p.panel(1, 'xlab', 'Number of cells', 'ylab', 'DFF^2', 'title', 'Signal');
+p.panel(1, 'xlab', 'Number of cells', 'ylab', 'Signal ([\DeltaF/F]^2)');
 MultiSessionVisualizer.plot_single_filtered(n, {signal}, {'k'}, filt_sess_indices);
 ylim(dff2_lim);
 
-p.panel(2, 'xlab', 'Number of cells', 'ylab', 'DFF^2', 'title', 'Noise');
+p.panel(2, 'xlab', 'Number of cells', 'ylab', 'Noise ([\DeltaF/F]^2)');
 MultiSessionVisualizer.plot_single_filtered(n, {noise, noise_shuf}, {'b', 'r'}, filt_sess_indices);
 ylim(dff2_lim);
 text(100, 1, 'Real', 'Color', 'b');
 text(400, 0.4, 'Shuffled', 'Color', 'r');
 
-p.panel(3, 'xlab', 'Number of cells', 'ylab', 'SNR^2', 'title', 'Signal/Noise');
+p.panel(3, 'xlab', 'Number of cells', 'ylab', 'Signal/Noise');
 MultiSessionVisualizer.plot_single_filtered(n, {snr, snr_shuf}, {'b', 'r'}, filt_sess_indices);
 text(50, 6.2, 'Shuffled', 'Color', 'r');
 text(400, 2, 'Real', 'Color', 'b');
 
-p.panel(4, 'ylab', 'Signal slope / Noise slope');
+y_sh = 0.135;
+p.panel(4, 'ylab', 'Signal slope / Noise slope', 'y_shift', y_sh);
 Utils.bns_groupings(asymp_snr, asymp_snr_shuf, asymp_snr_conf, asymp_snr_shuf_conf, mouse_names, true, {'Real', 'Shuffled'}, true);
 
 p.panel(5, 'xlab', 'Single cell signal / Single cell noise',...
-    'ylab', sprintf('I_0 fit value (cm^{-2}%sneuron^{-1})', Utils.dot));
+    'ylab', sprintf('I_0 fit value (cm^{-2}%sneuron^{-1})', Utils.dot), 'y_shift', y_sh);
 PanelGenerator.plot_regress_averaged(single_dp2(g_), I0_fit_s(g_),...
     1.96.*single_dp2_sem(g_), I0_conf_s(g_), mouse_names(g_), 'r', 'text_coord', [0.023 0.05e-3]);
 xlim([-Inf Inf]);
 ylim([-Inf 1e-3]);
 Utils.fix_exponent(gca , 'y', 0);
 
-p.panel(6, 'xlab', 'Signal slope / Noise slope', 'ylab', 'I_0N fit value (cm^{-2})');
+p.panel(6, 'xlab', 'Signal slope / Noise slope', 'ylab', 'I_0N fit value (cm^{-2})', 'y_shift', y_sh);
 InfoLimit = N_fit.*I0_fit;
 InfoLimit_conf = abs(InfoLimit).*sqrt((N_conf./N_fit).^2 + (I0_conf./I0_fit).^2);
 PanelGenerator.plot_regress_averaged(asymp_snr(g_), InfoLimit(g_),...
