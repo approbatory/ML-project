@@ -1,6 +1,7 @@
 recompute = false;
 
-load adjacent_agg_190725-194911_0.mat
+%load adjacent_agg_190725-194911_0.mat
+load adjacent_metrics_agg_191122-231912_0.mat
 
 fit_savefile = 'decoding_curves_fits.mat';
 if recompute || ~exist(fit_savefile, 'file')
@@ -29,6 +30,8 @@ end
 
 %% splash zone
 %prelude
+res_lookup = @(code) arrayfun(@(x)cellfun(@(y)median(y{code(1),code(2:3)}), x.results_table),res,'UniformOutput',false);
+r_ = res_lookup;
 medify = @(z) Utils.cf_(@(y)cellfun(@(x)median(x(:)), y), z);
 cutoff = 100;
 asymp_line = @(n,m) Utils.fitaline(n,m,cutoff);
@@ -41,7 +44,8 @@ filt_sess_indices = select_from_mice(show_mice);
 %middle
 mouse_names = Utils.cf_(@(x)x(17:25), {res.source});
 n = {res.n_sizes};
-n_minus_one = Utils.cf_(@(x)x-1, n);
+%%
+%n_minus_one = Utils.cf_(@(x)x-1, n);
 
 signal = medify({res.m2_d});
 [signal_slope, signal_slope_conf] = cellfun(asymp_line, n, signal, 'UniformOutput', false);
@@ -107,6 +111,16 @@ ylim([-Inf 0.15]);
 p.format;
 p.print('figure3_pdf', 'SignalNoise');
 %%
+p1 = @process_one_sess;
+function [n, signal, noise, noise_shuf, snr, snr_shuf] = process_one_sess(res)
+    n = res.n_sizes;
+    signal = cellfun(@(t) median(t{'m','se'}), res.results_table);
+    noise = cellfun(@(t) median(t{'m','ce'}), res.results_table);
+    noise_shuf = cellfun(@(t) median(t{'m','ue'}), res.results_table);
+    snr = signal ./ noise;
+    snr_shuf = signal ./ noise_shuf;
+end
+
 
 function filt_indices = select_from_mice(mice_to_show)
 
@@ -121,4 +135,3 @@ function [quotient, quotient_uncertainty] = uncertain_divide(x, xc, y, yc)
 quotient = x./y;
 quotient_uncertainty = abs(x./y)*sqrt((xc./x).^2 + (yc./y).^2);
 end
-
