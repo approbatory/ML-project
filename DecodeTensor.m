@@ -374,19 +374,19 @@ classdef DecodeTensor < handle
                         switch code(1)
                             case 's'
                                 my_dmu = mean(X_pos) - mean(X_neg);
-                                results_table{'f', code}(2*(k-1)+d_i) = dot(w_normed, my_dmu);
-                                results_table{'d', code}(2*(k-1)+d_i) = dot(wd_normed, my_dmu);
-                                results_table{'m', code}(2*(k-1)+d_i) = dot(dmu_normed, my_dmu);
+                                results_table{'f', code}(2*(k-1)+d_i) = dot(w_normed, my_dmu).^2;
+                                results_table{'d', code}(2*(k-1)+d_i) = dot(wd_normed, my_dmu).^2;
+                                results_table{'m', code}(2*(k-1)+d_i) = dot(dmu_normed, my_dmu).^2;
                             case 'c'
                                 my_sigma = (cov(X_pos) + cov(X_neg))/2;
                                 results_table{'f', code}(2*(k-1)+d_i) = ndir(w_normed, my_sigma);
                                 results_table{'d', code}(2*(k-1)+d_i) = ndir(wd_normed, my_sigma);
-                                results_table{'d', code}(2*(k-1)+d_i) = ndir(dmu_normed, my_sigma);
+                                results_table{'m', code}(2*(k-1)+d_i) = ndir(dmu_normed, my_sigma);
                             case 'u'
                                 my_sigma_s = (cov(Xs_pos) + cov(Xs_neg))/2;
                                 results_table{'f', code}(2*(k-1)+d_i) = ndir(w_normed, my_sigma_s);
                                 results_table{'d', code}(2*(k-1)+d_i) = ndir(wd_normed, my_sigma_s);
-                                results_table{'d', code}(2*(k-1)+d_i) = ndir(dmu_normed, my_sigma_s);
+                                results_table{'m', code}(2*(k-1)+d_i) = ndir(dmu_normed, my_sigma_s);
                             otherwise
                                 error('only options are s,c, and u for signal, correlated noise, uncorrelated noise');
                         end
