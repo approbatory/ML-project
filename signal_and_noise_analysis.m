@@ -196,6 +196,7 @@ PanelGenerator.plot_regress_averaged(single_dp2(g_), I0_fit_s(g_),...
     1.96.*single_dp2_sem(g_), I0_conf_s(g_), mouse_names(g_), 'r', 'text_coord', [0.028 0.15e-3]);
 xlim([0 Inf]);
 ylim([0 1e-3]);
+p.format;
 Utils.fix_exponent(gca , 'y', 0);
 
 p.panel(6, 'xlab', 'Signal slope / Noise slope', 'ylab', '{\itI}_0{\itN} fit value (cm^{-2})', 'y_shift', y_sh);
