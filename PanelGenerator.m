@@ -112,14 +112,14 @@ classdef PanelGenerator
             if p.Results.show_adjr2
                 if ~isempty(p.Results.text_coords)
                     text(p.Results.text_coords(1), p.Results.text_coords(2),...
-                        sprintf('adj. R^2 = %.2f', adjr2));
+                        sprintf('{\\itR}^2 = %.2f', adjr2));
                 else
                     xl_ = xlim;
                     yl_ = ylim;
                     xl_l = [max(xl_(1),min(x)) min(xl_(2),max(x))];
                     yl_l = [max(yl_(1),min(y)) min(yl_(2),max(y))];
                     text(xl_l(1)+3/4*diff(xl_l), yl_l(1)+1/4*diff(yl_l),...
-                        sprintf('adj. R^2 = %.2f', adjr2));
+                        sprintf('{\\itR}^2 = %.2f', adjr2));
                 end
             end
             

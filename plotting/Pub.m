@@ -64,9 +64,9 @@ classdef Pub < handle
             for index = 1:numel(o.subplots)
                 ax = o.subplots{index};
                 panel_format(ax);
-                xlabel(ax, o.xlabs{index});
-                ylabel(ax, o.ylabs{index});
-                title(ax, o.titles{index});
+                xlabel(ax, o.xlabs{index}, 'Interpreter', 'tex');
+                ylabel(ax, o.ylabs{index}, 'Interpreter', 'tex');
+                title(ax, o.titles{index}, 'Interpreter', 'tex');
             end
         end
         

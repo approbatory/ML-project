@@ -572,7 +572,18 @@ classdef Utils %Common utilities for dealing with neural data
             end
         end
         
-        function bns_groupings(fit_val, fit_val_s, confs, confs_s, mouse_list, is_grouped, labels, logscale)
+        function m = bodge_median(x)
+            x = x(:);
+            if mod(numel(x),2) == 0
+                x = [0;x];
+            end
+            m = median(x);
+        end
+        
+        function [y_, e_] = bns_groupings(fit_val, fit_val_s, confs, confs_s, mouse_list, is_grouped, labels, logscale, use_median)
+            if ~exist('use_median', 'var')
+                use_median = false;
+            end
             if ~exist('is_grouped', 'var')
                 is_grouped = false;
             end
@@ -594,7 +605,18 @@ classdef Utils %Common utilities for dealing with neural data
                 if ~exist('labels', 'var')
                     labels = {'Real', 'Shuffled'};
                 end
-                grouped_ballnstick(labels, y_, e_, 'coloring', DecodeTensor.mcolor(my_mice), 'logscale', logscale);
+                if ~use_median
+                    grouped_ballnstick(labels, y_, e_, 'coloring', DecodeTensor.mcolor(my_mice), 'logscale', logscale);
+                else
+                    med_ys = cellfun(@Utils.bodge_median, y_, 'UniformOutput', false);
+                    my_idx = cellfun(@(a,b)find(a==b), med_ys, y_, 'UniformOutput', false);
+                    med_errs = cellfun(@(a,ix) a(ix), e_, my_idx);
+                    
+                    med_ys = cellfun(@Utils.bodge_median, y_);
+                    ballnstick(labels{1}, labels{2}, med_ys(1,:), med_ys(2,:),...
+                        med_errs(1,:), med_errs(2,:),...
+                        'coloring', DecodeTensor.mcolor(my_mice), 'logscale', logscale);
+                end
             else
                 if ~exist('labels', 'var')
                     labels = {'Real', 'Shuffled'};
