@@ -71,43 +71,46 @@ else
 end
 s_ = summarized_adjacent_metrics;
 %% checking all options:
+filt_sess_indices = select_from_mice({'Mouse2022'});
+
 p = Pub(9, 14, 'rows', 3, 'columns', 2);
 %dff2_lim = [0 3];
 
-p.panel(1, 'xlab', 'Number of cells', 'ylab', 'Signal ([\DeltaF/F]^2)', 'title', '\Delta\mu, on test set');
+p.panel(1, 'xlab', 'Number of cells', 'ylab', 'Signal ([\Delta{\itF}/{\itF}]^2)', 'title', '\Delta{\it\mu}, on test set');
 MultiSessionVisualizer.plot_single_filtered(n, {s_.mse, s_.dse, s_.fse},...
     {'k','m','b'}, filt_sess_indices);
-text(150, 1, 'along \Delta\mu direction', 'Color', 'k', 'HorizontalAlignment', 'center');
+text(150, 1, 'along \Delta{\it\mu} direction', 'Color', 'k', 'HorizontalAlignment', 'center');
 text(130, 0.8, '$\hat{w_d}$', 'Color', 'm', 'HorizontalAlignment', 'center', 'Interpreter', 'latex');
 text(130, 0.6, '$\hat{w}$', 'Color', 'b', 'HorizontalAlignment', 'center', 'Interpreter', 'latex');
 %ylim(dff2_lim);
 
-p.panel(2, 'xlab', 'Number of cells', 'ylab', 'Signal ([\DeltaF/F]^2)', 'title', '\Delta\mu, on train set');
+p.panel(2, 'xlab', 'Number of cells', 'ylab', 'Signal ([\Delta{\itF}/{\itF}]^2)', 'title', '\Delta{\it\mu}, on train set');
 MultiSessionVisualizer.plot_single_filtered(n, {s_.msr, s_.dsr, s_.fsr},...
     {'k','m','b'}, filt_sess_indices);
 %ylim(dff2_lim);
 
-p.panel(3, 'xlab', 'Number of cells', 'ylab', 'Noise ([\DeltaF/F]^2)', 'title', '\Sigma, on test set');
+p.panel(3, 'xlab', 'Number of cells', 'ylab', 'Noise ([\Delta{\itF}/{\itF}]^2)', 'title', '{\it\sigma}^2, on test set');
 MultiSessionVisualizer.plot_single_filtered(n, {s_.mce, s_.dce, s_.fce},...
     {'k','m','b'}, filt_sess_indices);
 %ylim(dff2_lim);
 
-p.panel(4, 'xlab', 'Number of cells', 'ylab', 'Noise ([\DeltaF/F]^2)', 'title', '\Sigma, on train set');
+p.panel(4, 'xlab', 'Number of cells', 'ylab', 'Noise ([\Delta{\itF}/{\itF}]^2)', 'title', '{\it\sigma}^2, on train set');
 MultiSessionVisualizer.plot_single_filtered(n, {s_.mcr, s_.dcr, s_.fcr},...
     {'k','m','b'}, filt_sess_indices);
 %ylim(dff2_lim);
 
-p.panel(5, 'xlab', 'Number of cells', 'ylab', 'Noise ([\DeltaF/F]^2)', 'title', '\Sigma_{shuf}, on test set');
+p.panel(5, 'xlab', 'Number of cells', 'ylab', 'Noise ([\Delta{\itF}/{\itF}]^2)', 'title', '{\it\sigma}_{shuf}^2, on test set');
 MultiSessionVisualizer.plot_single_filtered(n, {s_.mue, s_.due, s_.fue},...
     {'k','m','b'}, filt_sess_indices);
 %ylim(dff2_lim);
 
-p.panel(6, 'xlab', 'Number of cells', 'ylab', 'Noise ([\DeltaF/F]^2)', 'title', '\Sigma_{shuf}, on train set');
+p.panel(6, 'xlab', 'Number of cells', 'ylab', 'Noise ([\Delta{\itF}/{\itF}]^2)', 'title', '{\it\sigma}_{shuf}^2, on train set');
 MultiSessionVisualizer.plot_single_filtered(n, {s_.mur, s_.dur, s_.fur},...
     {'k','m','b'}, filt_sess_indices);
 %ylim(dff2_lim);
 
 p.format;
+p.print('supplements_pdf', 'dm_w_wd_comparison');
 %%
 n_minus_one = Utils.cf_(@(x)x-1, n);
 
