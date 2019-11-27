@@ -214,8 +214,43 @@ ylim([0 0.15]);
 
 p.format;
 p.print('figure3_pdf', 'SignalNoise');
+%% path analysis: splash zone
+dm_asnr = get_asnr(res, s_, 'm', false)'; dm_asnr = zscore(dm_asnr(g_));
+w_asnr = get_asnr(res, s_, 'f', false)'; w_asnr = zscore(w_asnr(g_));
+wd_asnr = get_asnr(res, s_, 'd', false)'; wd_asnr = zscore(wd_asnr(g_));
+
+ss_snr = zscore(single_dp2(g_)');
+I0_val = zscore(I0_fit(g_)');
+I0N_val = zscore(InfoLimit(g_)');
+
 %%
-p1 = @process_one_sess;
+function [asnr, asnr_conf] = get_asnr(res, s_, code, isshuf)
+n = {res.n_sizes};
+cutoff = 100;
+asymp_line = @(n,m) Utils.fitaline(n,m,cutoff);
+signal = s_.([code 'se']);%medify({res.m2_d});
+[signal_slope, signal_slope_conf] = cellfun(asymp_line, n, signal, 'UniformOutput', false);
+%[signal_intercept, signal_intercept_conf] = cellfun(intercept, n_minus_one, signal, 'UniformOutput', false);
+
+if ~isshuf
+    noise = s_.([code 'ce']);%medify({res.nv_d});
+    [noise_slope, noise_slope_conf] = cellfun(asymp_line, n, noise, 'UniformOutput', false);
+    %[noise_intercept, noise_intercept_conf] = cellfun(intercept, n_minus_one, noise, 'UniformOutput', false);
+    [asymp_snr, asymp_snr_conf] = cellfun(@uncertain_divide, signal_slope, signal_slope_conf, noise_slope, noise_slope_conf);
+    asnr = asymp_snr;
+    asnr_conf = asymp_snr_conf;
+else
+    noise_shuf = s_.([code 'ue']);%medify({res.nv_s});
+    [noise_shuf_slope, noise_shuf_slope_conf] = cellfun(asymp_line, n, noise_shuf, 'UniformOutput', false);
+    %[noise_shuf_intercept, noise_shuf_intercept_conf] = cellfun(intercept, n_minus_one, noise_shuf, 'UniformOutput', false);
+    [asymp_snr_shuf, asymp_snr_shuf_conf] = cellfun(@uncertain_divide, signal_slope, signal_slope_conf, noise_shuf_slope, noise_shuf_slope_conf);
+    asnr = asymp_snr_shuf;
+    asnr_conf = asymp_snr_shuf_conf;
+end
+end
+
+
+%p1 = @process_one_sess;
 function [n, signal, noise, noise_shuf, snr, snr_shuf] = process_one_sess(res)
     n = res.n_sizes;
     signal = cellfun(@(t) median(t{'m','se'}), res.results_table);
