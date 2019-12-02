@@ -3,7 +3,7 @@ p = inputParser;
 p.addOptional('fix_expo', {}, @iscell);
 p.parse(varargin{:});
 
-my_font = 'Helvetica LT Std';
+my_font = 'Arial';
 my_font_size = 6*6/6.4;
 my_line_width = 0.5;
 my_boxsize = [0.8125 0.585].*0.98;

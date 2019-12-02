@@ -692,7 +692,7 @@ classdef Utils %Common utilities for dealing with neural data
         function specific_format(codename)
             switch codename
                 case 'MBNS' %multi ball and stick
-                    ylim([-Inf Inf]);
+                    %ylim([-Inf Inf]);
                     figure_format([3 0.6]*2);
                     set(gca, 'TickLength', [0.005 0]);
                     

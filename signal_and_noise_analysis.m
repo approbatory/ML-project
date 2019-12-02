@@ -214,6 +214,28 @@ ylim([0 0.15]);
 
 p.format;
 p.print('figure3_pdf', 'SignalNoise');
+
+%% showing for all sessions
+% [sess, mouse_names] = DecodeTensor.filt_sess_id_list;
+% PanelGenerator.aux_decoding_curves('supplements_pdf/decoding_curves/multi_asnr.pdf',...
+%     sess, mouse_names, n, asymp_nsr, asymp_nsr_shuf,...
+%     I0_fit, I0_fit_s, N_fit, N_fit_s, 'b', 'r',...
+%     [0 0.16], [2 50], [0 Inf]);
+
+figure;
+MultiSessionVisualizer.plot_series(n, {snr_shuf, snr}, {'r', 'b'}, mouse_names, [0 Inf]);
+            xlabel 'Number of cells'
+            ylabel 'Signal / Noise'
+            multi_figure_format;
+            Utils.printto('supplements_pdf/decoding_curves', 'multi_snr_curves.pdf');
+%%
+figure;
+Utils.bns_groupings(asymp_nsr, asymp_nsr_shuf, asymp_nsr_conf, asymp_nsr_shuf_conf, mouse_names, false);
+ylim([-0.5 12]);
+ylabel(sprintf('Noise slope / Signal slope'));
+xlabel 'Mouse index'
+Utils.specific_format('MBNS');
+Utils.printto('supplements_pdf/decoding_curves', 'multi_asymp_nsr.pdf');
 %% path analysis: splash zone
 dm_asnr = get_asnr(res, s_, 'm', false)'; dm_asnr = zscore(dm_asnr(g_));
 w_asnr = get_asnr(res, s_, 'f', false)'; w_asnr = zscore(w_asnr(g_));
@@ -223,6 +245,13 @@ ss_snr = zscore(single_dp2(g_)');
 I0_val = zscore(I0_fit(g_)');
 I0N_val = zscore(InfoLimit(g_)');
 
+%% FIRST PATH ANALYSIS - I0 & I0N
+%% interaction between I0 and I0N:
+fitlm(I0_val, I0N_val)
+%% I0, I0N -> ss_snr
+fitlm([I0_val, I0N_val], ss_snr)
+%% I0, I0N -> dm_asnr
+fitlm([I0_val, I0N_val, ss_snr], dm_asnr)
 %%
 function [asnr, asnr_conf] = get_asnr(res, s_, code, isshuf)
 n = {res.n_sizes};
