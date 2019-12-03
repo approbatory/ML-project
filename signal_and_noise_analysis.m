@@ -1,7 +1,6 @@
 recompute = false;
 
-%load adjacent_agg_190725-194911_0.mat
-load adjacent_metrics_agg_191125-135024_0.mat
+load adjacent_metrics_agg_191202-163306_0.mat
 
 fit_savefile = 'decoding_curves_fits.mat';
 if recompute || ~exist(fit_savefile, 'file')
@@ -76,7 +75,7 @@ filt_sess_indices = select_from_mice({'Mouse2022'});
 p = Pub(9, 14, 'rows', 3, 'columns', 2);
 %dff2_lim = [0 3];
 
-p.panel(1, 'xlab', 'Number of cells', 'ylab', 'Signal ([\Delta{\itF}/{\itF}]^2)', 'title', '\Delta{\it\mu}, on test set');
+p.panel(1, 'xlab', 'Number of cells', 'ylab', 'Signal ([\Delta{\itF}/{\itF}]^2)', 'title', '(\Delta{\it\mu})^2, on test set');
 MultiSessionVisualizer.plot_single_filtered(n, {s_.mse, s_.dse, s_.fse},...
     {'k','m','b'}, filt_sess_indices);
 text(150, 1, 'along \Delta{\it\mu} direction', 'Color', 'k', 'HorizontalAlignment', 'center');
@@ -84,7 +83,7 @@ text(130, 0.8, '$\hat{w_d}$', 'Color', 'm', 'HorizontalAlignment', 'center', 'In
 text(130, 0.6, '$\hat{w}$', 'Color', 'b', 'HorizontalAlignment', 'center', 'Interpreter', 'latex');
 %ylim(dff2_lim);
 
-p.panel(2, 'xlab', 'Number of cells', 'ylab', 'Signal ([\Delta{\itF}/{\itF}]^2)', 'title', '\Delta{\it\mu}, on train set');
+p.panel(2, 'xlab', 'Number of cells', 'ylab', 'Signal ([\Delta{\itF}/{\itF}]^2)', 'title', '(\Delta{\it\mu})^2, on train set');
 MultiSessionVisualizer.plot_single_filtered(n, {s_.msr, s_.dsr, s_.fsr},...
     {'k','m','b'}, filt_sess_indices);
 %ylim(dff2_lim);
