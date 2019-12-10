@@ -35,7 +35,7 @@ classdef Pub < handle
         
         function panel(o, index, varargin)
             p = inputParser;
-            p.addRequired('index', @isscalar);
+            p.addRequired('index', @isnumeric);
             p.addParameter('letter', char('a' + index - 1), @ischar);
             p.addParameter('xlab', '', @ischar);
             p.addParameter('ylab', '', @ischar);
@@ -47,16 +47,16 @@ classdef Pub < handle
             
             figure(o.h);
             ax = subplotp(o.Q, index);
-            o.subplots{index} = ax;
+            for i = index, o.subplots{i} = ax; end
             
             
             lettering(r.letter, r.x_shift, r.y_shift);
             
-            o.xlabs{index} = r.xlab;
+            for i = index, o.xlabs{i} = r.xlab; end
             xlabel(ax, r.xlab);
-            o.ylabs{index} = r.ylab;
+            for i = index, o.ylabs{i} = r.ylab; end
             ylabel(ax, r.ylab);
-            o.titles{index} = r.title;
+            for i = index, o.titles{i} = r.title; end
             title(ax, r.title);
         end
         
@@ -73,6 +73,12 @@ classdef Pub < handle
         function print(o, dest, fname)
             figure(o.h);
             Utils.printto(dest, fname);
+        end
+        
+        function preview(o)
+            h_ = figure;
+            ResizeFigure(h_, o.h.Position(3), o.h.Position(4), o.h.Units);
+            ShowComputedSubplotPositions(o.Q);
         end
     end
     

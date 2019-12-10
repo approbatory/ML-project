@@ -19,4 +19,9 @@ if (n<1 | n> size(Q,1))
   error('Row index into position matrix should be in the range [1, %d].', size(Q,1));
 end
 
-h = subplot('Position',Q(n,:));
+A_ = Q(n,:);
+A_ = A_ + [zeros(size(A_(:,1:2))),A_(:,1:2)];
+A_ = [min(A_(:,1:2),[],1), max(A_(:,3:4),[],1)];
+A_ = A_ - [zeros(size(A_(:,1:2))),A_(:,1:2)];
+
+h = subplot('Position', A_);

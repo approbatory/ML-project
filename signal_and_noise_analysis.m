@@ -251,6 +251,13 @@ fitlm(I0_val, I0N_val)
 fitlm([I0_val, I0N_val], ss_snr)
 %% I0, I0N -> dm_asnr
 fitlm([I0_val, I0N_val, ss_snr], dm_asnr)
+%% SECOND PATH ANALYSIS - ss_snr & dm_asnr
+%% interaction between ss_snr and dm_asnr
+fitlm(ss_snr, dm_asnr)
+%% ss_snr, dm_asnr -> I0
+fitlm([ss_snr, dm_asnr], I0_val)
+%% ss_snr, dm_asnr, I0_val -> I0N_val
+fitlm([ss_snr, dm_asnr, I0_val], I0N_val)
 %%
 function [asnr, asnr_conf] = get_asnr(res, s_, code, isshuf)
 n = {res.n_sizes};

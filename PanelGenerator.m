@@ -45,6 +45,28 @@ classdef PanelGenerator
                 n_sizes, imse);
         end
         
+        function [n_sizes, imse, mask] = db_imse_reader_safe(conn, setting, sess, samp_size)
+            %Read from the decoding database.
+            %Inputs:
+            %   conn: a valid connection to a sqlite database
+            %   setting: either 'unshuffled', 'shuffled', or 'diagonal'
+            %   sess: a string cell of session codes denoting which
+            %       sessions to read out
+            %   samp_size: how many samples to load, for a given set of
+            %       parameters, e.g. 20 or 80
+            bc = @DecodeTensor.build_command_sess;
+            q = @Utils.cf_p;
+            res = q(1,@(s)conn.fetch(bc(s, setting, 'MSE', [], 'max')), sess);
+            mask = ~cellfun(@isempty, res);
+            res = res(mask);
+            n_sizes = q(1,@(r)double(cell2mat(r(:,1))), res);
+            imse = q(1,@(r)1./cell2mat(r(:,3)), res);
+            [n_sizes, imse] = Utils.cf_p2(1,...
+                @(n,i)MultiSessionVisualizer.regroup(n, i, samp_size),...
+                n_sizes, imse);
+        end
+        
+        
         function plot_decoding_curve(sess, sp_, n_sizes, imse_s, I0_fit_s, N_fit_s, color, isrms)
             %plot a subset of the sessions as decoding curves + curve fits
             %Inputs:

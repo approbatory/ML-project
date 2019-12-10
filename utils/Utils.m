@@ -277,6 +277,14 @@ classdef Utils %Common utilities for dealing with neural data
             non_peak_mean = mean(trace(non_peak_frames));
         end
         
+        function L = pca_plot(X, labels)
+            [~, XS, latent] = pca(X);
+            XS = XS(:,1:2);
+            scatter(XS(:,1), XS(:,2), 10, labels, 'filled');
+            L = latent(1:2);
+        end
+        
+        
         %function [XS, stats] = pls_plot(X, signals, stats, xl_, yl_, )
         function [XS, stats] = pls_plot(X, signals, varargin)
             p = inputParser;

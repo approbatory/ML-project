@@ -1,8 +1,12 @@
-function res = med_loadings_compute(index)
-d = DecodeTensor.cons_filt(index);
+function res = med_loadings_compute(index, n_type)
+if ~exist('n_type', 'var')
+    n_type = 'rawTraces';
+end
+o_ = DecodeTensor.cons_filt(index, true);
+d = DecodeTensor(o_, n_type);
 n_max = size(d.data_tensor,1);
 res.n_sizes = [unique(ceil(10.^(log10(2):0.1:log10(n_max)))) n_max];
-n_reps = 100;
+n_reps = 20;
 for n_i = 1:numel(res.n_sizes)
     for i = 1:n_reps
         [ml, mls] = d.signal_loadings(res.n_sizes(n_i));
@@ -15,6 +19,7 @@ for n_i = 1:numel(res.n_sizes)
         end
         res.median_loadings(i, n_i, :) = ml;
         res.median_loadings_s(i, n_i, :) = mls;
+        progressbar(n_i/numel(res.n_sizes), i/n_reps);
     end
 end
 res.mouse_name = d.mouse_name;

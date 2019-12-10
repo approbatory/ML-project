@@ -1,4 +1,8 @@
-function res = adjacent_decoder_noise_runner(index)
+function res = adjacent_decoder_noise_runner(index, no_decoding)
+if ~exist('no_decoding', 'var')
+    no_decoding = false;
+end
+
 tic
 d_ = DecodeTensor.cons_filt(index);
 n_reps = 20;
@@ -10,7 +14,7 @@ for j = 1:n_reps
         %    res.m2{j,i}, res.m2_s{j,i}, res.m2_d{j,i}, res.md2{j,i}] = ...
         %    DecodeTensor.adjacent_decoder_noise(d_.data_tensor, d_.tr_dir, n_sizes(i), []);
         res.results_table{j,i} = ...
-            DecodeTensor.adjacent_metrics(d_.data_tensor, d_.tr_dir, n_sizes(i), []);
+            DecodeTensor.adjacent_metrics(d_.data_tensor, d_.tr_dir, n_sizes(i), [], no_decoding);
         progressbar(j/n_reps, i/numel(n_sizes));
     end
 end

@@ -309,7 +309,11 @@ classdef DecodeTensor < handle
         end
         
         
-        function results_table = adjacent_metrics(data_tensor, tr_dir, num_neurons, num_trials)
+        function results_table = adjacent_metrics(data_tensor, tr_dir, num_neurons, num_trials, no_decoding)
+            if ~exist('no_decoding', 'var')
+                no_decoding = false;
+            end
+            
             [data_tensor, tr_dir] = DecodeTensor.cut_tensor(data_tensor, tr_dir, num_neurons, num_trials);
             [T1, d1, T2, d2, ~] = DecodeTensor.holdout_half(data_tensor, tr_dir);
             T1s = DecodeTensor.shuffle_tensor(T1, d1);
@@ -344,12 +348,19 @@ classdef DecodeTensor < handle
                     %X2s = [X2s_neg ; X2s_pos];
                     %ks2 = [-ones(sum(d2==direction),1) ; ones(sum(d2==direction),1)];
                     
-                    model = alg.train(X1, ks1);
-                    model_d = alg.train(X1s, ks1);
+                    if ~no_decoding
+                        model = alg.train(X1, ks1);
+                        model_d = alg.train(X1s, ks1);
+                    end
                     model_mu = mean(X1_pos) - mean(X1_neg);
                     
-                    w_normed = n_ize(model.Beta);
-                    wd_normed = n_ize(model_d.Beta);
+                    if ~no_decoding
+                        w_normed = n_ize(model.Beta);
+                        wd_normed = n_ize(model_d.Beta);
+                    else
+                        w_normed = zeros(size(model_mu));
+                        wd_normed = w_normed;
+                    end
                     dmu_normed = n_ize(model_mu)';
                     
                     for code_c = results_table.Properties.VariableNames
@@ -1546,16 +1557,16 @@ classdef DecodeTensor < handle
                     %    SD = sqrt(diag(Noise_Cov{i_d, i_b}));
                     %    Noise_Cov{i_d, i_b} = Noise_Cov{i_d, i_b}./(SD*SD.');
                     %end
-                    [coeff{i_d, i_b}, latent{i_d, i_b}] = pcacov(Noise_Cov{i_d, i_b});
+                    [coeff{i_d, i_b}, sc__, latent{i_d, i_b}] = pca(X_noise);%pcacov(Noise_Cov{i_d, i_b});
                     Noise_Cov_s{i_d, i_b} = cov(X_noise_s);
                     %if using_corr
-                    c %    Noise_Cov_s{i_d, i_b} = eye(total_neurons);
+                    %    Noise_Cov_s{i_d, i_b} = eye(total_neurons);
                     %end
                     %if using_corr
                     %    SD = sqrt(diag(Noise_Cov_s{i_d, i_b}));
                     %    Noise_Cov_s{i_d, i_b} = Noise_Cov_s{i_d, i_b}./(SD*SD.');
                     %end
-                    [coeff_s{i_d, i_b}, latent_s{i_d, i_b}] = pcacov(Noise_Cov_s{i_d, i_b});
+                    [coeff_s{i_d, i_b}, sc___, latent_s{i_d, i_b}] = pca(X_noise_s);%pcacov(Noise_Cov_s{i_d, i_b});
                     Mean{i_d, i_b} = mean(X);
                     %%TODO new loop calculating f'
                 end
@@ -1570,6 +1581,7 @@ classdef DecodeTensor < handle
                         Signal_Direction_pre{i_d, i_b} = normalize(Mean{i_d, i_b} - Mean{i_d, i_b-1}, 'norm').';
                         Noise_in_Direction_of_Signal_pre{i_d, i_b} = Signal_Direction_pre{i_d, i_b}.' * Noise_Cov{i_d, i_b} * Signal_Direction_pre{i_d, i_b};
                         Eigenvector_Loadings_pre{i_d, i_b} = Signal_Direction_pre{i_d, i_b}.' * coeff{i_d, i_b};
+                        %assert(numel(Eigenvector_Loadings_pre{i_d, i_b}) == size(X_noise,2), 'not ndims size');
                         Noise_in_Direction_of_Signal_pre_s{i_d, i_b} = Signal_Direction_pre{i_d, i_b}.' * Noise_Cov_s{i_d, i_b} * Signal_Direction_pre{i_d, i_b};
                         Eigenvector_Loadings_pre_s{i_d, i_b} = Signal_Direction_pre{i_d, i_b}.' * coeff_s{i_d, i_b};
                     end
@@ -1758,6 +1770,22 @@ classdef DecodeTensor < handle
             l = l(ord);
             m = m(ord);
             indices = indices(ord);
+        end
+        
+        function [indices, sess_ids] = special_by_mouse(mice_names)
+            if ~iscell(mice_names)
+                mice_names = {mice_names};
+            end
+            indices = zeros(size(mice_names));
+            sess_ids = cell(size(mice_names));
+            [l, m, idx] = DecodeTensor.special_sess_id_list;
+            for m_i = 1:numel(mice_names)
+                mouse_name = mice_names{m_i};
+                mouse_index = find(strcmp(mouse_name, m), 1);
+                assert(~isempty(mouse_index), 'The requested mouse "%s" does not exist', mouse_name);
+                indices(m_i) = idx(mouse_index);
+                sess_ids{m_i} = l{mouse_index};
+            end
         end
         
         function c = mcolor(mouse_list, varargin)
@@ -1952,6 +1980,13 @@ classdef DecodeTensor < handle
             res = DecodeTensor.noise_properties(sub_tensor, o.tr_dir, true); %using correlation matrix for PCA
             loadings = res.el_pre;
             loadings_shuf = res.el_pre_s;
+            min_dim = cellfun(@numel, loadings);
+            min_dim = min_dim(min_dim~=0);
+            min_dim = min(min_dim);
+            loadings = Utils.cf_(@(x)x(1:min(numel(x),min_dim)), loadings);
+            loadings_shuf = Utils.cf_(@(x)x(1:min(numel(x),min_dim)), loadings_shuf);
+            loadings = loadings(~cellfun(@isempty, loadings(:)));
+            loadings_shuf = loadings_shuf(~cellfun(@isempty, loadings_shuf(:)));
             median_loadings = median(abs(cell2mat(loadings(:))));
             median_loadings_shuf = median(abs(cell2mat(loadings_shuf(:))));
         end
