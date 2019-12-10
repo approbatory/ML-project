@@ -226,3 +226,61 @@ ylabel 'max_i|cos(PC_i, Dm)|'
 xlim([1 500]);
 ylim([-Inf 1]);
 p.format;
+
+%% 
+load adjacent_metrics_no_decoder_70.mat
+
+%TODO make the graphs onto the Pub, then copy all graphs over into the 
+% new pres (based on the old pres). 
+% Include a couple slides at the end about LTM extraction
+%%
+cutoff = 100;
+asymp_line = @(n,m) Utils.fitaline(n,m,cutoff);
+
+res_lookup = @(res, code) arrayfun(@(x)cellfun(@(y)median(y{code(1),code(2:3)}), x.results_table),res,'UniformOutput',false);
+n = {res__.n_sizes};
+signal = res_lookup(res__, 'mse');
+noise = res_lookup(res__, 'mce');
+noise_shuf = res_lookup(res__, 'mue');
+
+snr = cellfun(@rdivide, signal, noise, 'UniformOutput', false);
+snr_shuf = cellfun(@rdivide, signal, noise_shuf, 'UniformOutput', false);
+
+[signal_slope, signal_slope_conf] = cellfun(asymp_line, n, signal, 'UniformOutput', false);
+[noise_slope, noise_slope_conf] = cellfun(asymp_line, n, noise, 'UniformOutput', false);
+[noise_shuf_slope, noise_shuf_slope_conf] = cellfun(asymp_line, n, noise_shuf, 'UniformOutput', false);
+
+[asymp_snr, asymp_snr_conf] = cellfun(@uncertain_divide, signal_slope, signal_slope_conf, noise_slope, noise_slope_conf);
+[asymp_snr_shuf, asymp_snr_shuf_conf] = cellfun(@uncertain_divide, signal_slope, signal_slope_conf, noise_shuf_slope, noise_shuf_slope_conf);
+
+
+
+dff2_lim = [0 1.5];
+
+p.panel([11 12], 'y_shift', 0.04, 'letter', 'i', 'xlab', 'Number of cells', 'ylab', 'Signal ([\Delta{\itF}/{\itF}]^2)');
+MultiSessionVisualizer.plot_single_filtered(n, {signal}, {'k'}, true);
+ylim(dff2_lim);
+
+p.panel([13 14], 'y_shift', 0.04, 'letter', 'j', 'xlab', 'Number of cells', 'ylab', 'Noise ([\Delta{\itF}/{\itF}]^2)');
+MultiSessionVisualizer.plot_single_filtered(n, {noise_shuf, noise}, {'r', 'b'}, true);
+ylim(dff2_lim);
+text(100, 1, 'Real', 'Color', 'b');
+text(300, 0.3, 'Shuffled', 'Color', 'r');
+p.format;
+
+p.panel([15 16], 'y_shift', 0.04, 'letter', 'k', 'xlab', 'Number of cells', 'ylab', 'Signal / Noise');
+MultiSessionVisualizer.plot_single_filtered(n, {snr, snr_shuf}, {'b', 'r'}, true);
+text(250, 6.2, 'Shuffled', 'Color', 'r');
+text(400, 2, 'Real', 'Color', 'b');
+hold on;
+%l_ = refline(0, asymp_snr); l_.Color = 'b';
+shadedErrorBar(n{1}, repmat(asymp_snr, size(n{1})), repmat(asymp_snr_conf, size(n{1})), 'lineprops', ':b');
+
+p.format;
+%%
+p.print('supplements_pdf', 'on_events.pdf');
+%%
+function [quotient, quotient_uncertainty] = uncertain_divide(x, xc, y, yc)
+quotient = x./y;
+quotient_uncertainty = abs(x./y)*sqrt((xc./x).^2 + (yc./y).^2);
+end
