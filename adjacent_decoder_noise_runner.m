@@ -1,10 +1,14 @@
-function res = adjacent_decoder_noise_runner(index, no_decoding)
+function res = adjacent_decoder_noise_runner(index, no_decoding, n_type)
 if ~exist('no_decoding', 'var')
     no_decoding = false;
 end
-
+if ~exist('n_type', 'var')
+    n_type = 'rawTraces';
+end
 tic
-d_ = DecodeTensor.cons_filt(index);
+%d_ = DecodeTensor.cons_filt(index);
+o_ = DecodeTensor.cons_filt(index, true);
+d_ = DecodeTensor(o_, n_type);
 n_reps = 20;
 [N, K, T] = size(d_.data_tensor);
 n_sizes = unique([2, 10:10:N, N]);

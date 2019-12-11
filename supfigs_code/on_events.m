@@ -228,7 +228,19 @@ ylim([-Inf 1]);
 p.format;
 
 %% 
-load adjacent_metrics_no_decoder_70.mat
+save_file = 'adjacent_metrics_no_decoder_IED.mat';
+if ~exist(save_file, 'file')
+    parfor i_s_i = 1:numel(selected_indices)
+        my_ticker = tic;
+        s_i = selected_indices(i_s_i);
+        res__(i_s_i) = adjacent_decoder_noise_runner(s_i, true, 'IED');
+        toc(my_ticker)
+        fprintf('done index %d\n', s_i);
+    end
+    save(save_file, 'res__');
+end
+
+load(save_file);
 
 %TODO make the graphs onto the Pub, then copy all graphs over into the 
 % new pres (based on the old pres). 
@@ -257,24 +269,28 @@ snr_shuf = cellfun(@rdivide, signal, noise_shuf, 'UniformOutput', false);
 
 dff2_lim = [0 1.5];
 
-p.panel([11 12], 'y_shift', 0.04, 'letter', 'i', 'xlab', 'Number of cells', 'ylab', 'Signal ([\Delta{\itF}/{\itF}]^2)');
-MultiSessionVisualizer.plot_single_filtered(n, {signal}, {'k'}, true);
+p.panel([11 12], 'y_shift', 0.04, 'letter', 'i', 'xlab', 'Number of cells', 'ylab', 'Signal ([event rate]^2)');
+MultiSessionVisualizer.plot_single_filtered(n, {signal}, {'k'}, [true true true]);
 ylim(dff2_lim);
 
-p.panel([13 14], 'y_shift', 0.04, 'letter', 'j', 'xlab', 'Number of cells', 'ylab', 'Noise ([\Delta{\itF}/{\itF}]^2)');
-MultiSessionVisualizer.plot_single_filtered(n, {noise_shuf, noise}, {'r', 'b'}, true);
-ylim(dff2_lim);
-text(100, 1, 'Real', 'Color', 'b');
-text(300, 0.3, 'Shuffled', 'Color', 'r');
+p.panel([13 14], 'y_shift', 0.04, 'letter', 'j', 'xlab', 'Number of cells', 'ylab', 'Noise ([event rate]^2)');
+MultiSessionVisualizer.plot_single_filtered(n, {noise_shuf, noise}, {'r', 'b'}, [true true true]);
+%ylim(dff2_lim);
+text(100, 1/3, 'Real', 'Color', 'b');
+text(300, 0.3/3, 'Shuffled', 'Color', 'r');
 p.format;
 
 p.panel([15 16], 'y_shift', 0.04, 'letter', 'k', 'xlab', 'Number of cells', 'ylab', 'Signal / Noise');
-MultiSessionVisualizer.plot_single_filtered(n, {snr, snr_shuf}, {'b', 'r'}, true);
+for i_ = 1:numel(asymp_snr)
+    shadedErrorBar(n{1}, repmat(asymp_snr(i_), size(n{1})), repmat(asymp_snr_conf(i_), size(n{1})), 'lineprops', ':b');
+    hold on;
+end
+MultiSessionVisualizer.plot_single_filtered(n, {snr, snr_shuf}, {'b', 'r'}, [true true true]);
 text(250, 6.2, 'Shuffled', 'Color', 'r');
 text(400, 2, 'Real', 'Color', 'b');
 hold on;
 %l_ = refline(0, asymp_snr); l_.Color = 'b';
-shadedErrorBar(n{1}, repmat(asymp_snr, size(n{1})), repmat(asymp_snr_conf, size(n{1})), 'lineprops', ':b');
+
 
 p.format;
 %%
