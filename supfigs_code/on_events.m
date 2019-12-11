@@ -130,9 +130,10 @@ save medload_selected_res_collection.mat res_collection selected_indices
 load medload_selected_res_collection.mat
 res = cell2mat(res_collection);
 n_sizes = {res.n_sizes};
+n_sizes = Utils.cf_(@(x)x(2:end),n_sizes);
 series = {{res.median_loadings_s}, {res.median_loadings}};
 
-series = Utils.cf_(@(m)Utils.cf_(@(x)max(x,[],3),m), series);
+series = Utils.cf_(@(m)Utils.cf_(@(x)max(x(:,2:end,:),[],3),m), series);
 mouse_name = {res.mouse_name};
 
 show_mice = {'Mouse2022', 'Mouse2024', 'Mouse2028'};
@@ -223,7 +224,7 @@ set(gca, 'XScale', 'log');
 set(gca, 'YScale', 'log');
 xlabel 'Number of cells'
 ylabel 'max_i|cos(PC_i, Dm)|'
-xlim([1 500]);
+xlim([-Inf 500]);
 ylim([-Inf 1]);
 p.format;
 
