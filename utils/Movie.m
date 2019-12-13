@@ -1,5 +1,42 @@
 classdef Movie
     methods(Static)
+        function viewer(path, fps)
+            if nargin == 2
+                %movieViewer(path, fps);
+                my_path = path;
+                my_fps = fps;
+            elseif nargin == 1
+                [file,path] = uigetfile({'*.*';'*.h5';'*.hdf5';'*.hdf'},...
+                          'File Selector');
+                dataset_name = inputdlg('Enter dataset name:', 'Dataset', [1 35], {'/Data/DFF'});
+                
+                my_fps = path;
+                my_path = [fullfile(path,file) ':' dataset_name{1}];
+                %movieViewer([fullfile(path,file) ':' dataset_name{1}], path);
+            elseif nargin == 0
+                [file,path] = uigetfile({'*.*';'*.h5';'*.hdf5';'*.hdf'},...
+                          'File Selector');
+                dataset_name = inputdlg('Enter dataset name:', 'Dataset', [1 35], {'/Data/DFF'});
+                my_fps = str2double(inputdlg('Enter fps (Hz):', 'Input fps', [1 35], {'20'}));
+                my_path = [fullfile(path,file) ':' dataset_name{1}];
+                %movieViewer([fullfile(path,file) ':' dataset_name{1}], my_fps);
+            else
+                error('invalid number of arguments');
+            end
+            
+            e_ = [];
+            app = [];
+            try
+                app = movieViewer(my_path, my_fps);
+            catch e_
+                disp(e_);
+                fprintf('There was a problem opening Movie.viewer, please check the file, hdf5 dataset, and fps.\n');
+            end
+            if ~isempty(e_)
+                app.close;
+            end
+        end
+        
         function stream(fname, varargin)
             p = inputParser;
             p.addParameter('MemChunk', 1e9);
