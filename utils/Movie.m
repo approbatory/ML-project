@@ -222,10 +222,15 @@ classdef Movie
             h5write(outname, dataset_name, movie);
         end
         
-        function cut_segment(fname_in, dataset_in, fname_out, dataset_out, segments)
+        function cut_segment(fname_in, dataset_in, fname_out, dataset_out, segments, chunk_size)
             info = h5info(fname_in, dataset_in);
-            chunk_size = info.ChunkSize;
+            if ~exist('chunk_size', 'var')
+                chunk_size = info.ChunkSize;
+            end
             movie = Movie.load_h5(fname_in, 'movie_dataset', dataset_in, 'segments', segments);
+            if isempty(chunk_size)
+                chunk_size = [128 128 2048];
+            end
             Movie.save_h5(movie, fname_out, dataset_out, chunk_size);
         end
         
