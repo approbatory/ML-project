@@ -215,6 +215,20 @@ classdef Movie
             M = load_movie_from_hdf5(fname, varargin{:});
         end
         
+        function save_h5(movie, outname, dataset_name, chunk_size)
+            data_type = class(movie);
+            h5create(outname, dataset_name, size(movie),...
+                'DataType', data_type, 'ChunkSize', chunk_size);
+            h5write(outname, dataset_name, movie);
+        end
+        
+        function cut_segment(fname_in, dataset_in, fname_out, dataset_out, segments)
+            info = h5info(fname_in, dataset_in);
+            chunk_size = info.ChunkSize;
+            movie = Movie.load_h5(fname_in, 'movie_dataset', dataset_in, 'segments', segments);
+            Movie.save_h5(movie, fname_out, dataset_out, chunk_size);
+        end
+        
         function downsample(mode, fname, factor, varargin)
             %downsample a movie in time
             %Inputs:
