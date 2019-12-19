@@ -45,6 +45,28 @@ classdef PanelGenerator
                 n_sizes, imse);
         end
         
+        function [n_sizes, imse, mask] = db_imse_reader_safe(conn, setting, sess, samp_size)
+            %Read from the decoding database.
+            %Inputs:
+            %   conn: a valid connection to a sqlite database
+            %   setting: either 'unshuffled', 'shuffled', or 'diagonal'
+            %   sess: a string cell of session codes denoting which
+            %       sessions to read out
+            %   samp_size: how many samples to load, for a given set of
+            %       parameters, e.g. 20 or 80
+            bc = @DecodeTensor.build_command_sess;
+            q = @Utils.cf_p;
+            res = q(1,@(s)conn.fetch(bc(s, setting, 'MSE', [], 'max')), sess);
+            mask = ~cellfun(@isempty, res);
+            res = res(mask);
+            n_sizes = q(1,@(r)double(cell2mat(r(:,1))), res);
+            imse = q(1,@(r)1./cell2mat(r(:,3)), res);
+            [n_sizes, imse] = Utils.cf_p2(1,...
+                @(n,i)MultiSessionVisualizer.regroup(n, i, samp_size),...
+                n_sizes, imse);
+        end
+        
+        
         function plot_decoding_curve(sess, sp_, n_sizes, imse_s, I0_fit_s, N_fit_s, color, isrms)
             %plot a subset of the sessions as decoding curves + curve fits
             %Inputs:
@@ -112,14 +134,14 @@ classdef PanelGenerator
             if p.Results.show_adjr2
                 if ~isempty(p.Results.text_coords)
                     text(p.Results.text_coords(1), p.Results.text_coords(2),...
-                        sprintf('adj. R^2 = %.2f', adjr2));
+                        sprintf('{\\itR}^2 = %.2f', adjr2));
                 else
                     xl_ = xlim;
                     yl_ = ylim;
                     xl_l = [max(xl_(1),min(x)) min(xl_(2),max(x))];
                     yl_l = [max(yl_(1),min(y)) min(yl_(2),max(y))];
                     text(xl_l(1)+3/4*diff(xl_l), yl_l(1)+1/4*diff(yl_l),...
-                        sprintf('adj. R^2 = %.2f', adjr2));
+                        sprintf('{\\itR}^2 = %.2f', adjr2));
                 end
             end
             

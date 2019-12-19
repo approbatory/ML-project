@@ -277,6 +277,14 @@ classdef Utils %Common utilities for dealing with neural data
             non_peak_mean = mean(trace(non_peak_frames));
         end
         
+        function L = pca_plot(X, labels)
+            [~, XS, latent] = pca(X);
+            XS = XS(:,1:2);
+            scatter(XS(:,1), XS(:,2), 10, labels, 'filled');
+            L = latent(1:2);
+        end
+        
+        
         %function [XS, stats] = pls_plot(X, signals, stats, xl_, yl_, )
         function [XS, stats] = pls_plot(X, signals, varargin)
             p = inputParser;
@@ -572,7 +580,18 @@ classdef Utils %Common utilities for dealing with neural data
             end
         end
         
-        function bns_groupings(fit_val, fit_val_s, confs, confs_s, mouse_list, is_grouped, labels, logscale)
+        function m = bodge_median(x)
+            x = x(:);
+            if mod(numel(x),2) == 0
+                x = [0;x];
+            end
+            m = median(x);
+        end
+        
+        function [y_, e_] = bns_groupings(fit_val, fit_val_s, confs, confs_s, mouse_list, is_grouped, labels, logscale, use_median)
+            if ~exist('use_median', 'var')
+                use_median = false;
+            end
             if ~exist('is_grouped', 'var')
                 is_grouped = false;
             end
@@ -594,7 +613,18 @@ classdef Utils %Common utilities for dealing with neural data
                 if ~exist('labels', 'var')
                     labels = {'Real', 'Shuffled'};
                 end
-                grouped_ballnstick(labels, y_, e_, 'coloring', DecodeTensor.mcolor(my_mice), 'logscale', logscale);
+                if ~use_median
+                    grouped_ballnstick(labels, y_, e_, 'coloring', DecodeTensor.mcolor(my_mice), 'logscale', logscale);
+                else
+                    med_ys = cellfun(@Utils.bodge_median, y_, 'UniformOutput', false);
+                    my_idx = cellfun(@(a,b)find(a==b), med_ys, y_, 'UniformOutput', false);
+                    med_errs = cellfun(@(a,ix) a(ix), e_, my_idx);
+                    
+                    med_ys = cellfun(@Utils.bodge_median, y_);
+                    ballnstick(labels{1}, labels{2}, med_ys(1,:), med_ys(2,:),...
+                        med_errs(1,:), med_errs(2,:),...
+                        'coloring', DecodeTensor.mcolor(my_mice), 'logscale', logscale);
+                end
             else
                 if ~exist('labels', 'var')
                     labels = {'Real', 'Shuffled'};
@@ -670,7 +700,7 @@ classdef Utils %Common utilities for dealing with neural data
         function specific_format(codename)
             switch codename
                 case 'MBNS' %multi ball and stick
-                    ylim([-Inf Inf]);
+                    %ylim([-Inf Inf]);
                     figure_format([3 0.6]*2);
                     set(gca, 'TickLength', [0.005 0]);
                     

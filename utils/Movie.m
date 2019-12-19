@@ -178,6 +178,80 @@ classdef Movie
             M = load_movie_from_hdf5(fname, varargin{:});
         end
         
+        function save_h5(movie, outname, dataset_name, chunk_size)
+            data_type = class(movie);
+            h5create(outname, dataset_name, size(movie),...
+                'DataType', data_type, 'ChunkSize', chunk_size);
+            h5write(outname, dataset_name, movie);
+        end
+        
+        function cut_segment(fname_in, dataset_in, fname_out, dataset_out, segments, chunk_size)
+            info = h5info(fname_in, dataset_in);
+            if ~exist('chunk_size', 'var')
+                chunk_size = info.ChunkSize;
+            end
+            movie = Movie.load_h5(fname_in, 'movie_dataset', dataset_in, 'segments', segments);
+            if isempty(chunk_size)
+                chunk_size = [128 128 2048];
+            end
+            Movie.save_h5(movie, fname_out, dataset_out, chunk_size);
+        end
+        
+        function conv333(fname_in, dataset_in, fname_out, dataset_out, varargin)
+            p = inputParser;
+            p.addParameter('MemChunk', 1e9);
+            p.parse(varargin{:});
+            
+            info = h5info(fname_in, dataset_in);
+            
+            if ~exist('chunk_size', 'var')
+                chunk_size = info.ChunkSize;
+            end
+            if isempty(chunk_size)
+                chunk_size = [128 128 2048];
+            end
+            
+            
+            movie_test = Movie.load_h5(fname_in, 'movie_dataset', dataset_in, 'segments', [1 1]);
+            h5create(fname_out, dataset_out, info.Dataspace.Size,...
+                'DataType', class(movie_test), 'ChunkSize', chunk_size);
+            clear movie_test;
+            
+            num_frames = info.Dataspace.Size(3);
+            allowed_size = ceil(p.Results.MemChunk / (prod(info.Dataspace.Size(1:2))*info.Datatype.Size));
+            
+            my_segments = 1:allowed_size:num_frames;
+            if my_segments(end) ~= num_frames
+                my_segments(end+1) = num_frames+1;
+            end
+            
+            fprintf('Using %d sized frame chunks\n', allowed_size);
+            progressbar('Convolving by frame chunks');
+            kern = ones(3,3,3);
+            kern = kern ./ sum(kern(:));
+            for s_i = 1:numel(my_segments)-1
+                segment_to_load = max(1, min(num_frames, [my_segments(s_i)-1, my_segments(s_i+1)]));
+                movie = Movie.load_h5(fname_in, 'movie_dataset', dataset_in, 'segments', segment_to_load);
+                conv_movie = convn(movie, kern, 'same');
+                
+                if segment_to_load(1) == 1
+                    start_offset = 0;
+                else
+                    start_offset = 1;
+                end
+                
+                if segment_to_load(2) == num_frames
+                    end_offset = 0;
+                else
+                    end_offset = -1;
+                end
+                
+                conv_movie = conv_movie(:,:,1+start_offset:end+end_offset);
+                h5write(fname_out, dataset_out, conv_movie, [1 1 my_segments(s_i)], size(conv_movie));
+                progressbar(s_i / (numel(my_segments)-1));
+            end
+        end
+        
         function downsample(mode, fname, factor, varargin)
             %downsample a movie in time
             %Inputs:
