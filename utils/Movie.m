@@ -232,7 +232,7 @@ classdef Movie
             for s_i = 1:numel(my_segments)-1
                 segment_to_load = max(1, min(num_frames, [my_segments(s_i)-1, my_segments(s_i+1)]));
                 movie = Movie.load_h5(fname_in, 'movie_dataset', dataset_in, 'segments', segment_to_load);
-                conv_movie = convn(movie, kern, 'same');
+                movie = convn(movie, kern, 'same');
                 
                 if segment_to_load(1) == 1
                     start_offset = 0;
@@ -246,8 +246,8 @@ classdef Movie
                     end_offset = -1;
                 end
                 
-                conv_movie = conv_movie(:,:,1+start_offset:end+end_offset);
-                h5write(fname_out, dataset_out, conv_movie, [1 1 my_segments(s_i)], size(conv_movie));
+                movie = movie(:,:,1+start_offset:end+end_offset);
+                h5write(fname_out, dataset_out, movie, [1 1 my_segments(s_i)], size(movie));
                 progressbar(s_i / (numel(my_segments)-1));
             end
         end
