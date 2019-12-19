@@ -31,7 +31,7 @@ try
 %         end
 %     end
 %     conn.close;
-    DecodeTensor.aggregate_results('db_file', 'decoding_all_sess.db');
+    DecodeTensor.aggregate_results('db_file', 'decoding_all_sess_IED.db');
 catch me
     fprintf('%s / %s\n', me.identifier, me.message);
 end

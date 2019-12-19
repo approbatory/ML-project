@@ -1,7 +1,7 @@
 function res = adjacent_decoder_noise_runner(index)
 tic
 d_ = DecodeTensor.cons_filt(index);
-n_reps = 20;
+n_reps = 80;
 [N, K, T] = size(d_.data_tensor);
 n_sizes = unique([2, 10:10:N, N]);
 for j = 1:n_reps
