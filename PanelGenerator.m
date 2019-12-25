@@ -940,7 +940,6 @@ classdef PanelGenerator
             set(gcf, 'Position', [8.5521    6.2292    8.3125    1.6146]);
             colormap parula;
             Utils.printto;
-            keyboard;
             
             figure('FileName', 'figure2_pdf/medload/medload_curves.pdf');
             MultiSessionVisualizer.plot_single_filtered(n_sizes, series, {'b', 'r'}, sp_);
@@ -964,8 +963,16 @@ classdef PanelGenerator
             
             n_c = 50;
             fit_func = @(x,y)fit(log10(x(x>=n_c))',log10(mean(y(:,x>=n_c)))', 'poly1');
-            fr_ = Utils.cf_(fit_func, n_sizes, series{1});
-            fr_s = Utils.cf_(fit_func, n_sizes, series{2});
+            [fr_, gf_] = cellfun(fit_func, n_sizes, series{1}, 'UniformOutput', false);
+            [fr_s, gf_s] = cellfun(fit_func, n_sizes, series{2}, 'UniformOutput', false);
+            
+            gf_ = cell2mat(gf_);
+            rsquare = [gf_.rsquare];
+            fprintf('Unshuf: range %f-%f, median %f\n', min(rsquare), max(rsquare), median(rsquare));
+            
+            gf_s = cell2mat(gf_s);
+            rsquare_s = [gf_s.rsquare];
+            fprintf('Shuf: range %f-%f, median %f\n', min(rsquare_s), max(rsquare_s), median(rsquare_s));
             
             [rate_f, rate_f_conf] = Utils.fit_get(fr_, 'p1');
             [rate_f_s, rate_f_s_conf] = Utils.fit_get(fr_s, 'p1');
@@ -996,6 +1003,161 @@ classdef PanelGenerator
             
         end
         
+        
+        function medload_with_mean
+            load('MedLoad_agg_190705-171806_0.mat');
+            n_sizes = {res.n_sizes};
+            series = {{res.median_loadings}, {res.median_loadings_s}};
+            
+
+            series = Utils.cf_(@(m)Utils.cf_(@PanelGenerator.mean_func,m), series); %using mean rather than max
+            mouse_name = {res.mouse_name};
+            
+            show_mice = {'Mouse2022', 'Mouse2024', 'Mouse2028'};
+            
+            [~,m_,sp_] = DecodeTensor.special_sess_id_list;
+            show_filter = ismember(m_, show_mice);
+            sp_ = sp_(show_filter);
+            m_ = m_(show_filter);
+            figure('FileName', 'supplements_pdf/medload/medload_rasters.pdf');
+            colorscale = 'log';
+            for i = 1:numel(sp_)
+                subplot(1,numel(sp_)+1, i);
+                t_ = res(sp_(i));
+                mean_median_loadings = squeeze(mean(abs(t_.median_loadings)));
+                min_d = 30;
+                ns = t_.n_sizes;
+                im_data = (mean_median_loadings(ns >= min_d,1:min_d));
+                %padded_im_data = nan(16 - size(im_data,1), size(im_data,2));
+                %imagesc([im_data;padded_im_data], [-1.6 log10(0.3)]);
+                surf(1:min_d, ns(ns>=min_d), im_data, 'EdgeColor', 'none');
+                view(2);
+                
+                %set(gca, 'XScale', 'log');
+                %set(gca, 'YScale', 'log');
+                set(gca, 'ColorScale', colorscale);
+                caxis([0.03 0.25]);
+                xlim([1 min_d]);
+                ylim([min_d+10, 500]);
+                xlabel 'Fluctuation mode, i'
+                ylabel 'Number of cells'
+                title(sprintf('Mouse %s', m_{i}(end-1:end)), 'FontName', 'Helvetica', 'FontSize', 6, 'FontWeight', 'normal', 'Color', 'b');
+                
+                set(gca, 'FontSize', 6);
+                set(gca, 'FontName', 'Helvetica');
+                set(gca, 'TickLength', [0.02 0.02]);
+                colorbar;
+                %set(gca, 'YTick', [1 2 4 8 16 32 64].*min_d);
+                %rectangle('Position',...
+                %    0.5+[0 size(im_data,1) size(im_data,2) (48 - size(im_data,1))],...
+                %    'FaceColor', 'w', 'EdgeColor', 'k', 'LineStyle', 'none');
+                %set(gca, 'YTickLabel', 10*cellfun(@str2num, get(gca, 'YTickLabel')));
+                box off;
+                if i > 1
+                    box off
+                    xlabel ''
+                    ylabel ''
+                    set(gca, 'YTick', []);
+                end
+                %colorbar;
+            end
+            subplot(1, numel(sp_)+1, numel(sp_)+1);
+            t_ = res(sp_(1));
+            mean_median_loadings_s = squeeze(mean(abs(t_.median_loadings_s)));
+            min_d = 30;
+            ns = t_.n_sizes;
+            im_data = (mean_median_loadings_s(ns >= min_d,1:min_d));
+            surf(1:min_d, ns(ns>=min_d), im_data, 'EdgeColor', 'none');
+            view(2);
+            %set(gca, 'YScale', 'log');
+            set(gca, 'ColorScale', colorscale);
+            caxis([0.03 0.25]);
+            xlim([1 min_d]);
+            ylim([min_d+10, 500]);
+            %xlabel 'Fluctuation mode, i'
+            %ylabel 'Number of cells'
+            title('Shuffled', 'FontName', 'Helvetica', 'FontSize', 6, 'FontWeight', 'normal', 'Color', 'r');
+            
+            set(gca, 'FontSize', 6);
+            set(gca, 'FontName', 'Helvetica');
+            set(gca, 'TickLength', [0.02 0.02]);
+            set(gca, 'YTick', [1 2 4 8 16 32 64].*min_d);
+            box off
+            %axis off
+            xlabel ''; ylabel '';
+            set(gca, 'YTick', []);
+            colorbar;
+            set(gcf, 'Units', 'inches');
+            set(gcf, 'Position', [8.5521    6.2292    8.3125    1.6146]);
+            colormap parula;
+            Utils.printto;
+            
+            figure('FileName', 'figure2_pdf/medload/medload_curves_with_mean.pdf');
+            MultiSessionVisualizer.plot_single_filtered(n_sizes, series, {'b', 'r'}, sp_);
+            set(gca, 'XScale', 'log');
+            set(gca, 'YScale', 'log');
+            xlabel 'Number of cells'
+            ylabel 'mean_i|cos(PC_i, Dm)|, first 50'
+            xlim([1 500]);
+            ylim([-Inf 1]);
+            figure_format([1 1.4]);
+            Utils.printto;
+            
+            MultiSessionVisualizer.plot_series(n_sizes, series, {'b','r'}, mouse_name);
+            axs = findall(gcf, 'type', 'axes');
+            set(axs, 'YScale', 'log');
+            set(axs, 'XScale', 'log');
+            xlabel 'Number of cells'
+            ylabel 'mean_i|cos(PC_i, Dm)|, first 50'
+            multi_figure_format;
+            Utils.printto('supplements_pdf/medload', 'multi_medload_curves_with_mean.pdf');
+            
+            n_c = 50;
+            fit_func = @(x,y)fit(log10(x(x>=n_c))',log10(mean(y(:,x>=n_c)))', 'poly1');
+            [fr_, gf_] = cellfun(fit_func, n_sizes, series{1}, 'UniformOutput', false);
+            [fr_s, gf_s] = cellfun(fit_func, n_sizes, series{2}, 'UniformOutput', false);
+            
+            gf_ = cell2mat(gf_);
+            rsquare = [gf_.rsquare];
+            fprintf('Unshuf: range %f-%f, median %f\n', min(rsquare), max(rsquare), median(rsquare));
+            
+            gf_s = cell2mat(gf_s);
+            rsquare_s = [gf_s.rsquare];
+            fprintf('Shuf: range %f-%f, median %f\n', min(rsquare_s), max(rsquare_s), median(rsquare_s));
+            
+            [rate_f, rate_f_conf] = Utils.fit_get(fr_, 'p1');
+            [rate_f_s, rate_f_s_conf] = Utils.fit_get(fr_s, 'p1');
+            figure('FileName', 'figure2_pdf/medload/inset_with_mean.pdf');
+            Utils.bns_groupings(rate_f, rate_f_s, rate_f_conf, rate_f_s_conf, mouse_name, true);
+            hold on;
+            %line(xlim-0.5, [0 0], 'Color', 'k', 'LineStyle', '-');
+            line(xlim, [-0.5 -0.5], 'Color', 'k', 'LineStyle', ':');
+            ylabel 'Fit exponent'
+            ylim([-Inf Inf]);
+            set(gca, 'XTickLabels', {'Real', 'Shuf.'});
+            %figure_format([0.8 1]/2, 'fontsize', 4);
+            Utils.specific_format('inset');
+            Utils.printto;
+            
+            figure('FileName', 'supplements_pdf/medload/multi_inset_with_mean.pdf');
+            Utils.bns_groupings(rate_f, rate_f_s, rate_f_conf, rate_f_s_conf, mouse_name, false, {'Unshuffled', 'Shuffled'});
+            hold on;
+            line(xlim-0.5, [0 0], 'Color', 'k', 'LineStyle', '-');
+            line(xlim, [-0.5 -0.5], 'Color', 'k', 'LineStyle', ':');
+            ylabel 'Fit exponent'
+            ylim([-Inf Inf]);
+            %set(gca, 'XTickLabels', {'Unsh.', 'Sh.'});
+            %figure_format([0.8 1]/2, 'fontsize', 4);
+            Utils.specific_format('MBNS');
+            Utils.printto;
+            
+                        
+        end
+        
+        function m = mean_func(x)
+            x(x==0) = nan;   
+            m = nanmean(x,3); 
+        end
         %function adjacent_decoders
         %    load('adjacent_agg_190725-094031_0.mat');
         %    keyboard
