@@ -1000,7 +1000,31 @@ classdef PanelGenerator
             Utils.specific_format('MBNS');
             Utils.printto;
             
-            
+            %PABLO POINT 4
+            if true
+                fprintf('The following are the values (there is no variation for max cells)\n for max_i cos(PC_i, Dm), at the maximal # of cells\n');
+                max_overlap = cellfun(@(x)mean(x(:,end)), series{1}); %vector of length 107
+                disp(max_overlap);
+                
+                
+                fit_savefile = 'decoding_curves_fits.mat';
+                recompute = false;
+                if recompute || ~exist(fit_savefile, 'file')
+                    PanelGenerator.decoding_curves('remake', true, 'recompute', recompute);
+                end
+                load(fit_savefile);
+                
+                fprintf('The following is Pablo''s formula: (I0N(shuf)-I0N(real))/(I0N(shuf)+I0N(real))\n');
+                pablos_formula = (I0_fit_s.*N_fit_s - I0_fit.*N_fit)./(I0_fit_s.*N_fit_s + I0_fit.*N_fit);
+                disp(pablos_formula);
+                figure;
+                scatter(max_overlap, pablos_formula);
+                xlabel 'max_i |cos(PC_i, \Delta\mu)|'
+                ylabel 'Pablo''s formula: (I_0N_{sh}-I_0N_{re}) / (I_0N_{sh}+I_0N_{re})'
+                refline
+                [res_, GOF_] = fit(max_overlap(:), pablos_formula(:), 'poly1');
+                text(0.25, -0.6, sprintf('\\it{R}^2 = %.2e', GOF_.rsquare));
+            end
         end
         
         
@@ -1010,7 +1034,7 @@ classdef PanelGenerator
             series = {{res.median_loadings}, {res.median_loadings_s}};
             
 
-            series = Utils.cf_(@(m)Utils.cf_(@PanelGenerator.mean_func,m), series); %using mean rather than max
+            series = Utils.cf_(@(m)Utils.cf_(@PanelGenerator.mean_func_trunc5,m), series); %using mean rather than max
             mouse_name = {res.mouse_name};
             
             show_mice = {'Mouse2022', 'Mouse2024', 'Mouse2028'};
@@ -1097,7 +1121,7 @@ classdef PanelGenerator
             set(gca, 'XScale', 'log');
             set(gca, 'YScale', 'log');
             xlabel 'Number of cells'
-            ylabel 'mean_i|cos(PC_i, Dm)|, first 50'
+            ylabel 'mean_i|cos(PC_i, Dm)|, first 5'
             xlim([1 500]);
             ylim([-Inf 1]);
             figure_format([1 1.4]);
@@ -1108,7 +1132,7 @@ classdef PanelGenerator
             set(axs, 'YScale', 'log');
             set(axs, 'XScale', 'log');
             xlabel 'Number of cells'
-            ylabel 'mean_i|cos(PC_i, Dm)|, first 50'
+            ylabel 'mean_i|cos(PC_i, Dm)|, first 5'
             multi_figure_format;
             Utils.printto('supplements_pdf/medload', 'multi_medload_curves_with_mean.pdf');
             
@@ -1157,6 +1181,11 @@ classdef PanelGenerator
         function m = mean_func(x)
             x(x==0) = nan;   
             m = nanmean(x,3); 
+        end
+        
+        function m = mean_func_trunc5(x)
+            x(x==0) = nan;   
+            m = nanmean(x(:,:,1:5),3); 
         end
         %function adjacent_decoders
         %    load('adjacent_agg_190725-094031_0.mat');
