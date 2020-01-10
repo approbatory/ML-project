@@ -1,42 +1,5 @@
 classdef Movie
     methods(Static)
-        function viewer(path, fps)
-            if nargin == 2
-                %movieViewer(path, fps);
-                my_path = path;
-                my_fps = fps;
-            elseif nargin == 1
-                [file,path] = uigetfile({'*.*';'*.h5';'*.hdf5';'*.hdf'},...
-                          'File Selector');
-                dataset_name = inputdlg('Enter dataset name:', 'Dataset', [1 35], {'/Data/DFF'});
-                
-                my_fps = path;
-                my_path = [fullfile(path,file) ':' dataset_name{1}];
-                %movieViewer([fullfile(path,file) ':' dataset_name{1}], path);
-            elseif nargin == 0
-                [file,path] = uigetfile({'*.*';'*.h5';'*.hdf5';'*.hdf'},...
-                          'File Selector');
-                dataset_name = inputdlg('Enter dataset name:', 'Dataset', [1 35], {'/Data/DFF'});
-                my_fps = str2double(inputdlg('Enter fps (Hz):', 'Input fps', [1 35], {'20'}));
-                my_path = [fullfile(path,file) ':' dataset_name{1}];
-                %movieViewer([fullfile(path,file) ':' dataset_name{1}], my_fps);
-            else
-                error('invalid number of arguments');
-            end
-            
-            e_ = [];
-            app = [];
-            try
-                app = movieViewer(my_path, my_fps);
-            catch e_
-                disp(e_);
-                fprintf('There was a problem opening Movie.viewer, please check the file, hdf5 dataset, and fps.\n');
-            end
-            if ~isempty(e_)
-                app.close;
-            end
-        end
-        
         function stream(fname, varargin)
             p = inputParser;
             p.addParameter('MemChunk', 1e9);
@@ -232,6 +195,61 @@ classdef Movie
                 chunk_size = [128 128 2048];
             end
             Movie.save_h5(movie, fname_out, dataset_out, chunk_size);
+        end
+        
+        function conv333(fname_in, dataset_in, fname_out, dataset_out, varargin)
+            p = inputParser;
+            p.addParameter('MemChunk', 1e9);
+            p.parse(varargin{:});
+            
+            info = h5info(fname_in, dataset_in);
+            
+            if ~exist('chunk_size', 'var')
+                chunk_size = info.ChunkSize;
+            end
+            if isempty(chunk_size)
+                chunk_size = [128 128 2048];
+            end
+            
+            
+            movie_test = Movie.load_h5(fname_in, 'movie_dataset', dataset_in, 'segments', [1 1]);
+            h5create(fname_out, dataset_out, info.Dataspace.Size,...
+                'DataType', class(movie_test), 'ChunkSize', chunk_size);
+            clear movie_test;
+            
+            num_frames = info.Dataspace.Size(3);
+            allowed_size = ceil(p.Results.MemChunk / (prod(info.Dataspace.Size(1:2))*info.Datatype.Size));
+            
+            my_segments = 1:allowed_size:num_frames;
+            if my_segments(end) ~= num_frames
+                my_segments(end+1) = num_frames+1;
+            end
+            
+            fprintf('Using %d sized frame chunks\n', allowed_size);
+            progressbar('Convolving by frame chunks');
+            kern = ones(3,3,3);
+            kern = kern ./ sum(kern(:));
+            for s_i = 1:numel(my_segments)-1
+                segment_to_load = max(1, min(num_frames, [my_segments(s_i)-1, my_segments(s_i+1)]));
+                movie = Movie.load_h5(fname_in, 'movie_dataset', dataset_in, 'segments', segment_to_load);
+                movie = convn(movie, kern, 'same');
+                
+                if segment_to_load(1) == 1
+                    start_offset = 0;
+                else
+                    start_offset = 1;
+                end
+                
+                if segment_to_load(2) == num_frames
+                    end_offset = 0;
+                else
+                    end_offset = -1;
+                end
+                
+                movie = movie(:,:,1+start_offset:end+end_offset);
+                h5write(fname_out, dataset_out, movie, [1 1 my_segments(s_i)], size(movie));
+                progressbar(s_i / (numel(my_segments)-1));
+            end
         end
         
         function downsample(mode, fname, factor, varargin)
