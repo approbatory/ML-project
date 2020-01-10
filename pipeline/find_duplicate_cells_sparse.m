@@ -23,7 +23,7 @@ function idx_trash = find_duplicate_cells_sparse(S, Tt, overlap_idx)
         idx_trash_this = [];
         for kk = 1:length(cc_trace)
             idx_duplicate = idx_with_spat_overlap(cc_trace(kk).indices);
-            S_sub = single(S(:, idx_duplicate) > 0);
+            S_sub = S(:, idx_duplicate) > 0;
             areas = sum(S_sub, 1);
             [~, idx_largest] = max(areas);
             % Eliminate all but the largest cell
