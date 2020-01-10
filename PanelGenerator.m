@@ -124,7 +124,11 @@ classdef PanelGenerator
             hold on;
             scatter(x, y, dotsize, DecodeTensor.mcolor(mouse_names, false), 'filled');
             
-            
+            [pearson, pearson_p] = corr(x(:), y(:), 'type', 'Pearson');
+            [kendall, kendall_p] = corr(x(:), y(:), 'type', 'Kendall');
+            [spearman, spearman_p] = corr(x(:), y(:), 'type', 'Spearman');
+            fprintf('Pearson rho: %f, p=%f\nSpearman rho: %f, p=%f\nKendall tau: %f, p=%f\n',...
+                pearson, pearson_p, spearman, spearman_p, kendall, kendall_p);
             [fitresult, adjr2] = Utils.regress_line(x, y);
             h_ = plot(fitresult); legend off
             h_.Color = color;
@@ -1014,16 +1018,26 @@ classdef PanelGenerator
                 end
                 load(fit_savefile);
                 
-                fprintf('The following is Pablo''s formula: (I0N(shuf)-I0N(real))/(I0N(shuf)+I0N(real))\n');
-                pablos_formula = (I0_fit_s.*N_fit_s - I0_fit.*N_fit)./(I0_fit_s.*N_fit_s + I0_fit.*N_fit);
+                fprintf('The following is Pablo''s formula: (I0N(shuf)-I0N(real))\n');
+                pablos_formula = (I0_fit_s.*N_fit_s - I0_fit.*N_fit);
                 disp(pablos_formula);
                 figure;
                 scatter(max_overlap, pablos_formula);
                 xlabel 'max_i |cos(PC_i, \Delta\mu)|'
-                ylabel 'Pablo''s formula: (I_0N_{sh}-I_0N_{re}) / (I_0N_{sh}+I_0N_{re})'
+                ylabel 'I_0N_{sh}-I_0N_{re}'
                 refline
                 [res_, GOF_] = fit(max_overlap(:), pablos_formula(:), 'poly1');
                 text(0.25, -0.6, sprintf('\\it{R}^2 = %.2e', GOF_.rsquare));
+                
+                [~, mouse_names] = DecodeTensor.filt_sess_id_list;
+                figure;
+                PanelGenerator.plot_regress_averaged(max_overlap, pablos_formula,...
+                    0*max_overlap, 0*pablos_formula, mouse_names, 'g',...
+                    'xlim', [0.08 0.37], 'text_coords', [0.25 -5]);
+                xlabel 'max_i |cos(PC_i, \Delta\mu)|'
+                ylabel 'I_0N_{sh}-I_0N_{re}'
+                figure_format('factor', 1.6);
+                Utils.printto('supplements_pdf', 'Pablo_point_4.pdf')
             end
         end
         
@@ -1036,7 +1050,7 @@ classdef PanelGenerator
 
             series = Utils.cf_(@(m)Utils.cf_(@PanelGenerator.mean_func_trunc5,m), series); %using mean rather than max
             mouse_name = {res.mouse_name};
-            
+            %{
             show_mice = {'Mouse2022', 'Mouse2024', 'Mouse2028'};
             
             [~,m_,sp_] = DecodeTensor.special_sess_id_list;
@@ -1174,8 +1188,51 @@ classdef PanelGenerator
             %figure_format([0.8 1]/2, 'fontsize', 4);
             Utils.specific_format('MBNS');
             Utils.printto;
-            
-                        
+            %}
+            %PABLO POINT 4
+            if true
+                fprintf('The following are the values (there is no variation for max cells)\n for max_i cos(PC_i, Dm), at the maximal # of cells\n');
+                max_overlap = cellfun(@(x)mean(x(:,end)), series{1}); %vector of length 107
+                disp(max_overlap);
+                
+                
+                fit_savefile = 'decoding_curves_fits.mat';
+                recompute = false;
+                if recompute || ~exist(fit_savefile, 'file')
+                    PanelGenerator.decoding_curves('remake', true, 'recompute', recompute);
+                end
+                load(fit_savefile);
+                
+                fprintf('The following is Pablo''s formula: (I0N(shuf)-I0N(real))\n');
+                pablos_formula = (I0_fit_s.*N_fit_s - I0_fit.*N_fit) ./ (I0_fit_s.*N_fit_s + I0_fit.*N_fit);
+                disp(pablos_formula);
+                %{
+                figure;
+                scatter(max_overlap, pablos_formula);
+                xlabel 'mean_i|cos(PC_i, Dm)|, first 5'
+                ylabel 'I_0N_{sh}-I_0N_{re}'
+                refline
+                [res_, GOF_] = fit(max_overlap(:), pablos_formula(:), 'poly1');
+                text(0.25, -0.6, sprintf('\\it{R}^2 = %.2e', GOF_.rsquare));
+                %}
+                [~, mouse_names] = DecodeTensor.filt_sess_id_list;
+                figure;
+                PanelGenerator.plot_regress(max_overlap, pablos_formula,...
+                    0*max_overlap, 0*pablos_formula, mouse_names, 'g', 'text_coords', [0.15 -0.5]);
+                xlabel 'mean_i|cos(PC_i, \Delta\mu)|, first 5'
+                ylabel '(I_0N_{sh}-I_0N_{re}) / (I_0N_{sh}+I_0N_{re})'
+                figure_format('factor', 1.6);
+                Utils.printto('supplements_pdf', 'Pablo_point_4_mean_RATIO.pdf');
+                
+                
+                figure;
+                PanelGenerator.plot_regress_averaged(max_overlap, pablos_formula,...
+                    0*max_overlap, 0*pablos_formula, mouse_names, 'g', 'text_coords', [0.15 -0.5]);
+                xlabel 'mean_i|cos(PC_i, \Delta\mu)|, first 5'
+                ylabel '(I_0N_{sh}-I_0N_{re}) / (I_0N_{sh}+I_0N_{re})'
+                figure_format('factor', 1.6);
+                Utils.printto('supplements_pdf', 'Pablo_point_4_mean_grouped_RATIO.pdf');
+            end            
         end
         
         function m = mean_func(x)
