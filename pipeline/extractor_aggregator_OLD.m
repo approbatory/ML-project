@@ -1,29 +1,20 @@
 function output = extractor_aggregator(varargin)
 [S, T, summary] = deal(cell(1,nargin));
 
-first_one = true;
 for i = 1:nargin
     fname = varargin{i};
     L = load(fname);
-    %assert(isfield(L, 'S_this'), '%s does not contain S_this', fname);
-    %assert(isfield(L, 'T_this'), '%s does not contain T_this', fname);
-    %assert(isfield(L, 'summary_this'), '%s does not contain summary_this', fname);
-    if ~isfield(L, 'S_this') || ~isfield(L, 'T_this') || ~isfield(L, 'summary_this')
-        fprintf('Skipping file %s\n', fname);
-        continue;
-    end
     S{i} = L.S_this;
     T{i} = L.T_this';
     summary{i} = L.summary_this;
     
-    if first_one
+    if i == 1
         fov_occupation_total = L.fov_occupation;
         summary_image = L.summary_image;
         max_image = L.max_image;
         config = L.config;
         w = L.w;
         h = L.h;
-        first_one = false;
     else
         fov_occupation_total = fov_occupation_total + L.fov_occupation;
         summary_image = summary_image + L.summary_image;
@@ -43,7 +34,7 @@ if config.remove_duplicate_cells
 
     overlap_idx = find(fov_occupation_total == 2);
     if ~isempty(S)
-        idx_trash = find_duplicate_cells(full(S), T, overlap_idx);
+        idx_trash = find_duplicate_cells(S, T, overlap_idx);
         S(:, idx_trash) = [];
         T(:, idx_trash) = [];
     end
