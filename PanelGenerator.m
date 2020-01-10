@@ -124,7 +124,11 @@ classdef PanelGenerator
             hold on;
             scatter(x, y, dotsize, DecodeTensor.mcolor(mouse_names, false), 'filled');
             
-            
+            [pearson, pearson_p] = corr(x(:), y(:), 'type', 'Pearson');
+            [kendall, kendall_p] = corr(x(:), y(:), 'type', 'Kendall');
+            [spearman, spearman_p] = corr(x(:), y(:), 'type', 'Spearman');
+            fprintf('Pearson rho: %f, p=%f\nSpearman rho: %f, p=%f\nKendall tau: %f, p=%f\n',...
+                pearson, pearson_p, spearman, spearman_p, kendall, kendall_p);
             [fitresult, adjr2] = Utils.regress_line(x, y);
             h_ = plot(fitresult); legend off
             h_.Color = color;
@@ -940,7 +944,6 @@ classdef PanelGenerator
             set(gcf, 'Position', [8.5521    6.2292    8.3125    1.6146]);
             colormap parula;
             Utils.printto;
-            keyboard;
             
             figure('FileName', 'figure2_pdf/medload/medload_curves.pdf');
             MultiSessionVisualizer.plot_single_filtered(n_sizes, series, {'b', 'r'}, sp_);
@@ -964,8 +967,16 @@ classdef PanelGenerator
             
             n_c = 50;
             fit_func = @(x,y)fit(log10(x(x>=n_c))',log10(mean(y(:,x>=n_c)))', 'poly1');
-            fr_ = Utils.cf_(fit_func, n_sizes, series{1});
-            fr_s = Utils.cf_(fit_func, n_sizes, series{2});
+            [fr_, gf_] = cellfun(fit_func, n_sizes, series{1}, 'UniformOutput', false);
+            [fr_s, gf_s] = cellfun(fit_func, n_sizes, series{2}, 'UniformOutput', false);
+            
+            gf_ = cell2mat(gf_);
+            rsquare = [gf_.rsquare];
+            fprintf('Unshuf: range %f-%f, median %f\n', min(rsquare), max(rsquare), median(rsquare));
+            
+            gf_s = cell2mat(gf_s);
+            rsquare_s = [gf_s.rsquare];
+            fprintf('Shuf: range %f-%f, median %f\n', min(rsquare_s), max(rsquare_s), median(rsquare_s));
             
             [rate_f, rate_f_conf] = Utils.fit_get(fr_, 'p1');
             [rate_f_s, rate_f_s_conf] = Utils.fit_get(fr_s, 'p1');
@@ -993,9 +1004,246 @@ classdef PanelGenerator
             Utils.specific_format('MBNS');
             Utils.printto;
             
-            
+            %PABLO POINT 4
+            if true
+                fprintf('The following are the values (there is no variation for max cells)\n for max_i cos(PC_i, Dm), at the maximal # of cells\n');
+                max_overlap = cellfun(@(x)mean(x(:,end)), series{1}); %vector of length 107
+                disp(max_overlap);
+                
+                
+                fit_savefile = 'decoding_curves_fits.mat';
+                recompute = false;
+                if recompute || ~exist(fit_savefile, 'file')
+                    PanelGenerator.decoding_curves('remake', true, 'recompute', recompute);
+                end
+                load(fit_savefile);
+                
+                fprintf('The following is Pablo''s formula: (I0N(shuf)-I0N(real))\n');
+                pablos_formula = (I0_fit_s.*N_fit_s - I0_fit.*N_fit);
+                disp(pablos_formula);
+                figure;
+                scatter(max_overlap, pablos_formula);
+                xlabel 'max_i |cos(PC_i, \Delta\mu)|'
+                ylabel 'I_0N_{sh}-I_0N_{re}'
+                refline
+                [res_, GOF_] = fit(max_overlap(:), pablos_formula(:), 'poly1');
+                text(0.25, -0.6, sprintf('\\it{R}^2 = %.2e', GOF_.rsquare));
+                
+                [~, mouse_names] = DecodeTensor.filt_sess_id_list;
+                figure;
+                PanelGenerator.plot_regress_averaged(max_overlap, pablos_formula,...
+                    0*max_overlap, 0*pablos_formula, mouse_names, 'g',...
+                    'xlim', [0.08 0.37], 'text_coords', [0.25 -5]);
+                xlabel 'max_i |cos(PC_i, \Delta\mu)|'
+                ylabel 'I_0N_{sh}-I_0N_{re}'
+                figure_format('factor', 1.6);
+                Utils.printto('supplements_pdf', 'Pablo_point_4.pdf')
+            end
         end
         
+        
+        function medload_with_mean
+            load('MedLoad_agg_190705-171806_0.mat');
+            n_sizes = {res.n_sizes};
+            series = {{res.median_loadings}, {res.median_loadings_s}};
+            
+
+            series = Utils.cf_(@(m)Utils.cf_(@PanelGenerator.mean_func_trunc5,m), series); %using mean rather than max
+            mouse_name = {res.mouse_name};
+            %{
+            show_mice = {'Mouse2022', 'Mouse2024', 'Mouse2028'};
+            
+            [~,m_,sp_] = DecodeTensor.special_sess_id_list;
+            show_filter = ismember(m_, show_mice);
+            sp_ = sp_(show_filter);
+            m_ = m_(show_filter);
+            figure('FileName', 'supplements_pdf/medload/medload_rasters.pdf');
+            colorscale = 'log';
+            for i = 1:numel(sp_)
+                subplot(1,numel(sp_)+1, i);
+                t_ = res(sp_(i));
+                mean_median_loadings = squeeze(mean(abs(t_.median_loadings)));
+                min_d = 30;
+                ns = t_.n_sizes;
+                im_data = (mean_median_loadings(ns >= min_d,1:min_d));
+                %padded_im_data = nan(16 - size(im_data,1), size(im_data,2));
+                %imagesc([im_data;padded_im_data], [-1.6 log10(0.3)]);
+                surf(1:min_d, ns(ns>=min_d), im_data, 'EdgeColor', 'none');
+                view(2);
+                
+                %set(gca, 'XScale', 'log');
+                %set(gca, 'YScale', 'log');
+                set(gca, 'ColorScale', colorscale);
+                caxis([0.03 0.25]);
+                xlim([1 min_d]);
+                ylim([min_d+10, 500]);
+                xlabel 'Fluctuation mode, i'
+                ylabel 'Number of cells'
+                title(sprintf('Mouse %s', m_{i}(end-1:end)), 'FontName', 'Helvetica', 'FontSize', 6, 'FontWeight', 'normal', 'Color', 'b');
+                
+                set(gca, 'FontSize', 6);
+                set(gca, 'FontName', 'Helvetica');
+                set(gca, 'TickLength', [0.02 0.02]);
+                colorbar;
+                %set(gca, 'YTick', [1 2 4 8 16 32 64].*min_d);
+                %rectangle('Position',...
+                %    0.5+[0 size(im_data,1) size(im_data,2) (48 - size(im_data,1))],...
+                %    'FaceColor', 'w', 'EdgeColor', 'k', 'LineStyle', 'none');
+                %set(gca, 'YTickLabel', 10*cellfun(@str2num, get(gca, 'YTickLabel')));
+                box off;
+                if i > 1
+                    box off
+                    xlabel ''
+                    ylabel ''
+                    set(gca, 'YTick', []);
+                end
+                %colorbar;
+            end
+            subplot(1, numel(sp_)+1, numel(sp_)+1);
+            t_ = res(sp_(1));
+            mean_median_loadings_s = squeeze(mean(abs(t_.median_loadings_s)));
+            min_d = 30;
+            ns = t_.n_sizes;
+            im_data = (mean_median_loadings_s(ns >= min_d,1:min_d));
+            surf(1:min_d, ns(ns>=min_d), im_data, 'EdgeColor', 'none');
+            view(2);
+            %set(gca, 'YScale', 'log');
+            set(gca, 'ColorScale', colorscale);
+            caxis([0.03 0.25]);
+            xlim([1 min_d]);
+            ylim([min_d+10, 500]);
+            %xlabel 'Fluctuation mode, i'
+            %ylabel 'Number of cells'
+            title('Shuffled', 'FontName', 'Helvetica', 'FontSize', 6, 'FontWeight', 'normal', 'Color', 'r');
+            
+            set(gca, 'FontSize', 6);
+            set(gca, 'FontName', 'Helvetica');
+            set(gca, 'TickLength', [0.02 0.02]);
+            set(gca, 'YTick', [1 2 4 8 16 32 64].*min_d);
+            box off
+            %axis off
+            xlabel ''; ylabel '';
+            set(gca, 'YTick', []);
+            colorbar;
+            set(gcf, 'Units', 'inches');
+            set(gcf, 'Position', [8.5521    6.2292    8.3125    1.6146]);
+            colormap parula;
+            Utils.printto;
+            
+            figure('FileName', 'figure2_pdf/medload/medload_curves_with_mean.pdf');
+            MultiSessionVisualizer.plot_single_filtered(n_sizes, series, {'b', 'r'}, sp_);
+            set(gca, 'XScale', 'log');
+            set(gca, 'YScale', 'log');
+            xlabel 'Number of cells'
+            ylabel 'mean_i|cos(PC_i, Dm)|, first 5'
+            xlim([1 500]);
+            ylim([-Inf 1]);
+            figure_format([1 1.4]);
+            Utils.printto;
+            
+            MultiSessionVisualizer.plot_series(n_sizes, series, {'b','r'}, mouse_name);
+            axs = findall(gcf, 'type', 'axes');
+            set(axs, 'YScale', 'log');
+            set(axs, 'XScale', 'log');
+            xlabel 'Number of cells'
+            ylabel 'mean_i|cos(PC_i, Dm)|, first 5'
+            multi_figure_format;
+            Utils.printto('supplements_pdf/medload', 'multi_medload_curves_with_mean.pdf');
+            
+            n_c = 50;
+            fit_func = @(x,y)fit(log10(x(x>=n_c))',log10(mean(y(:,x>=n_c)))', 'poly1');
+            [fr_, gf_] = cellfun(fit_func, n_sizes, series{1}, 'UniformOutput', false);
+            [fr_s, gf_s] = cellfun(fit_func, n_sizes, series{2}, 'UniformOutput', false);
+            
+            gf_ = cell2mat(gf_);
+            rsquare = [gf_.rsquare];
+            fprintf('Unshuf: range %f-%f, median %f\n', min(rsquare), max(rsquare), median(rsquare));
+            
+            gf_s = cell2mat(gf_s);
+            rsquare_s = [gf_s.rsquare];
+            fprintf('Shuf: range %f-%f, median %f\n', min(rsquare_s), max(rsquare_s), median(rsquare_s));
+            
+            [rate_f, rate_f_conf] = Utils.fit_get(fr_, 'p1');
+            [rate_f_s, rate_f_s_conf] = Utils.fit_get(fr_s, 'p1');
+            figure('FileName', 'figure2_pdf/medload/inset_with_mean.pdf');
+            Utils.bns_groupings(rate_f, rate_f_s, rate_f_conf, rate_f_s_conf, mouse_name, true);
+            hold on;
+            %line(xlim-0.5, [0 0], 'Color', 'k', 'LineStyle', '-');
+            line(xlim, [-0.5 -0.5], 'Color', 'k', 'LineStyle', ':');
+            ylabel 'Fit exponent'
+            ylim([-Inf Inf]);
+            set(gca, 'XTickLabels', {'Real', 'Shuf.'});
+            %figure_format([0.8 1]/2, 'fontsize', 4);
+            Utils.specific_format('inset');
+            Utils.printto;
+            
+            figure('FileName', 'supplements_pdf/medload/multi_inset_with_mean.pdf');
+            Utils.bns_groupings(rate_f, rate_f_s, rate_f_conf, rate_f_s_conf, mouse_name, false, {'Unshuffled', 'Shuffled'});
+            hold on;
+            line(xlim-0.5, [0 0], 'Color', 'k', 'LineStyle', '-');
+            line(xlim, [-0.5 -0.5], 'Color', 'k', 'LineStyle', ':');
+            ylabel 'Fit exponent'
+            ylim([-Inf Inf]);
+            %set(gca, 'XTickLabels', {'Unsh.', 'Sh.'});
+            %figure_format([0.8 1]/2, 'fontsize', 4);
+            Utils.specific_format('MBNS');
+            Utils.printto;
+            %}
+            %PABLO POINT 4
+            if true
+                fprintf('The following are the values (there is no variation for max cells)\n for max_i cos(PC_i, Dm), at the maximal # of cells\n');
+                max_overlap = cellfun(@(x)mean(x(:,end)), series{1}); %vector of length 107
+                disp(max_overlap);
+                
+                
+                fit_savefile = 'decoding_curves_fits.mat';
+                recompute = false;
+                if recompute || ~exist(fit_savefile, 'file')
+                    PanelGenerator.decoding_curves('remake', true, 'recompute', recompute);
+                end
+                load(fit_savefile);
+                
+                fprintf('The following is Pablo''s formula: (I0N(shuf)-I0N(real))\n');
+                pablos_formula = (I0_fit_s.*N_fit_s - I0_fit.*N_fit) ./ (I0_fit_s.*N_fit_s + I0_fit.*N_fit);
+                disp(pablos_formula);
+                %{
+                figure;
+                scatter(max_overlap, pablos_formula);
+                xlabel 'mean_i|cos(PC_i, Dm)|, first 5'
+                ylabel 'I_0N_{sh}-I_0N_{re}'
+                refline
+                [res_, GOF_] = fit(max_overlap(:), pablos_formula(:), 'poly1');
+                text(0.25, -0.6, sprintf('\\it{R}^2 = %.2e', GOF_.rsquare));
+                %}
+                [~, mouse_names] = DecodeTensor.filt_sess_id_list;
+                figure;
+                PanelGenerator.plot_regress(max_overlap, pablos_formula,...
+                    0*max_overlap, 0*pablos_formula, mouse_names, 'g', 'text_coords', [0.15 -0.5]);
+                xlabel 'mean_i|cos(PC_i, \Delta\mu)|, first 5'
+                ylabel '(I_0N_{sh}-I_0N_{re}) / (I_0N_{sh}+I_0N_{re})'
+                figure_format('factor', 1.6);
+                Utils.printto('supplements_pdf', 'Pablo_point_4_mean_RATIO.pdf');
+                
+                
+                figure;
+                PanelGenerator.plot_regress_averaged(max_overlap, pablos_formula,...
+                    0*max_overlap, 0*pablos_formula, mouse_names, 'g', 'text_coords', [0.15 -0.5]);
+                xlabel 'mean_i|cos(PC_i, \Delta\mu)|, first 5'
+                ylabel '(I_0N_{sh}-I_0N_{re}) / (I_0N_{sh}+I_0N_{re})'
+                figure_format('factor', 1.6);
+                Utils.printto('supplements_pdf', 'Pablo_point_4_mean_grouped_RATIO.pdf');
+            end            
+        end
+        
+        function m = mean_func(x)
+            x(x==0) = nan;   
+            m = nanmean(x,3); 
+        end
+        
+        function m = mean_func_trunc5(x)
+            x(x==0) = nan;   
+            m = nanmean(x(:,:,1:5),3); 
+        end
         %function adjacent_decoders
         %    load('adjacent_agg_190725-094031_0.mat');
         %    keyboard
