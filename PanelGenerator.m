@@ -1010,34 +1010,104 @@ classdef PanelGenerator
                 max_overlap = cellfun(@(x)mean(x(:,end)), series{1}); %vector of length 107
                 disp(max_overlap);
                 
+                dbfile = 'decoding_all_sess.db';
+                conn = sqlite(dbfile);
+                samp_size = 80;
+                [sess, mouse_names] = DecodeTensor.filt_sess_id_list;
+                [n_sizes, imse] = PanelGenerator.db_imse_reader(conn, 'unshuffled', sess, samp_size);
+                [n_sizes_s, imse_s] = PanelGenerator.db_imse_reader(conn, 'shuffled', sess, samp_size);
+                [n_sizes_d, imse_d] = PanelGenerator.db_imse_reader(conn, 'diagonal', sess, samp_size);
+                assert(isequal(n_sizes, n_sizes_s), 'mismatch between unshuffled and shuffled sampling');
+                assert(isequal(n_sizes, n_sizes_d), 'mismatch between unshuffled and diagonal sampling');
                 
-                fit_savefile = 'decoding_curves_fits.mat';
-                recompute = false;
-                if recompute || ~exist(fit_savefile, 'file')
-                    PanelGenerator.decoding_curves('remake', true, 'recompute', recompute);
-                end
-                load(fit_savefile);
+                max_imse = cell2mat(cellfun(@(x)x(:,end),imse,'UniformOutput', false));
+                max_imse_s = cell2mat(cellfun(@(x)x(:,end),imse_s,'UniformOutput', false));
                 
-                fprintf('The following is Pablo''s formula: (I0N(shuf)-I0N(real))\n');
-                pablos_formula = (I0_fit_s.*N_fit_s - I0_fit.*N_fit);
-                disp(pablos_formula);
-                figure;
-                scatter(max_overlap, pablos_formula);
-                xlabel 'max_i |cos(PC_i, \Delta\mu)|'
-                ylabel 'I_0N_{sh}-I_0N_{re}'
-                refline
-                [res_, GOF_] = fit(max_overlap(:), pablos_formula(:), 'poly1');
-                text(0.25, -0.6, sprintf('\\it{R}^2 = %.2e', GOF_.rsquare));
+                mean_max_imse = mean(max_imse);
+                mean_max_imse_s = mean(max_imse_s);
+                
+                sem_max_imse = sem(max_imse);
+                sem_max_imse_s = sem(max_imse_s);
+                
+                max_num_neurons = cellfun(@(x)x(end),n_sizes);
+                
+                victors_suggestion = (mean_max_imse_s - mean_max_imse)./max_num_neurons;
+                victors_suggestion_sem = sqrt( (sem_max_imse_s.^2 + sem_max_imse.^2)./max_num_neurons );
+                
                 
                 [~, mouse_names] = DecodeTensor.filt_sess_id_list;
                 figure;
-                PanelGenerator.plot_regress_averaged(max_overlap, pablos_formula,...
-                    0*max_overlap, 0*pablos_formula, mouse_names, 'g',...
-                    'xlim', [0.08 0.37], 'text_coords', [0.25 -5]);
-                xlabel 'max_i |cos(PC_i, \Delta\mu)|'
-                ylabel 'I_0N_{sh}-I_0N_{re}'
+                PanelGenerator.plot_regress(max_overlap, victors_suggestion,...
+                    0*max_overlap, victors_suggestion_sem, mouse_names, 'g', 'text_coords', [0.25 -1e-4]);
+                xlabel 'max_i|cos(PC_i, \Delta\mu)|'
+                ylabel(sprintf('(IMSE_{sh} - IMSE_{re}) / (max n)\n(cm^{-2}%sneuron^{-1})',Utils.dot));
+                Utils.fix_exponent(gca, 'y', 0);
                 figure_format('factor', 1.6);
-                Utils.printto('supplements_pdf', 'Pablo_point_4.pdf')
+                Utils.printto('supplements_pdf', 'Victors_suggestion.pdf');
+                
+                figure;
+                PanelGenerator.plot_regress_averaged(max_overlap, victors_suggestion,...
+                    0*max_overlap, victors_suggestion_sem, mouse_names, 'g', 'text_coords', [0.25 -1e-4]);
+                xlabel 'max_i|cos(PC_i, \Delta\mu)|'
+                ylabel(sprintf('(IMSE_{sh} - IMSE_{re}) / (max n)\n(cm^{-2}%sneuron^{-1})',Utils.dot));
+                Utils.fix_exponent(gca, 'y', 0);
+                figure_format('factor', 1.6);
+                Utils.printto('supplements_pdf', 'Victors_suggestion_grouped.pdf');
+                
+                pablos_suggestion_x = 1./sqrt(max_num_neurons) - max_overlap;
+                pablos_suggestion_y = mean_max_imse_s - mean_max_imse;
+                pablos_suggestion_y_sem = sqrt(sem_max_imse_s.^2 + sem_max_imse.^2);
+                
+                [~, mouse_names] = DecodeTensor.filt_sess_id_list;
+                figure;
+                PanelGenerator.plot_regress(pablos_suggestion_x, pablos_suggestion_y,...
+                    0*pablos_suggestion_x, pablos_suggestion_y_sem, mouse_names, 'g', 'text_coords', [-0.22 0.1]);
+                xlabel '1/sqrt(n) - max_i|cos(PC_i, \Delta\mu)|'
+                ylabel(sprintf('(IMSE_{sh} - IMSE_{re}) (cm^{-2})'));
+                %Utils.fix_exponent(gca, 'y', 0);
+                figure_format('factor', 1.6);
+                Utils.printto('supplements_pdf', 'Pablos_suggestion.pdf');
+                
+                figure;
+                PanelGenerator.plot_regress_averaged(pablos_suggestion_x, pablos_suggestion_y,...
+                    0*pablos_suggestion_x, pablos_suggestion_y_sem, mouse_names, 'g', 'text_coords', [-0.27 0.1]);
+                xlabel '1/sqrt(n) - max_i|cos(PC_i, \Delta\mu)|'
+                ylabel(sprintf('(IMSE_{sh} - IMSE_{re}) (cm^{-2})'));
+                %Utils.fix_exponent(gca, 'y', 0);
+                figure_format('factor', 1.6);
+                Utils.printto('supplements_pdf', 'Pablos_suggestion_grouped.pdf');
+                
+                
+                
+                if false
+                    fit_savefile = 'decoding_curves_fits.mat';
+                    recompute = false;
+                    if recompute || ~exist(fit_savefile, 'file')
+                        PanelGenerator.decoding_curves('remake', true, 'recompute', recompute);
+                    end
+                    load(fit_savefile);
+
+                    fprintf('The following is Pablo''s formula: (I0N(shuf)-I0N(real))\n');
+                    pablos_formula = (I0_fit_s.*N_fit_s - I0_fit.*N_fit);
+                    disp(pablos_formula);
+                    figure;
+                    scatter(max_overlap, pablos_formula);
+                    xlabel 'max_i |cos(PC_i, \Delta\mu)|'
+                    ylabel 'I_0N_{sh}-I_0N_{re}'
+                    refline
+                    [res_, GOF_] = fit(max_overlap(:), pablos_formula(:), 'poly1');
+                    text(0.25, -0.6, sprintf('\\it{R}^2 = %.2e', GOF_.rsquare));
+
+                    [~, mouse_names] = DecodeTensor.filt_sess_id_list;
+                    figure;
+                    PanelGenerator.plot_regress_averaged(max_overlap, pablos_formula,...
+                        0*max_overlap, 0*pablos_formula, mouse_names, 'g',...
+                        'xlim', [0.08 0.37], 'text_coords', [0.25 -5]);
+                    xlabel 'max_i |cos(PC_i, \Delta\mu)|'
+                    ylabel 'I_0N_{sh}-I_0N_{re}'
+                    figure_format('factor', 1.6);
+                    Utils.printto('supplements_pdf', 'Pablo_point_4.pdf')
+                end
             end
         end
         
