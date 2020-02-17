@@ -1,4 +1,6 @@
-addpath utils plotting decoding data_loading
+function setup(p)
+
+addpath('utils', 'plotting', 'decoding', 'data',_'loading'
 addpath(genpath('external'));
 addpath .
 
