@@ -1696,7 +1696,7 @@ classdef DecodeTensor < handle
             %T_s = DecodeTensor.shuffle_tensor(T, d);
             directions = [-1 1];
             
-            [Signal_Direction_pre, Eigenvector_Loadings_pre, ~, latent, ~, coeff, ~, Mean] = deal(cell(numel(directions), n_bins));
+            [Signal_Direction_pre, Eigenvector_Loadings_pre, ~, latent, ~, coeff, ~, Mean, Cov, Corr] = deal(cell(numel(directions), n_bins));
             for i_d = 1:numel(directions)
                 dir_value = directions(i_d);
                 for i_b = 1:n_bins
@@ -1713,7 +1713,8 @@ classdef DecodeTensor < handle
                     
                     %[coeff_s{i_d, i_b}, ~, latent_s{i_d, i_b}] = pca(X_noise_s);%pcacov(Noise_Cov_s{i_d, i_b});
                     Mean{i_d, i_b} = mean(X);
-                    
+                    Cov{i_d, i_b} = cov(X);
+                    Corr{i_d, i_b} = corr(X);
                 end
                 
                 for i_b = 1:n_bins
@@ -1736,8 +1737,8 @@ classdef DecodeTensor < handle
             
             res.sig_direc_pre = Signal_Direction_pre;
             res.mean_response = Mean;
-            
-            
+            res.noise_cov = Cov;
+            res.noise_corr = Corr;
             return;
             
             

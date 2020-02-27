@@ -1,12 +1,13 @@
-parpool(20);
-parfor i = 1:107
-    res(i) = med_loadings_compute_(i);
-    fprintf('Done %d\n', i);
-end
-
-save medload_diet.mat res
-
-function res = med_loadings_compute_(index, n_type)
+%parpool(20);
+%parfor i = 1:107
+%    res(i) = med_loadings_compute_(i);
+%    fprintf('Done %d\n', i);
+%end
+%
+%save medload_diet.mat res
+%%
+%mlc_ = @med_loadings_compute_;
+function res = med_loadings_compute(index, n_type)
 if ~exist('n_type', 'var')
     n_type = 'rawTraces';
 end

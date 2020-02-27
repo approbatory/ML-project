@@ -1,6 +1,6 @@
 function setup(p)
 
-addpath('utils', 'plotting', 'decoding', 'data',_'loading'
+addpath('utils', 'plotting', 'decoding', 'data_loading');
 addpath(genpath('external'));
 addpath .
 

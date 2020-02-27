@@ -417,7 +417,7 @@ classdef Utils %Common utilities for dealing with neural data
             if ~exist('intercept', 'var')
                 intercept = false;
             end
-            m = mean(s);
+            m = mean(s,1);
             m = m(n >= min_n);
             n = n(n >= min_n);
             [fitresult, gof] = fit(n(:), m(:), 'poly1');
