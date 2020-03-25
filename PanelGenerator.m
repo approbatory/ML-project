@@ -1010,6 +1010,7 @@ classdef PanelGenerator
                 max_overlap = cellfun(@(x)mean(x(:,end)), series{1}); %vector of length 107
                 disp(max_overlap);
                 
+                if false
                 dbfile = 'decoding_all_sess.db';
                 conn = sqlite(dbfile);
                 samp_size = 80;
@@ -1076,10 +1077,10 @@ classdef PanelGenerator
                 %Utils.fix_exponent(gca, 'y', 0);
                 figure_format('factor', 1.6);
                 Utils.printto('supplements_pdf', 'Pablos_suggestion_grouped.pdf');
+                end
                 
                 
-                
-                if false
+                if true
                     fit_savefile = 'decoding_curves_fits.mat';
                     recompute = false;
                     if recompute || ~exist(fit_savefile, 'file')
@@ -1087,6 +1088,7 @@ classdef PanelGenerator
                     end
                     load(fit_savefile);
 
+                    if false
                     fprintf('The following is Pablo''s formula: (I0N(shuf)-I0N(real))\n');
                     pablos_formula = (I0_fit_s.*N_fit_s - I0_fit.*N_fit);
                     disp(pablos_formula);
@@ -1107,6 +1109,27 @@ classdef PanelGenerator
                     ylabel 'I_0N_{sh}-I_0N_{re}'
                     figure_format('factor', 1.6);
                     Utils.printto('supplements_pdf', 'Pablo_point_4.pdf')
+                    end
+                    
+                    [~, mouse_names] = DecodeTensor.filt_sess_id_list;
+                    figure;
+                    PanelGenerator.plot_regress(max_overlap, N_fit,...
+                        0*max_overlap, N_conf, mouse_names, 'g', 'show_adjr2', false);
+                    xlabel 'max_i|cos(PC_i, \Delta\mu)|'
+                    ylabel('N fit value');
+                    %Utils.fix_exponent(gca, 'y', 0);
+                    set(gca, 'YScale', 'log');
+                    figure_format('factor', 1.6);
+                    Utils.printto('supplements_pdf', 'Connection_to_N.pdf');
+                    
+                    %figure;
+                    %PanelGenerator.plot_regress_averaged(max_overlap, N_fit,...
+                    %    0*max_overlap, N_conf, mouse_names, 'g', 'text_coords', [0.22 100]);
+                    %xlabel 'max_i|cos(PC_i, \Delta\mu)|'
+                    %ylabel('N fit value');
+                    %%Utils.fix_exponent(gca, 'y', 0);
+                    %figure_format('factor', 1.6);
+                    %Utils.printto('supplements_pdf', 'Connection_to_N_grouped.pdf');
                 end
             end
         end

@@ -1,5 +1,14 @@
 classdef Utils %Common utilities for dealing with neural data
     methods(Static)
+        function r = rank_order(x)
+            sh = size(x);
+            x = x(:);
+            [~,p] = sort(x);
+            r = 1:numel(x);
+            r(p) = r;
+            r = reshape(r, sh);
+        end
+        
         function [data_size, frac_signif] = ...
                 muti_signif_vs_data_size(X_spike, ks, alpha, n_shufs, divs)
             [n_samples, ~] = size(X_spike);
