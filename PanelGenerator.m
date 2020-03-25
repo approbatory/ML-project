@@ -1005,7 +1005,7 @@ classdef PanelGenerator
             Utils.printto;
             
             %PABLO POINT 4
-            if true
+            if false
                 fprintf('The following are the values (there is no variation for max cells)\n for max_i cos(PC_i, Dm), at the maximal # of cells\n');
                 max_overlap = cellfun(@(x)mean(x(:,end)), series{1}); %vector of length 107
                 disp(max_overlap);

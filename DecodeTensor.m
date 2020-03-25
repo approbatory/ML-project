@@ -1536,6 +1536,7 @@ classdef DecodeTensor < handle
             track_dir_bins = add_in_direction(track_bins, vel);
         end
         
+        
         function res = noise_properties(T, d, using_corr)
             [total_neurons, n_bins, n_trials] = size(T);
             T_s = DecodeTensor.shuffle_tensor(T, d);
@@ -1623,6 +1624,122 @@ classdef DecodeTensor < handle
             res.noise_spectrum_s = latent_s;
             
             
+            
+            
+            %starting from T,d
+            [n,k,t] = size(T);
+            
+            %choose forward T
+            Tf = T(:,:,d==1);
+            
+            %select the signal
+            signal = mean(Tf, 3);
+            [~, amax] = max(signal.');
+            [~, amax_ord] = sort(amax);
+            
+            %sort the neurons
+            s_Tf = Tf(amax_ord,:,:);
+            s_signal = mean(s_Tf, 3);
+            s_noise = s_Tf - s_signal;
+            
+            
+            [s_Xf, ~] = DecodeTensor.tensor2dataset(s_Tf, ones(1,sum(d==1)));
+            res.total_corr = corr(s_Xf);
+            %compute correlations
+            res.sig_corr = corr(s_signal.');
+            
+            noise_corr = zeros(n,n,k);
+            RMS_noise_corr = zeros(1,k);
+            for b = 1:k
+                noise_corr(:,:,b) = corr(squeeze(s_noise(:,b,:)).');
+                RMS_noise_corr(b) = sqrt((norm(noise_corr(:,:,b), 'fro').^2 - n)/2 ./ ((n^2-n)/2));
+            end
+            
+            res.mean_noise_corr = mean(noise_corr,3);
+            res.RMS_noise_corr = mean(RMS_noise_corr);
+            
+            %%%%%%%%%%%%%%%%now on shuffle
+            %starting from T_shuf,d
+            %[n,k,t] = size(T_shuf);
+            
+            %choose forward T
+            T_shuf = DecodeTensor.shuffle_tensor(T, d);
+            Tf_shuf = T_shuf(:,:,d==1);
+            
+            %select the signal
+            signal_shuf = mean(Tf_shuf, 3);
+            [~, amax_shuf] = max(signal_shuf.');
+            [~, amax_ord_shuf] = sort(amax_shuf);
+            
+            %sort the neurons
+            s_Tf_shuf = Tf_shuf(amax_ord_shuf,:,:);
+            s_signal_shuf = mean(s_Tf_shuf, 3);
+            s_noise_shuf = s_Tf_shuf - s_signal_shuf;
+            
+            %compute correlations
+            res.sig_corr_shuf = corr(s_signal_shuf.');
+            noise_corr_shuf = zeros(n,n,k);
+            RMS_noise_corr_shuf = zeros(1,k);
+            for b = 1:20
+                noise_corr_shuf(:,:,b) = corr(squeeze(s_noise_shuf(:,b,:)).');
+                RMS_noise_corr_shuf(b) = sqrt((norm(noise_corr_shuf(:,:,b), 'fro').^2 - n)/2 ./ ((n^2-n)/2));
+            end
+            
+            res.mean_noise_corr_shuf = mean(noise_corr_shuf,3);
+            res.RMS_noise_corr_shuf = mean(RMS_noise_corr_shuf);
+            
+        end
+        
+        
+        function res = noise_properties_diet(T, d, using_corr)
+            [total_neurons, n_bins, n_trials] = size(T);
+            %T_s = DecodeTensor.shuffle_tensor(T, d);
+            directions = [-1 1];
+            
+            [Signal_Direction_pre, Eigenvector_Loadings_pre, ~, latent, ~, coeff, ~, Mean, Cov, Corr] = deal(cell(numel(directions), n_bins));
+            for i_d = 1:numel(directions)
+                dir_value = directions(i_d);
+                for i_b = 1:n_bins
+                    X = squeeze(T(:,i_b,d==dir_value)).';
+                    %X_s = squeeze(T_s(:,i_b,d==dir_value)).';
+                    if using_corr
+                        X_noise = zscore(X);
+                        %X_noise_s = zscore(X_s);
+                    else
+                        X_noise = X - mean(X);
+                        %X_noise_s = X_s - mean(X_s);
+                    end
+                    [coeff{i_d, i_b}, ~, latent{i_d, i_b}] = pca(X_noise);%pcacov(Noise_Cov{i_d, i_b});
+                    
+                    %[coeff_s{i_d, i_b}, ~, latent_s{i_d, i_b}] = pca(X_noise_s);%pcacov(Noise_Cov_s{i_d, i_b});
+                    Mean{i_d, i_b} = mean(X);
+                    Cov{i_d, i_b} = cov(X);
+                    Corr{i_d, i_b} = corr(X);
+                end
+                
+                for i_b = 1:n_bins
+                    if i_b > 1
+                        Signal_Direction_pre{i_d, i_b} = normalize(Mean{i_d, i_b} - Mean{i_d, i_b-1}, 'norm').';
+                        
+                        Eigenvector_Loadings_pre{i_d, i_b} = Signal_Direction_pre{i_d, i_b}.' * coeff{i_d, i_b};
+                        
+                        %Eigenvector_Loadings_pre_s{i_d, i_b} = Signal_Direction_pre{i_d, i_b}.' * coeff_s{i_d, i_b};
+                    end
+                end
+            end
+            
+            res.el_pre = Eigenvector_Loadings_pre;
+            %res.el_pre_s = Eigenvector_Loadings_pre_s;
+            
+            
+            res.noise_spectrum = latent;
+            %res.noise_spectrum_s = latent_s;
+            
+            res.sig_direc_pre = Signal_Direction_pre;
+            res.mean_response = Mean;
+            res.noise_cov = Cov;
+            res.noise_corr = Corr;
+            return;
             
             
             %starting from T,d
@@ -1989,6 +2106,12 @@ classdef DecodeTensor < handle
             loadings_shuf = loadings_shuf(~cellfun(@isempty, loadings_shuf(:)));
             median_loadings = median(abs(cell2mat(loadings(:))));
             median_loadings_shuf = median(abs(cell2mat(loadings_shuf(:))));
+        end
+        
+        function noise_res = neuron_subset_noise_props(o, n_size)
+            [N, K, T] = size(o.data_tensor);
+            sub_tensor = o.data_tensor(randperm(N)<=n_size,:,:);
+            noise_res = DecodeTensor.noise_properties_diet(sub_tensor, o.tr_dir, true); %using correlation matrix for PCA
         end
         
         function mean_cell_snr = single_cell_d_primes2(o)
