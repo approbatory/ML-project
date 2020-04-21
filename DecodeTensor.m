@@ -2131,5 +2131,24 @@ classdef DecodeTensor < handle
             
             mean_cell_snr = mean(median([dp2_leftward dp2_rightward], 2));
         end
+        
+        function X = get_bin_resp(o, bin_index, direction)
+            max_bin = size(o.data_tensor, 2);
+            if nargin == 2
+                assert(bin_index >= 1 && bin_index <= 2*max_bin);
+                if bin_index <= max_bin
+                    direction = 1;
+                else
+                    direction = -1;
+                    bin_index = bin_index - max_bin;
+                end
+                X = o.get_bin_resp(bin_index, direction);
+                return;
+            end
+            
+            assert(bin_index >= 1 && bin_index <= max_bin);
+            assert(direction == 1 || direction == -1);
+            X = squeeze(o.data_tensor(:, bin_index, o.tr_dir==direction));
+        end
     end
 end
