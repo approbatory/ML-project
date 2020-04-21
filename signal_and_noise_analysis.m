@@ -174,22 +174,28 @@ text(400, 2, 'Real', 'Color', 'b');
 
 y_sh = 0.135;
 %p.panel(4, 'ylab', 'Signal slope / Noise slope', 'y_shift', y_sh);
-p.panel(4, 'xlab', 'Mouse index', 'ylab', 'Noise slope / Signal slope', 'y_shift', y_sh);
+
+%p.panel(4, 'xlab', 'Mouse index', 'ylab', 'Noise slope / Signal slope', 'y_shift', y_sh);
+p.panel(4, 'xlab', 'Mouse index', 'ylab', 'Signal slope / Noise slope', 'y_shift', y_sh);
 %[y_,e_] = Utils.bns_groupings(asymp_snr, asymp_snr_shuf, asymp_snr_conf, asymp_snr_shuf_conf, mouse_names, true, {'Real', 'Shuffled'}, true);
 %[y_,e_] = Utils.bns_groupings(asymp_nsr, asymp_nsr_shuf, asymp_nsr_conf, asymp_nsr_shuf_conf, mouse_names, false, {'Real', 'Shuffled'}, false, false);
 % TODO: CONVERT PANEL 4 TO BOXPLOT OR VIOLIN PLOT OVERLAYED REAL WITH SHUF
 
 hold on;
 bf_ = @(x, c) boxplot(x, Utils.cf_(@(x)x(end-1:end),mouse_names), 'Colors', c, 'BoxStyle', 'outline', 'Symbol', '');
-bf_(asymp_nsr, 'b');
+%bf_(asymp_nsr, 'b');
+bf_(asymp_snr, 'b');
 hold on;
 l_ = refline(0, 0); l_.Color = 'k'; l_.LineStyle = '-';
-bf_(asymp_nsr_shuf, 'r');
+%bf_(asymp_nsr_shuf, 'r');
+bf_(asymp_snr_shuf, 'r');
 hold on;
 
-ylim([-Inf 6]);
+%ylim([-Inf 6]);
 xtickangle(45);
-
+%%%later addition
+set(gca, 'YScale', 'log');
+%%%
 
 
 p.panel(5, 'xlab', 'Single cell signal / Single cell noise',...
