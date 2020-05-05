@@ -60,10 +60,13 @@ classdef Cloud
                 end
                 cs = cumsum(o.loadings{i}.^2);
                 cs_s = cumsum(o.loadings_shuf{i}.^2);
+                reorder = @(x) x(randperm(numel(x)));
+                cs_ro = cumsum(reorder(o.loadings{i}.^2));
                 %plot(cs, 'Color', colors(mod(i-1,o.K)+1,:));
                 if ~suppress
                     plot(cs, 'b');
                     plot(cs_s, 'r');
+                    plot(cs_ro, 'g');
                 end
                 ind(i) = find(cs > 0.5, 1);
             end
@@ -76,8 +79,9 @@ classdef Cloud
             if ~suppress
                 xlabel 'Number of PCs'
                 ylabel 'Fraction of \Delta\mu within the subspace'
-                text(170, 0.2, 'Real', 'Color', 'b');
-                text(170, 0.15, 'Shuffled', 'Color', 'r');
+                text(160, 0.2, 'Real', 'Color', 'b');
+                text(160, 0.15, 'Shuffled', 'Color', 'r');
+                text(160, 0.1, 'Unordered', 'Color', 'g');
                 title 'Showing all spatial bins'
             end
         end
@@ -109,7 +113,7 @@ classdef Cloud
             cos_overlap = zeros(2*o.K);
             for i = 1:2*o.K
                 for j = 1:2*o.K
-                    cos_overlap(i,j) = cos(subspace(o.evecs{i}(:,1:o.N), o.evecs{j}(:,1:o.N)));
+                    cos_overlap(i,j) = mean(cos(subspacea(o.evecs{i}(:,1:o.N), o.evecs{j}(:,1:o.N))));
                 end
             end
             
@@ -120,7 +124,7 @@ classdef Cloud
             xlabel 'Spatial bin';
             ylabel 'Spatial bin';
             colorbar;
-            title(sprintf('Cos overlap between %dD noise subspaces', o.N));
+            title(sprintf('Mean canon corr between\n%dD noise subspaces', o.N));
             axis image
         end
         
