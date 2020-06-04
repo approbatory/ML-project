@@ -1850,7 +1850,7 @@ classdef DecodeTensor < handle
                 data_path = p;
             elseif isempty(data_path) && isa(data_path, 'double')
                 if ispc
-                    data_path = '../../../Box/share';
+                    data_path = 'D:\Box Sync\share';
                 else
                     data_path = '../linear_track';
                 end
@@ -1911,6 +1911,11 @@ classdef DecodeTensor < handle
                 'Mouse2011', 'Mouse2021', 'Mouse2025', 'Mouse2029'};
             m = unique(m);
             c = Utils.names_to_colors(mouse_list, m, varargin{:});
+        end
+        
+        function o = c(idx, varargin)
+            x = DecodeTensor.cons_filt(idx, true);
+            o = DecodeTensor(x, varargin{:});
         end
     end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

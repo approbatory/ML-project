@@ -111,10 +111,11 @@ classdef PanelGenerator
             p.addOptional('text_coords', [], @isnumeric);
             p.addOptional('show_adjr2', true, @islogical);
             p.addOptional('fix_expo', false, @islogical);
+            p.addParameter('dotsize', 4, @isnumeric);
             p.parse(varargin{:});
             
             %figure;
-            dotsize = 4;
+            dotsize = p.Results.dotsize;
             
             %InfoLimit = N_fit.*I0_fit;
             %InfoLimit_conf = abs(InfoLimit).*sqrt((N_conf./N_fit).^2 + (I0_conf./I0_fit).^2);
@@ -192,7 +193,8 @@ classdef PanelGenerator
             p = inputParser;
             p.addOptional('xlim', [], @isnumeric);
             p.addOptional('text_coords', [], @isnumeric);
-            p.addOptional('show_adjr2', true, @islogical)
+            p.addOptional('show_adjr2', true, @islogical);
+            p.addParameter('dotsize', 4, @isnumeric);
             p.parse(varargin{:});
             
             mouse_names = unique(mouse_list);
