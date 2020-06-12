@@ -16,11 +16,13 @@ g_ = good_fit_filter;
 %% precompute single cell dp2
 save_fname = 'single_cell_dp2.mat';
 if ~exist(save_fname, 'file')
-    parfor i = 1:107
+    progressbar('sess...');
+    for i = 1:107
         [single_dp2(i), single_dp2_sem(i)] = DecodeTensor.cons_filt(i).single_cell_d_primes2;
-        fprintf('*');
+        %fprintf('*');
+        progressbar(i/107);
     end
-    fprintf('\ndone\n');
+    %fprintf('\ndone\n');
     save(save_fname, 'single_dp2', 'single_dp2_sem');
 else
     load(save_fname);

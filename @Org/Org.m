@@ -11,8 +11,15 @@ classdef Org < handle
     
     methods
         function o = Org
-            o.vars = struct;
-            o.save_me;
+            if ~exist(o.storage_file, 'file')
+                o.vars = struct;
+                o.save_me;
+            else
+                L = load(o.storage_file);
+                o.vars = L.vars_;
+                o.mouse = L.mouse_;
+                o.derived = L.derived_;
+            end
         end
         
         function save_me(o)
@@ -41,14 +48,47 @@ classdef Org < handle
         
         [res, res_sem] = per_sess(o, varname)
         
-        function make_derived(o, varname, varlist, func)
+        function make_derived(o, varname, varlist, func, saveit)
             o.derived.(varname).v = varlist;
             o.derived.(varname).f = func;
+            
+            if exist('saveit', 'var') && saveit
+                o.vars.(varname) = o.fetch(varname);
+            end
+        end
+        
+        function make_var_per_sess(o, varname, varlist, func)
+            for i = 1:o.total_sessions
+                for j = 1:numel(varlist)
+                    my_var = varlist{j};
+                    %invar{j} = o.vars.(my_var){i};
+                    t_ = o.fetch(my_var);
+                    invar{j} = t_{i};
+                end
+                outvar{i} = func(invar{:});
+            end
+            o.vars.(varname) = outvar;
         end
         
         [mat,sem,varnames,mat_agg,sem_agg] = predictor_matrix(o)
         
-        T = correspondence(o)
+        [T, asymp_ratio, mat, varnames] = correspondence(o, use_n50)
+        
+        com_dist_vs_corr(o)
+        
+        function correlogram(o, var1, var2, aggregate)
+            [v1, v1sem] = o.per_sess(var1);
+            [v2, v2sem] = o.per_sess(var2);
+            if aggregate
+                func = @PanelGenerator.plot_regress_averaged;
+            else
+                func = @PanelGenerator.plot_regress;
+            end
+            func(v1(:), v2(:), v1sem(:)*1.96, v2sem(:)*1.96, o.mouse, 'r', 'dotsize', 10);
+            xlabel(esc(var1));
+            ylabel(esc(var2));
+        end
+        
     end
 
 

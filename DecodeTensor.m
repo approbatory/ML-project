@@ -2119,7 +2119,7 @@ classdef DecodeTensor < handle
             noise_res = DecodeTensor.noise_properties_diet(sub_tensor, o.tr_dir, true); %using correlation matrix for PCA
         end
         
-        function mean_cell_snr = single_cell_d_primes2(o)
+        function [mean_cell_snr, sem_cell_snr] = single_cell_d_primes2(o)
             %[N, K, T] = size(o.data_tensor);
             signal_leftward = diff(mean(o.data_tensor(:,:,o.tr_dir==-1), 3), 1, 2).^2;
             signal_rightward = diff(mean(o.data_tensor(:,:,o.tr_dir==1), 3), 1, 2).^2;
@@ -2134,7 +2134,9 @@ classdef DecodeTensor < handle
             dp2_leftward = signal_leftward ./ noise_leftward;
             dp2_rightward = signal_rightward ./ noise_rightward;
             
-            mean_cell_snr = mean(median([dp2_leftward dp2_rightward], 2));
+            mean_over_bins = mean([dp2_leftward dp2_rightward], 2); %used to be median
+            mean_cell_snr = mean(mean_over_bins);
+            sem_cell_snr = sem(mean_over_bins);
         end
         
         function X = get_bin_resp(o, bin_index, direction)

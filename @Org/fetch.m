@@ -1,8 +1,13 @@
-function res = fetch(o, varname)
+function res = fetch(o, varname, verbose)
+if ~exist('verbose', 'var')
+    verbose = false;
+end
 
 if isfield(o.vars, varname)
     res = o.vars.(varname);
-    fprintf('Fetched a saved variable: %s\n', varname);
+    if verbose
+        fprintf('Fetched a saved variable: %s\n', varname);
+    end
 elseif isfield(o.derived, varname)
     each = @(f,c)cellfun(f,c,'UniformOutput',false);
     
@@ -24,9 +29,13 @@ elseif isfield(o.derived, varname)
             res{sess_idx}{b_idx} = func(v{:});
         end
     end
-    fprintf('Fetched a derived variable: %s\n', varname);
+    if verbose
+        fprintf('Fetched a derived variable: %s\n', varname);
+    end
 else
-    fprintf('The variable %s does not exist: %s\n', varname);
+    if verbose
+        fprintf('The variable %s does not exist: %s\n', varname);
+    end
     res = [];
     error('no such var');
 end

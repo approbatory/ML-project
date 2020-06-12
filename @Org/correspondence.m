@@ -1,16 +1,29 @@
-function T = correspondence(o)
+function [T, asymp_ratio, mat, varnames] = correspondence(o, use_n50)
 
 load asymp_snr_values.mat
+load single_cell_dp2.mat
 
 [mat, sem, varnames, mat_agg, sem_agg] = o.predictor_matrix;
 
-[asymp_ratio, asymp_ratio_conf] = ...
-    uncertain_divide(asymp_snr, asymp_snr_conf,...
-    asymp_snr_shuf, asymp_snr_shuf_conf);
-
-%[asymp_worst, asymp_worst_conf] = ...
-%    worst_divide(asymp_snr, asymp_snr_conf,...
-%    asymp_snr_shuf, asymp_snr_shuf_conf);
+if ~use_n50
+    [asymp_ratio, asymp_ratio_conf] = ...
+        uncertain_divide(asymp_snr, asymp_snr_conf,...
+        asymp_snr_shuf, asymp_snr_shuf_conf);
+    
+    %[asymp_worst, asymp_worst_conf] = ...
+    %    worst_divide(asymp_snr, asymp_snr_conf,...
+    %    asymp_snr_shuf, asymp_snr_shuf_conf);
+else
+    [asymp_ratio, asymp_ratio_conf] = ...
+        uncertain_divide(asymp_snr, asymp_snr_conf,...
+        single_dp2, single_dp2_sem*1.96);
+    
+    %asymp_ratio = asymp_snr;
+    %asymp_ratio_conf = asymp_snr_conf;
+    
+    %asymp_ratio = asymp_snr_shuf;
+    %asymp_ratio_conf = asymp_snr_shuf_conf;
+end
 [asymp_ratio_agg, asymp_ratio_conf_agg] = agg(o.mouse, asymp_ratio', asymp_ratio_conf');
 
 conf = sem * 1.96;

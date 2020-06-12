@@ -11,7 +11,7 @@ num_dims(num_dims == 0) = [];
 n = min(num_dims);
 
 V = cellfun(@(x)sel_(x,n), V, 'UniformOutput', false);
-
+V = cellfun(@(x)x(:), V, 'UniformOutput', false);
 arr = cell2mat(V);
 %imagesc(arr);
 

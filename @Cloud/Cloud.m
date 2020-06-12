@@ -98,6 +98,12 @@ classdef Cloud
         varargout = pc_signal_variance(o)
         
         varargout = signal_density_demo(o, varargin)
+        
+        function n = num_neurons(o)
+            n = size(o.dt.data_tensor,1);
+        end
+        
+        [dp2_train, dp2_test] = pls_demo(o)
     end
     
     methods(Static)

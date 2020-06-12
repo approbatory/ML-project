@@ -206,8 +206,8 @@ classdef PanelGenerator
                 f_ = strcmp(mouse_names{m_i}, mouse_list);
                 x_(m_i) = mean(x(f_));
                 y_(m_i) = mean(y(f_));
-                x_conf_(m_i) = sqrt(1.96.^2*var(x(f_)) + mean(x_conf(f_).^2));
-                y_conf_(m_i) = sqrt(1.96.^2*var(y(f_)) + mean(y_conf(f_).^2));
+                x_conf_(m_i) = sqrt(mean(x_conf(f_).^2));%sqrt(1.96.^2*var(x(f_)) + mean(x_conf(f_).^2));
+                y_conf_(m_i) = sqrt(mean(y_conf(f_).^2));%sqrt(1.96.^2*var(y(f_)) + mean(y_conf(f_).^2));
                 m_ = mouse_list(f_);
                 
                 %adjr2_list(m_i) = PanelGenerator.plot_regress(x_, y_,...
