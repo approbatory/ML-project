@@ -2011,6 +2011,10 @@ classdef DecodeTensor < handle
             n = floor(size(o.data_tensor,3)/2);
         end
         
+        function n = n_min_trials(o)
+            n = min(sum(o.tr_dir==1), sum(o.tr_dir==-1));
+        end
+        
         function [X, ks] = get_dataset(o)
             [X, ks] = DecodeTensor.tensor2dataset(o.data_tensor, o.tr_dir);
         end

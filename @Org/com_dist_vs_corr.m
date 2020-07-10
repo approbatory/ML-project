@@ -8,6 +8,9 @@ total_noise_corr_left = agg('noise_corr_avg_left');
 total_sig_corr_right = agg('sig_corr_right');
 total_sig_corr_left = agg('sig_corr_left');
 
+total_corr_right = agg('tot_corr_right');
+total_corr_left = agg('tot_corr_left');
+
 total_com_dist_right = agg('com_dist_right');
 total_com_dist_left = agg('com_dist_left');
 
@@ -17,37 +20,53 @@ total_mode_dist_left = agg('mode_dist_left');
 bin_params = {0,10,40};
 
 figure;
-subplot(2,2,1);
+subplot(3,2,1);
 [d,c,cs] = show_vars(total_com_dist_right, total_noise_corr_right,...
     bin_params{:});
-errorbar(d,c,cs);
+serrorbar(d,c,cs);
 l_ = refline(0,0); l_.Color = 'k';
 xlabel 'COM dist. right (bins)'
 ylabel 'Noise corr. right'
 
-subplot(2,2,2);
+subplot(3,2,2);
 [d,c,cs] = show_vars(total_com_dist_left, total_noise_corr_left,...
     bin_params{:});
-errorbar(d,c,cs);
+serrorbar(d,c,cs);
 l_ = refline(0,0); l_.Color = 'k';
 xlabel 'COM dist. left (bins)'
 ylabel 'Noise corr. left'
 
-subplot(2,2,3);
+subplot(3,2,3);
 [d,c,cs] = show_vars(total_com_dist_right, total_sig_corr_right,...
     bin_params{:});
-errorbar(d,c,cs);
+serrorbar(d,c,cs);
 l_ = refline(0,0); l_.Color = 'k';
 xlabel 'COM dist. right (bins)'
 ylabel 'Signal corr. right'
 
-subplot(2,2,4);
+subplot(3,2,4);
 [d,c,cs] = show_vars(total_com_dist_left, total_sig_corr_left,...
     bin_params{:});
-errorbar(d,c,cs);
+serrorbar(d,c,cs);
 l_ = refline(0,0); l_.Color = 'k';
 xlabel 'COM dist. left (bins)'
 ylabel 'Signal corr. left'
+
+subplot(3,2,5);
+[d,c,cs] = show_vars(total_com_dist_right, total_corr_right,...
+    bin_params{:});
+serrorbar(d,c,cs);
+l_ = refline(0,0); l_.Color = 'k';
+xlabel 'COM dist. right (bins)'
+ylabel 'Total corr. right'
+
+subplot(3,2,6);
+[d,c,cs] = show_vars(total_com_dist_left, total_corr_left,...
+    bin_params{:});
+serrorbar(d,c,cs);
+l_ = refline(0,0); l_.Color = 'k';
+xlabel 'COM dist. left (bins)'
+ylabel 'Total corr. left'
 
 suptitle('All sessions, using COM distance');
 
@@ -55,37 +74,54 @@ suptitle('All sessions, using COM distance');
 
 bin_params = {0,20,20};
 figure;
-subplot(2,2,1);
+subplot(3,2,1);
 [d,c,cs] = show_vars(total_mode_dist_right, total_noise_corr_right,...
     bin_params{:});
-errorbar(d,c,cs);
+serrorbar(d,c,cs);
 l_ = refline(0,0); l_.Color = 'k';
 xlabel 'Peak dist. right (bins)'
 ylabel 'Noise corr. right'
 
-subplot(2,2,2);
+subplot(3,2,2);
 [d,c,cs] = show_vars(total_mode_dist_left, total_noise_corr_left,...
     bin_params{:});
-errorbar(d,c,cs);
+serrorbar(d,c,cs);
 l_ = refline(0,0); l_.Color = 'k';
 xlabel 'Peak dist. left (bins)'
 ylabel 'Noise corr. left'
 
-subplot(2,2,3);
+subplot(3,2,3);
 [d,c,cs] = show_vars(total_mode_dist_right, total_sig_corr_right,...
     bin_params{:});
-errorbar(d,c,cs);
+serrorbar(d,c,cs);
 l_ = refline(0,0); l_.Color = 'k';
 xlabel 'Peak dist. right (bins)'
 ylabel 'Signal corr. right'
 
-subplot(2,2,4);
+subplot(3,2,4);
 [d,c,cs] = show_vars(total_mode_dist_left, total_sig_corr_left,...
     bin_params{:});
-errorbar(d,c,cs);
+serrorbar(d,c,cs);
 l_ = refline(0,0); l_.Color = 'k';
 xlabel 'Peak dist. left (bins)'
 ylabel 'Signal corr. left'
+
+subplot(3,2,5);
+[d,c,cs] = show_vars(total_mode_dist_right, total_corr_right,...
+    bin_params{:});
+serrorbar(d,c,cs);
+l_ = refline(0,0); l_.Color = 'k';
+xlabel 'Peak dist. right (bins)'
+ylabel 'Total corr. right'
+
+subplot(3,2,6);
+[d,c,cs] = show_vars(total_mode_dist_left, total_corr_left,...
+    bin_params{:});
+serrorbar(d,c,cs);
+l_ = refline(0,0); l_.Color = 'k';
+xlabel 'Peak dist. left (bins)'
+ylabel 'Total corr. left'
+
 
 suptitle('All sessions, using peak (mode) distance');
 end

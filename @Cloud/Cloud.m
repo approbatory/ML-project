@@ -23,15 +23,23 @@ classdef Cloud
     end
     
     methods
-        function o = Cloud(i, use_corr)
+        function o = Cloud(i, use_corr, use_events)
             if ~exist('use_corr', 'var')
                 use_corr = false;
+            end
+            
+            if ~exist('use_events', 'var')
+                use_events = false;
             end
             
             if isa(i, 'DecodeTensor')
                 o.dt = i;
             else
-                o.dt = DecodeTensor.cons_filt(i);
+                if use_events
+                    o.dt = DecodeTensor(DecodeTensor.cons_filt(i,true), 'IED');
+                else
+                    o.dt = DecodeTensor.cons_filt(i);
+                end
             end
             
             n = @(x)x./norm(x);
@@ -104,6 +112,7 @@ classdef Cloud
         end
         
         [dp2_train, dp2_test] = pls_demo(o)
+        varargout = eigen_snr_crossval(o)
     end
     
     methods(Static)

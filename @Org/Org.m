@@ -72,23 +72,39 @@ classdef Org < handle
         
         [mat,sem,varnames,mat_agg,sem_agg] = predictor_matrix(o)
         
-        [T, asymp_ratio, mat, varnames] = correspondence(o, use_n50)
+        [T, asymp_ratio, mat, varnames] = correspondence(o, use_n50, plot_all)
         
         com_dist_vs_corr(o)
         
-        function correlogram(o, var1, var2, aggregate)
-            [v1, v1sem] = o.per_sess(var1);
-            [v2, v2sem] = o.per_sess(var2);
+        function adjr2 = correlogram(o, var1, var2, aggregate)
+            if iscell(var1)
+                v1 = var1{1}; v1sem = var1{2};
+            else
+                [v1, v1sem] = o.per_sess(var1);
+            end
+            if iscell(var2)
+                v2 = var2{1}; v2sem = var2{2};
+            else
+                [v2, v2sem] = o.per_sess(var2); 
+            end
             if aggregate
                 func = @PanelGenerator.plot_regress_averaged;
             else
                 func = @PanelGenerator.plot_regress;
             end
-            func(v1(:), v2(:), v1sem(:)*1.96, v2sem(:)*1.96, o.mouse, 'r', 'dotsize', 10);
-            xlabel(esc(var1));
-            ylabel(esc(var2));
+            adjr2 = func(v1(:), v2(:), v1sem(:)*1.96, v2sem(:)*1.96, o.mouse, 'r', 'dotsize', 10);
+            if ~iscell(var1)
+                xlabel(esc(var1));
+            end
+            if ~iscell(var2)
+                ylabel(esc(var2));
+            end
         end
         
+    end
+    
+    methods(Static)
+        eigen_snr_crossval_aggregation
     end
 
 

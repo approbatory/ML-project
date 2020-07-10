@@ -1,9 +1,10 @@
-function [T, asymp_ratio, mat, varnames] = correspondence(o, use_n50)
+function [T, asymp_ratio, mat, varnames] = correspondence(o, use_n50, plot_all)
 
 load asymp_snr_values.mat
 load single_cell_dp2.mat
+load decoding_curves_fits.mat
 
-[mat, sem, varnames, mat_agg, sem_agg] = o.predictor_matrix;
+[mat, sem_, varnames, mat_agg, sem_agg] = o.predictor_matrix;
 
 if ~use_n50
     [asymp_ratio, asymp_ratio_conf] = ...
@@ -14,9 +15,34 @@ if ~use_n50
     %    worst_divide(asymp_snr, asymp_snr_conf,...
     %    asymp_snr_shuf, asymp_snr_shuf_conf);
 else
-    [asymp_ratio, asymp_ratio_conf] = ...
-        uncertain_divide(asymp_snr, asymp_snr_conf,...
-        single_dp2, single_dp2_sem*1.96);
+    %asymp_ratio = I0_fit * N_fit ./ (I0_fit_s * N_fit_s);
+    
+    if true
+        [I0N, I0N_c] = uncertain_multiply(I0_fit, I0_conf, N_fit, N_conf);
+        [I0N_s, I0N_c_s] = uncertain_multiply(I0_fit_s, I0_conf_s, N_fit_s, N_conf_s);
+        [asymp_ratio, asymp_ratio_conf] = uncertain_divide(I0N, I0N_c, I0N_s, I0N_c_s);
+    end
+    
+    %asymp_ratio = N_fit; asymp_ratio_conf = N_conf;
+    if false
+        chosen_size = 150;
+        for i = 1:numel(sess)
+            ix = find(n_sizes{i} == chosen_size, 1);
+            assert(~isempty(ix));
+            imse_at_size(i) = mean(imse{i}(:,ix));
+            imse_at_size_conf(i) = sem(imse{i}(:,ix));
+            
+            imse_s_at_size(i) = mean(imse_s{i}(:,ix));
+            imse_s_at_size_conf(i) = sem(imse_s{i}(:,ix));
+        end
+        [asymp_ratio, asymp_ratio_conf] = ...
+            uncertain_divide(imse_at_size, imse_at_size_conf,...
+            imse_s_at_size, imse_s_at_size_conf);
+        asymp_ratio_conf = 1.96 * asymp_ratio_conf;
+    end
+    %[asymp_ratio, asymp_ratio_conf] = ...
+    %    uncertain_divide(asymp_snr, asymp_snr_conf,...
+    %    single_dp2, single_dp2_sem*1.96);
     
     %asymp_ratio = asymp_snr;
     %asymp_ratio_conf = asymp_snr_conf;
@@ -26,7 +52,7 @@ else
 end
 [asymp_ratio_agg, asymp_ratio_conf_agg] = agg(o.mouse, asymp_ratio', asymp_ratio_conf');
 
-conf = sem * 1.96;
+conf = sem_ * 1.96;
 conf_agg = sem_agg * 1.96;
 
 for j = 1:numel(varnames)
@@ -46,8 +72,14 @@ T = table(pearson, pearson_p, spearman, spearman_p,...
     pearson_agg, pearson_p_agg, spearman_agg, spearman_p_agg,...
     kendall_agg, kendall_p_agg, adjr2_agg, 'RowNames', varnames);
 
-
-
+if plot_all
+    for j = 1:numel(varnames)
+        figure;
+        o.correlogram({mat(:,j), sem_(:,j)}, {asymp_ratio, asymp_ratio_conf./1.96}, true);
+        xlabel(esc(varnames{j}));
+        ylabel('Asymp ratio');
+    end
+end
 end
 
 function [r, rc] = agg(mouse, x, xc)
@@ -65,6 +97,11 @@ end
 function [quotient, quotient_uncertainty] = uncertain_divide(x, xc, y, yc)
 quotient = x./y;
 quotient_uncertainty = abs(x./y).*sqrt((xc./x).^2 + (yc./y).^2);
+end
+
+function [product, product_uncertainty] = uncertain_multiply(x, xc, y, yc)
+product = x.*y;
+product_uncertainty = abs(product) .* sqrt((xc./x).^2 + (yc./y).^2);
 end
 
 function [quotient, quotient_uncertainty] = worst_divide(x, xc, y, yc)

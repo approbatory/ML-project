@@ -1,0 +1,295 @@
+#LyX 2.3 created this file. For more info see http://www.lyx.org/
+\lyxformat 544
+\begin_document
+\begin_header
+\save_transient_properties true
+\origin unavailable
+\textclass article
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman "default" "default"
+\font_sans "default" "default"
+\font_typewriter "default" "default"
+\font_math "auto" "auto"
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100 100
+\font_tt_scale 100 100
+\use_microtype false
+\use_dash_ligatures true
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\use_minted 0
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\is_math_indent 0
+\math_numbering_side default
+\quotes_style english
+\dynamic_quotes 0
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Subsection*
+Approximate analytic connection of the asymptotic ratio to signal density
+\end_layout
+
+\begin_layout Standard
+Signal density is defined as:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\text{Signal density}=\frac{1}{N}\cdot\frac{\left(\sum_{k}(\Delta\mu_{k})^{2}\right)^{2}}{\sum_{k}(\Delta\mu_{k})^{4}}=:\frac{1}{N}\cdot\frac{M_{2}^{2}}{M_{4}}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+I am using 
+\begin_inset Formula $M_{2}$
+\end_inset
+
+ and 
+\begin_inset Formula $M_{4}$
+\end_inset
+
+ as short notation for the sums of squares or fourth-powers of the elements
+ of 
+\begin_inset Formula $\Delta\mu$
+\end_inset
+
+ over neurons.
+\end_layout
+
+\begin_layout Standard
+The asymptotic ratio is the ratio of the asymptotic SNR along 
+\begin_inset Formula $\Delta\mu$
+\end_inset
+
+ to the shuffled asymptotic SNR along 
+\begin_inset Formula $\Delta\mu$
+\end_inset
+
+.
+ When I checked those two variables separately (not as a ratio), there was
+ no correlation to the asymptotic SNR, but there was a correlation to the
+ shuffled asymptotic SNR.
+ Let's inspect more closely the shuffled asymptotic SNR.
+\end_layout
+
+\begin_layout Subsubsection*
+Shuffled asymptotic SNR
+\end_layout
+
+\begin_layout Standard
+The shuffled asymptotic SNR is the ratio of the rate of change of the signal,
+ which is 
+\begin_inset Formula 
+\[
+\text{Signal slope}=\frac{1}{N}\cdot\sum_{k}(\Delta\mu_{k})^{2}=\frac{1}{N}\cdot M_{2}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+to the rate of change of the noise, which is harder to determine because
+ it appears to converge to a constant value or nearly constant value (it
+ depends on the properties of the distribution of signal and noise among
+ neurons).
+\end_layout
+
+\begin_layout Standard
+The noise along 
+\begin_inset Formula $\Delta\mu$
+\end_inset
+
+ in the shuffled case (idealized to mean that there are no noise correlations
+ at all) is:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\text{Noise }=\frac{\sum_{k}(\Delta\mu_{k})^{2}\sigma_{k}^{2}}{\sum_{k}(\Delta\mu_{k})^{2}}=\frac{\sum_{k}(\Delta\mu_{k})^{2}\sigma_{k}^{2}}{M_{2}}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+In other words, it is the weighted average of the noise variances 
+\begin_inset Formula $\sigma_{k}^{2}$
+\end_inset
+
+ based on the signal quantities 
+\begin_inset Formula $(\Delta\mu_{k})^{2}$
+\end_inset
+
+.
+ Since it is a weighted average, it is bounded above by the maximum value
+ of the random variable 
+\begin_inset Formula $\sigma_{k}^{2}\sim\text{Dist}$
+\end_inset
+
+, where 
+\begin_inset Formula $k$
+\end_inset
+
+ is a random neuron and Dist is the distribution from which the noise variance
+ of a random neuron comes from.
+ If we reasonably assume that individual neurons will carry only up to a
+ maximal amount of noise then the noise in the signal direction will necessarily
+ converge to a constant.
+ If we measure the slope in the asymptotic regime it must be 0.
+ The way we are calculating the slope of the noise is by fitting a line
+ to all noise values from ensembles larger than 100 neurons.
+ Of course, the asymptotic regime can never be exactly reached, so the values
+ of the slopes of the noise in the shuffled case would be a nonzero finite
+ slope value that captures the rate of convergence to the asymptotic value.
+ It is reasonable to assume that this quantity is proportional to the value
+ of the asymptotic noise itself, if the noise in the signal direction of
+ all sessions converges at a similar rate per additional neuron in the ensemble.
+ Let us denote the constant of proportionality as 
+\begin_inset Formula $\gamma$
+\end_inset
+
+.
+ Now the estimated rate of change of noise is:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\text{Noise slope}=\gamma\frac{\sum_{k}(\Delta\mu_{k})^{2}\sigma_{k}^{2}}{M_{2}}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We take the ratio of the signal slope to the noise slope to get the estimated
+ asymptotic SNR:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\text{Shuffled asymp. SNR}=\frac{\text{Signal slope}}{\text{Noise slope}}=\frac{M_{2}/N}{\gamma\sum_{k}(\Delta\mu_{k})^{2}\sigma_{k}^{2}/M_{2}}=\frac{1}{\gamma N}\cdot\frac{M_{2}^{2}}{\sum_{k}(\Delta\mu_{k})^{2}\sigma_{k}^{2}}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+This quantity will become proportional to signal density if we include another
+ assumption, that 
+\begin_inset Formula $\sigma_{k}^{2}\propto(\Delta\mu_{k})^{2}$
+\end_inset
+
+.
+ This assumption is almost certainly false, since the noise density is approxima
+tely twice the signal density, whereas proportionality would imply that
+ they should be equal.
+ However, a reasonable assumption is that 
+\begin_inset Formula $\sigma_{k}^{2}\sim(\Delta\mu_{k})^{2}$
+\end_inset
+
+, meaning that they are correlated.
+ If that is the case, then the term in the denominator of the shuffled asymptoti
+c SNR, 
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\xout off
+\uuline off
+\uwave off
+\noun off
+\color none
+
+\begin_inset Formula $\sum_{k}(\Delta\mu_{k})^{2}\sigma_{k}^{2}\sim M_{4}$
+\end_inset
+
+ becomes correlated with 
+\begin_inset Formula $M_{4}$
+\end_inset
+
+, which in turn means that shuffled asymptotic SNR is correlated with signal
+ density.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\text{Shuffled asymp. SNR}\sim\frac{1}{\gamma N}\cdot\frac{M_{2}^{2}}{M_{4}}\sim\text{Signal density}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\end_body
+\end_document
