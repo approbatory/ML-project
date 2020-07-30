@@ -2,6 +2,10 @@ function res_list = mouse_all_sess(o, varname, mouse_name)
 
 if isempty(mouse_name)
     filt_sess = true(size(o.mouse));
+elseif ischar(mouse_name) && strcmp(mouse_name, 'restrict')
+    filt_sess = o.default_filt';
+elseif iscell(mouse_name) && strcmp(mouse_name{2}, 'restrict')
+    filt_sess = strcmp(o.mouse, mouse_name{1}) & o.default_filt';
 else
     filt_sess = strcmp(o.mouse, mouse_name);
 end

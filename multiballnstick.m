@@ -45,6 +45,7 @@ if p.Results.logscale
     set(gca, 'YScale', 'log');
 end
 
+
 yl_ = ylim;
 xl_ = xlim;
 if p.Results.logscale

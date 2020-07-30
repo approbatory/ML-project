@@ -1821,6 +1821,23 @@ classdef DecodeTensor < handle
             end
         end
         
+        function meta = all_session_metadata
+            N = 239;
+            [num_neurons, num_trials_left, num_trials_right] = deal(zeros(N,1));
+            [mouse_name, source_path] = deal(cell(N,1));
+            progressbar('All sessions (239)...');
+            for i = 1:N
+                d = DecodeTensor.cons(i);
+                num_neurons(i) = size(d.data_tensor,1);
+                num_trials_left(i) = sum(d.tr_dir == -1);
+                num_trials_right(i) = sum(d.tr_dir == 1);
+                mouse_name{i} = d.mouse_name;
+                source_path{i} = d.source_path;
+                progressbar(i/N);
+            end
+            meta = table(mouse_name, num_neurons, num_trials_left, num_trials_right, source_path);
+        end
+        
         function o = cons_filt(index_filt, no_create)
             if ~exist('no_create', 'var')
                 no_create = false;

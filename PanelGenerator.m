@@ -125,11 +125,13 @@ classdef PanelGenerator
             hold on;
             scatter(x, y, dotsize, DecodeTensor.mcolor(mouse_names, false), 'filled');
             
-            [pearson, pearson_p] = corr(x(:), y(:), 'type', 'Pearson');
-            [kendall, kendall_p] = corr(x(:), y(:), 'type', 'Kendall');
-            [spearman, spearman_p] = corr(x(:), y(:), 'type', 'Spearman');
-            fprintf('Pearson rho: %f, p=%f\nSpearman rho: %f, p=%f\nKendall tau: %f, p=%f\n',...
-                pearson, pearson_p, spearman, spearman_p, kendall, kendall_p);
+            xlim([min(x) - 0.1*range(x), max(x) + 0.1*range(x)]);
+            ylim([min(y) - 0.1*range(y), max(y) + 0.1*range(y)]);
+            %[pearson, pearson_p] = corr(x(:), y(:), 'type', 'Pearson');
+            %[kendall, kendall_p] = corr(x(:), y(:), 'type', 'Kendall');
+            %[spearman, spearman_p] = corr(x(:), y(:), 'type', 'Spearman');
+            %fprintf('Pearson rho: %f, p=%f\nSpearman rho: %f, p=%f\nKendall tau: %f, p=%f\n',...
+            %    pearson, pearson_p, spearman, spearman_p, kendall, kendall_p);
             [fitresult, adjr2] = Utils.regress_line(x, y);
             h_ = plot(fitresult); legend off
             h_.Color = color;

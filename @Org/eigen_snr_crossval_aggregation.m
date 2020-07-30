@@ -1,8 +1,15 @@
-function eigen_snr_crossval_aggregation
+function eigen_snr_crossval_aggregation(org)
 
 load eigen_snr_crossval_save.mat
 
-
+filt = org.default_filt;
+mouse_ = org.mouse(filt);
+dp2_test = dp2_test(filt);
+dp2_train = dp2_train(filt);
+noise_test = noise_test(filt);
+noise_train = noise_train(filt);
+signal_test = signal_test(filt);
+signal_train = signal_train(filt);
 %%
 [dp2_test_agg, dp2_test_agg_sem] = jagged_agg(dp2_test);
 [dp2_train_agg, dp2_train_agg_sem] = jagged_agg(dp2_train);
@@ -100,8 +107,9 @@ legend boxoff
 legend location north
 
 %% dp2
-figure;
-[~, mouse_] = DecodeTensor.filt_sess_id_list;
+max_pos = [0.0010    0.0383    2.1333    1.0907]*1e3;
+figure('Position', max_pos);
+%[~, mouse_] = DecodeTensor.filt_sess_id_list;
 my_mice = unique(mouse_);
 for m_i = 1:numel(my_mice)
     my_mouse = my_mice{m_i};
@@ -115,8 +123,8 @@ end
 
 
 %% signal
-figure;
-[~, mouse_] = DecodeTensor.filt_sess_id_list;
+figure('Position', max_pos);
+%[~, mouse_] = DecodeTensor.filt_sess_id_list;
 my_mice = unique(mouse_);
 for m_i = 1:numel(my_mice)
     my_mouse = my_mice{m_i};
@@ -129,8 +137,8 @@ for m_i = 1:numel(my_mice)
 end
 
 %% noise
-figure;
-[~, mouse_] = DecodeTensor.filt_sess_id_list;
+figure('Position', max_pos);
+%[~, mouse_] = DecodeTensor.filt_sess_id_list;
 my_mice = unique(mouse_);
 for m_i = 1:numel(my_mice)
     my_mouse = my_mice{m_i};

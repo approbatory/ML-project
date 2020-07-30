@@ -1,4 +1,4 @@
-function [T, asymp_ratio, mat, varnames] = correspondence(o, use_n50, plot_all)
+function [T, vartable, rank_table] = correspondence(o, use_n50, plot_all)
 
 load asymp_snr_values.mat
 load single_cell_dp2.mat
@@ -17,13 +17,15 @@ if ~use_n50
 else
     %asymp_ratio = I0_fit * N_fit ./ (I0_fit_s * N_fit_s);
     
-    if true
+    if false
         [I0N, I0N_c] = uncertain_multiply(I0_fit, I0_conf, N_fit, N_conf);
         [I0N_s, I0N_c_s] = uncertain_multiply(I0_fit_s, I0_conf_s, N_fit_s, N_conf_s);
         [asymp_ratio, asymp_ratio_conf] = uncertain_divide(I0N, I0N_c, I0N_s, I0N_c_s);
     end
     
     %asymp_ratio = N_fit; asymp_ratio_conf = N_conf;
+    asymp_ratio = 1./N_fit; asymp_ratio_conf = N_conf ./ N_fit.^2;
+    
     if false
         chosen_size = 150;
         for i = 1:numel(sess)
@@ -79,6 +81,20 @@ if plot_all
         xlabel(esc(varnames{j}));
         ylabel('Asymp ratio');
     end
+end
+
+
+vartable = array2table([mat, 1./asymp_ratio', asymp_ratio'], 'VariableNames', [varnames, {'N50', 'invN50'}]);
+vartable = [table(mouse_names', 'VariableNames', {'Mouse'}), vartable];
+
+table_var_names = vartable.Properties.VariableNames;
+rank_table = table(mouse_names', 'VariableNames', {'Mouse'});
+for i = 1:numel(table_var_names)
+    name = table_var_names{i};
+    if strcmp(name, 'Mouse')
+        continue;
+    end
+    rank_table = [rank_table, table(value_rank(vartable.(name)), 'VariableNames', {name})];
 end
 end
 
