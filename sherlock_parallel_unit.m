@@ -4,15 +4,17 @@ my_rand_seed = str2double(random_str);
 %distance_cutoff = str2double(distance_cutoff);
 rng(my_rand_seed);
 fprintf('random seed %d\n\n', my_rand_seed);
-addpath utils decoding
+setup
+DecodeTensor.linear_track_path('/oak/stanford/groups/mschnitz/hazon/lintrack_home');
 try
     %Analyzer.dispatch(source, numer, denom);
     %Analyzer.dispatch_update(source, numer, denom);
     %test_selector(str2num(source));
     %DecodeTensor.dispatch_datasize(str2double(source));
     %DecodeTensor.dispatch(str2double(source), is_padded, distance_cutoff);
-    DecodeTensor.dispatch_filt(str2double(source), 'IED');
+    %DecodeTensor.dispatch_filt(str2double(source), 'IED');
     %%DecodeTensor.dispatch_datasize_filt(str2double(source));
+    SessManager.dispatch_base(str2double(source));
 catch me
     fprintf('%s / %s\n', me.identifier, me.message);
 end
