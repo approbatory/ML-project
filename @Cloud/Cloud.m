@@ -35,10 +35,11 @@ classdef Cloud
             if isa(i, 'DecodeTensor')
                 o.dt = i;
             else
+                sm = SessManager;
                 if use_events
-                    o.dt = DecodeTensor(DecodeTensor.cons_filt(i,true), 'IED');
+                    o.dt = DecodeTensor(sm.cons_usable(i,true), 'IED');
                 else
-                    o.dt = DecodeTensor.cons_filt(i);
+                    o.dt = sm.cons_usable(i);
                 end
             end
             
