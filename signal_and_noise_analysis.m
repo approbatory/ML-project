@@ -15,12 +15,13 @@ g_ = good_fit_filter;
 
 %% precompute single cell dp2
 save_fname = 'single_cell_dp2.mat';
+sm = SessManager;
 if ~exist(save_fname, 'file')
     progressbar('sess...');
-    for i = 1:107
-        [single_dp2(i), single_dp2_sem(i)] = DecodeTensor.cons_filt(i).single_cell_d_primes2;
+    for i = 1:sm.num_usable
+        [single_dp2(i), single_dp2_sem(i)] = sm.cons_usable(i).single_cell_d_primes2;
         %fprintf('*');
-        progressbar(i/107);
+        progressbar(i/sm.num_usable);
     end
     %fprintf('\ndone\n');
     save(save_fname, 'single_dp2', 'single_dp2_sem');

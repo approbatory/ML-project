@@ -4,7 +4,7 @@ classdef Org < handle
         vars;
         derived;
         storage_file = 'default_store.mat'
-        total_sessions = 107;
+        total_sessions;
         
         mouse;
         
@@ -14,6 +14,8 @@ classdef Org < handle
     
     methods
         function o = Org
+            sm = SessManager;
+            o.total_sessions = sm.num_usable;
             if ~exist(o.storage_file, 'file')
                 o.vars = struct;
                 o.save_me;

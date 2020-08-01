@@ -7,7 +7,8 @@ if ~exist('n_type', 'var')
 end
 tic
 %d_ = DecodeTensor.cons_filt(index);
-o_ = DecodeTensor.cons_filt(index, true);
+sm = SessManager;
+o_ = sm.cons_usable(index, true);
 d_ = DecodeTensor(o_, n_type);
 n_reps = 20;
 [N, K, T] = size(d_.data_tensor);

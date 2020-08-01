@@ -55,6 +55,14 @@ classdef SessManager
             end
             u_i = [];
         end
+        
+        function res = verify_usable(o)
+            res = all(o.meta.Usable == (o.meta.Exists & (o.meta.Neurons > 150) & (min(o.meta.TrialsL, o.meta.TrialsR) > 30)));
+        end
+        
+        function res = verify_highqual(o)
+            res = all(o.meta.HighQual == (o.meta.Exists & (o.meta.Neurons > 200) & (min(o.meta.TrialsL, o.meta.TrialsR) > 30)));
+        end
     end
     
     methods(Static)
@@ -66,6 +74,14 @@ classdef SessManager
                 opt.neural_data_type = data_type;
             end
             DecodeTensor.decode_series(d{1}, d{2}, opt);
+        end
+        
+        function [sess, mouse_names] = usable_sess_id_list
+            sm = SessManager;
+            sess = sm.meta.Session(sm.meta.Usable)';
+            mouse_names = sm.meta.Mouse(sm.meta.Usable)';
+            mouse_names = cellfun(@(x)['Mouse' x], mouse_names,...
+                'UniformOutput', false);
         end
     end
 end

@@ -285,7 +285,8 @@ classdef PanelGenerator
             set(gca, 'YTick', [1 2 5 10 20 50]);
             legend off
             if exist('non_inset', 'var') && non_inset
-                figure_format;
+                %figure_format;
+                figure_format([2 2.5]);
             else
                 figure_format('boxsize', [0.6 0.8], 'fontsize', 5);
             end
@@ -713,7 +714,8 @@ classdef PanelGenerator
                 dbfile = 'decoding_all_sess.db';
                 conn = sqlite(dbfile);
                 samp_size = 80;
-                [sess, mouse_names] = DecodeTensor.filt_sess_id_list;
+                %[sess, mouse_names] = DecodeTensor.filt_sess_id_list;
+                [sess, mouse_names] = SessManager.usable_sess_id_list;
                 [n_sizes, imse] = PanelGenerator.db_imse_reader(conn, 'unshuffled', sess, samp_size);
                 [n_sizes_s, imse_s] = PanelGenerator.db_imse_reader(conn, 'shuffled', sess, samp_size);
                 [n_sizes_d, imse_d] = PanelGenerator.db_imse_reader(conn, 'diagonal', sess, samp_size);
@@ -770,7 +772,7 @@ classdef PanelGenerator
             if p.Results.remake || ~exist(fname, 'file')
                 PanelGenerator.aux_decoding_curves(fname, sess, mouse_names, n_sizes, imse, imse_s,...
                     I0_fit, I0_fit_s, N_fit, N_fit_s, 'b', 'r',...
-                    [0 0.16], [2 50], [0 Inf]);
+                    [0 0.16], [2 50], [0 Inf], true);
             end
             
             fname = ap('decoding_curve_fit_diagonal');
@@ -805,7 +807,7 @@ classdef PanelGenerator
                 InfoLimit_conf_s = abs(InfoLimit_s).*sqrt((N_conf_s./N_fit_s).^2 + (I0_conf_s./I0_fit_s).^2);
                 
                 PanelGenerator.aux_param_bns(fname, InfoLimit, InfoLimit_s, InfoLimit_conf, InfoLimit_conf_s, mouse_names,...
-                    {'Unshuffled', 'Shuffled'}, sprintf('I_0N fit value\n(cm^{-2})'), [1e-3 Inf], false, true, [1e-2 1e0 1e2]);
+                    {'Unshuffled', 'Shuffled'}, sprintf('I_0N fit value\n(cm^{-2})'), [1e-4 Inf], false, true, [1e-4 1e-2 1e0 1e2]);
                 PanelGenerator.val_reporter(InfoLimit, InfoLimit_s, InfoLimit_conf, InfoLimit_conf_s, 'I_0N', 'I_0N (shuf)', mouse_names);
                 PanelGenerator.val_reporter(log(InfoLimit), log(InfoLimit_s), InfoLimit_conf./InfoLimit, InfoLimit_conf_s./InfoLimit_s, 'log(I_0N)', 'log(I_0N) (shuf)', mouse_names, @exp);
                 
