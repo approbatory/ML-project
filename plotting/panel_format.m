@@ -22,9 +22,11 @@ ax.YLabel.FontSize = my_font_size;
 ax.Title.FontName = my_font;
 ax.Title.FontSize = my_font_size;
 
-for i = 1:numel(ax.Children)
-    if strcmp(ax.Children(i).Type, 'text')
-        ax.Children(i).FontName = my_font;
-        ax.Children(i).FontSize = my_font_size;
+if isprop(ax, 'Children')
+    for i = 1:numel(ax.Children)
+        if strcmp(ax.Children(i).Type, 'text')
+            ax.Children(i).FontName = my_font;
+            ax.Children(i).FontSize = my_font_size;
+        end
     end
 end

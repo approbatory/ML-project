@@ -690,7 +690,10 @@ classdef Utils %Common utilities for dealing with neural data
         
         %function printto(varargin)
         %end%TODO undo disability
-        function printto(save_dir, fname)
+        function printto(save_dir, fname, also_png)
+            if ~exist('also_png', 'var')
+                also_png = false;
+            end
             if ~exist('save_dir', 'var')
                 save_dir = '.';
             end
@@ -704,6 +707,9 @@ classdef Utils %Common utilities for dealing with neural data
             end
             %export_fig(pdf_fname, '-pdf', '-transparent', '-nofontswap', '-cmyk');
             print(gcf, '-dpdf', pdf_fname);
+            if also_png
+                print(gcf, '-dpng', '-r300', pdf_fname);
+            end
         end
         
         function specific_format(codename)

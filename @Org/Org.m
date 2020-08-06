@@ -18,7 +18,6 @@ classdef Org < handle
             o.total_sessions = sm.num_usable;
             if ~exist(o.storage_file, 'file')
                 o.vars = struct;
-                o.save_me;
             else
                 L = load(o.storage_file);
                 o.vars = L.vars_;
@@ -112,15 +111,31 @@ classdef Org < handle
             end
         end
         
-        function T = corr_table(o, var_name)
-            low_bounds = Org.default_low_bounds;
-            filt = o.sess_prop.num_neurons >= low_bounds(1) &...
-                o.sess_prop.num_trials >= low_bounds(2);
+        function T = corr_table(o, var_name, highqual, conf_filt)
+            if ~exist('conf_filt', 'var')
+                conf_filt = false;
+            end
+            if ~exist('highqual', 'var')
+                highqual = false;
+            end
+            %low_bounds = Org.default_low_bounds;
+            %filt = o.sess_prop.num_neurons >= low_bounds(1) &...
+            %    o.sess_prop.num_trials >= low_bounds(2);
+            if highqual
+                filt = SessManager.highqual_filt_from_usable;
+            else
+                filt = true(1,o.total_sessions);
+            end
+            
             [~, ~, pred_names, ~] = o.predictor_matrix;
-            var_target = o.sess_prop.(var_name);
-            var_target = var_target(filt);
-            var_target_conf = o.sess_prop_conf.(var_name);
-            var_target_conf = var_target_conf(filt);
+            var_target_ = o.sess_prop.(var_name);
+            var_target_conf_ = o.sess_prop_conf.(var_name);
+            
+            if conf_filt
+                filt = filt & (var_target_' > var_target_conf_');
+            end
+            var_target = var_target_(filt);
+            var_target_conf = var_target_conf_(filt);
             
             my_mice = o.mouse;
             my_mice = my_mice(filt);
@@ -150,10 +165,13 @@ classdef Org < handle
                 pearson_agg, pearson_p_agg, spearman_agg, spearman_p_agg,...
                 kendall_agg, kendall_p_agg, adjr2_agg, 'RowNames', pred_names);
         end
-        function metrics = correlogram(o, var1, var2, aggregate, low_bounds)
-            if ~exist('low_bounds', 'var')
-                low_bounds = Org.default_low_bounds;
+        function metrics = correlogram(o, var1, var2, aggregate, highqual, conf_filt)
+            if ~exist('conf_filt', 'var')
+                conf_filt = false;
             end
+            %if ~exist('low_bounds', 'var')
+            %    low_bounds = Org.default_low_bounds;
+            %end
             v1 = o.sess_prop.(var1);
             v1_conf = o.sess_prop_conf.(var1);
             
@@ -164,8 +182,24 @@ classdef Org < handle
             
             %filt = o.sess_prop.N50 > 2*o.sess_prop_conf.N50;
             %filt = filt & (v1 > 2*v1_conf) & (v2 > 2*v2_conf); %<>
-            filt = o.sess_prop.num_neurons >= low_bounds(1) &...
-                o.sess_prop.num_trials >= low_bounds(2);
+            %filt = o.sess_prop.num_neurons >= low_bounds(1) &...
+            %    o.sess_prop.num_trials >= low_bounds(2);
+            if ~exist('highqual', 'var')
+                highqual = false;
+            end
+
+            if highqual
+                filt = SessManager.highqual_filt_from_usable;
+            else
+                filt = true(1,o.total_sessions);
+            end
+            if conf_filt
+                filt = filt & (v1' > v1_conf') & (v2' > v2_conf');
+            end
+            if strcmp(var2, 'asymp_ratio')
+                filt = filt & (v2' < 7);
+                fprintf('Special for asymp_ratio, removing outliers > 7\n');
+            end
             if any(~filt)
                 fprintf('Using only %d out of %d sessions\n',...
                     sum(filt), numel(filt));
@@ -196,7 +230,7 @@ classdef Org < handle
                 fprintf('Spearman: %.3f, p = %e, %s\n', s, sp, Utils.pstar(sp));
                 fprintf('Kendall: %.3f, p = %e, %s\n', k, kp, Utils.pstar(kp));
             end
-            adjr2_ = func(v1(:), v2(:), v1_conf(:), v2_conf(:), my_mice, 'r', 'dotsize', 10);
+            adjr2_ = func(v1(:), v2(:), v1_conf(:), v2_conf(:), my_mice, 'k', 'dotsize', 10);
             assert(abs(adjr2 - adjr2_) < 0.01, 'Mismatch in adj. R^2 values');
             xlabel(esc(var1));
             ylabel(esc(var2));
@@ -206,17 +240,20 @@ classdef Org < handle
             metrics.aggregated = aggregate;
         end
         
-        function bns(o, var1, var2, aggreagte, logscale)
-            [v1, v1_conf, mice] = o.fetch_filt(var1);
-            [v2, v2_conf, ~] = o.fetch_filt(var2);
+        function bns(o, var1, var2, aggregate, logscale, highqual)
+            if ~exist('highqual', 'var')
+                highqual = false;
+            end
+            [v1, v1_conf, mice] = o.fetch_filt(var1, highqual);
+            [v2, v2_conf, ~] = o.fetch_filt(var2, highqual);
             
             Utils.bns_groupings(v1', v2', v1_conf', v2_conf',...
-                mice, aggreagte, {'Real data', 'Shuffled'}, logscale);
+                mice, aggregate, {'Real data', 'Shuffled'}, logscale);
         end
         
-        function boxplot(o, var1, var2, logscale)
-            [v1, v1_conf, mice] = o.fetch_filt(var1);
-            [v2, v2_conf, ~] = o.fetch_filt(var2);
+        function boxplot(o, var1, var2, logscale, highqual)
+            [v1, v1_conf, mice] = o.fetch_filt(var1, highqual);
+            [v2, v2_conf, ~] = o.fetch_filt(var2, highqual);
             
             hold on;
             bf_ = @(x, c) boxplot(x, Utils.cf_(@(x)x(end-1:end), mice), 'Colors', c, 'BoxStyle', 'outline', 'Symbol', '');
@@ -233,18 +270,35 @@ classdef Org < handle
                 x_val = x_coords(i);
                 color = mouse_colors{i};
                 hold on;
-                y_bottom = 0.15;
+                yt_ = get(gca, 'YTick');
+                %if logscale
+                %    y_bottom = exp(log(yl_(1))+0.1*log(yl_(2)));
+                %else
+                %    y_bottom = yl_(1)+0.1*yl_(2);
+                %end
+                low_vals = [v1(:)-v1_conf(:); v2(:)-v2_conf(:)];
+                low_vals = low_vals(low_vals > 0);
+                y_bottom = min(low_vals);
                 scatter(x_val, y_bottom, 8, color, 'filled');
             end
         end
         
-        function [v, v_conf, mice] = fetch_filt(o, varname)
+        function [v, v_conf, mice] = fetch_filt(o, varname, highqual)
             v = o.sess_prop.(varname);
             v_conf = o.sess_prop_conf.(varname);
             
-            low_bounds = Org.default_low_bounds;
-            filt = o.sess_prop.num_neurons >= low_bounds(1) &...
-                o.sess_prop.num_trials >= low_bounds(2);
+            %low_bounds = Org.default_low_bounds;
+            %filt = o.sess_prop.num_neurons >= low_bounds(1) &...
+            %    o.sess_prop.num_trials >= low_bounds(2);
+            if ~exist('highqual', 'var')
+                highqual = false;
+            end
+            
+            if highqual
+                filt = SessManager.highqual_filt_from_usable;
+            else
+                filt = true(1,o.total_sessions);
+            end
             v = v(filt);
             v_conf = v_conf(filt);
             
@@ -252,14 +306,23 @@ classdef Org < handle
             mice = mice(filt);
         end
         
-        function filt = default_filt(o)
-            low_bounds = Org.default_low_bounds;
-            filt = o.sess_prop.num_neurons >= low_bounds(1) &...
-                o.sess_prop.num_trials >= low_bounds(2);
+        function filt = default_filt(o, highqual)
+            %low_bounds = Org.default_low_bounds;
+            %filt = o.sess_prop.num_neurons >= low_bounds(1) &...
+            %    o.sess_prop.num_trials >= low_bounds(2);
+            if ~exist('highqual', 'var')
+                highqual = false;
+            end
+            
+            if highqual
+                filt = SessManager.highqual_filt_from_usable;
+            else
+                filt = true(1,o.total_sessions);
+            end
         end
         
-        eigen_snr_crossval_aggregation(org);
-        area_between_cos2(o, MAX_DIM);
+        eigen_snr_crossval_aggregation(org, just_snr);
+        area_between_cos2(o, MAX_DIM, lean);
         sigdens_plots(o);
     end
     
@@ -287,6 +350,7 @@ classdef Org < handle
         end
         
         function b = default_low_bounds
+            error('deprecated');
             b = [200 40];
         end
         
