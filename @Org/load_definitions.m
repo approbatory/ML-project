@@ -132,6 +132,22 @@ org.make_derived('cos2_area_20_shuf', {'loadings_shuf'},...
 org.make_derived('cos2_area_14_shuf', {'loadings_shuf'},...
     @(c)up_to(c.^2, 14));
 
+for d = 1:40
+    
+    name = sprintf('delta_cos2_area_%d',d);
+    unshuf = sprintf('cos2_area_%d',d);
+    shuf = [unshuf '_shuf'];
+    
+    org.make_derived(unshuf, {'loadings'},...
+    @(c)up_to(c.^2, d));
+    
+    org.make_derived(shuf, {'loadings_shuf'},...
+    @(c)up_to(c.^2, d));
+    
+    org.make_derived(name, {unshuf, shuf},...
+        @(a,b)a-b);
+end
+
 org.make_derived('delta_cos2_area_20', {'cos2_area_20', 'cos2_area_20_shuf'},...
     @(a,b)a-b);
 
@@ -324,5 +340,6 @@ end
 end
 
 function r = up_to(a, n)
-    r = sum(a(1:n));
+n = min(n, numel(a));    
+r = sum(a(1:n));
 end

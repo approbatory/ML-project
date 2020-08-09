@@ -19,6 +19,26 @@ classdef SessManager
             n = sum(o.meta.HighQual);
         end
         
+        function p = data_path(o, i, type)
+            switch lower(type)
+                case 'usable'
+                    i = o.index_usable(i);
+                case 'highqual'
+                    i = o.index_highqual(i);
+                case 'base'
+                otherwise
+                    error('Must enter Usable or HighQual or Base, %s is not valid', type);
+            end
+            base = DecodeTensor.linear_track_path;
+            m = o.meta.Mouse{i};
+            d = o.meta.Day{i};
+            s = o.meta.Session{i};
+            
+            p = fullfile(base, ['Mouse' m],...
+                ['Mouse-' m '-' d '-linear-track'],...
+                ['Mouse-' m '-' d '_' s '-linear-track-TracesAndEvents.mat']);
+        end
+        
         function base_i = index_usable(o, i)
             assert(i >= 1 && i <= o.num_usable);
             base_i = find(i == cumsum(o.meta.Usable),1);
@@ -63,6 +83,22 @@ classdef SessManager
         function res = verify_highqual(o)
             res = all(o.meta.HighQual == (o.meta.Exists & (o.meta.Neurons > 200) & (min(o.meta.TrialsL, o.meta.TrialsR) > 30)));
         end
+        
+        function i = lookup(o, mouse_name, sess_id)
+            mouse_names = o.meta.Mouse;
+            mouse_names = cellfun(@(x)['Mouse' x], mouse_names,...
+                'UniformOutput', false);
+            i = find(strcmp(mouse_names, mouse_name) & strcmp(o.meta.Session, sess_id), 1);
+            assert(~isempty(i), 'Usable session not found.');
+        end
+        
+        function i = lookup_usable(o, mouse_name, sess_id)
+            i = o.usable_index_alias(o.lookup(mouse_name, sess_id));
+        end
+        
+        function i_u = convert_highqual_to_usable(o, i_h)
+            i_u = o.usable_index_alias(o.index_highqual(i_h));
+        end
     end
     
     methods(Static)
@@ -82,6 +118,30 @@ classdef SessManager
             mouse_names = sm.meta.Mouse(sm.meta.Usable)';
             mouse_names = cellfun(@(x)['Mouse' x], mouse_names,...
                 'UniformOutput', false);
+        end
+        function i = usable_index(mouse_name, sess_id)
+            sm = SessManager;
+            assert(numel(mouse_name) == numel(sess_id), 'Unequal numbers');
+            i = zeros(1, numel(mouse_name));
+            for j = 1:numel(mouse_name)
+                i(j) = sm.lookup_usable(mouse_name{j}, sess_id{j});
+            end
+        end
+        function ix = special_sessions_usable_index(mouse_names)
+            [sess_ids,m_,~] = DecodeTensor.special_sess_id_list;
+            show_filter = ismember(m_, mouse_names);
+            ix = SessManager.usable_index(m_(show_filter), sess_ids(show_filter));
+        end
+        
+        function filt = highqual_filt_from_usable
+            sm = SessManager;
+            filt = false(1,sm.num_usable);
+            for i = 1:sm.num_usable
+                base_i = sm.index_usable(i);
+                assert(sm.meta.Usable(base_i));
+                filt(i) = sm.meta.HighQual(base_i);
+            end
+            filt = logical(filt);
         end
     end
 end

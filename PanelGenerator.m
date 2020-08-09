@@ -135,6 +135,7 @@ classdef PanelGenerator
             [fitresult, adjr2] = Utils.regress_line(x, y);
             h_ = plot(fitresult); legend off
             h_.Color = color;
+            h_.LineStyle = '--';
             if ~isempty(p.Results.xlim)
                 xlim(p.Results.xlim);
             end
@@ -257,9 +258,10 @@ classdef PanelGenerator
             %       set to Inf for each mouse to have its own max
             figure('FileName', fname);
             show_mice = {'Mouse2022', 'Mouse2024', 'Mouse2028'};
-            [~,m_,sp_] = DecodeTensor.special_sess_id_list;
-            show_filter = ismember(m_, show_mice);
-            sp_ = sp_(show_filter);
+            %[~,m_,sp_] = DecodeTensor.special_sess_id_list;<>
+            %show_filter = ismember(m_, show_mice);
+            %sp_ = sp_(show_filter);
+            sp_ = SessManager.special_sessions_usable_index(show_mice);
             PanelGenerator.plot_decoding_curve(sess, sp_, n_sizes, imse_alt, I0_fit_alt, N_fit_alt, color_alt);
             hold on;
             PanelGenerator.plot_decoding_curve(sess, sp_, n_sizes, imse, I0_fit, N_fit, color);
@@ -352,6 +354,9 @@ classdef PanelGenerator
             ylabel(y_label);
             xlabel 'Mouse index';
             Utils.specific_format('MBNS');
+            if fix_expo
+                Utils.fix_exponent(gca, 'Y', 0);
+            end
             Utils.printto('supplements_pdf/param_bns', ['multi_' fn ext]);
         end
         
@@ -876,10 +881,12 @@ classdef PanelGenerator
             
             show_mice = {'Mouse2022', 'Mouse2024', 'Mouse2028'};
             
-            [~,m_,sp_] = DecodeTensor.special_sess_id_list;
-            show_filter = ismember(m_, show_mice);
-            sp_ = sp_(show_filter);
-            m_ = m_(show_filter);
+            %[~,m_,sp_] = DecodeTensor.special_sess_id_list;<>
+            %show_filter = ismember(m_, show_mice);
+            %sp_ = sp_(show_filter);
+            %m_ = m_(show_filter);
+            sp_ = SessManager.special_sessions_usable_index(show_mice);
+            m_ = show_mice;
             figure('FileName', 'supplements_pdf/medload/medload_rasters.pdf');
             colorscale = 'log';
             for i = 1:numel(sp_)
@@ -1152,7 +1159,7 @@ classdef PanelGenerator
             %{
             show_mice = {'Mouse2022', 'Mouse2024', 'Mouse2028'};
             
-            [~,m_,sp_] = DecodeTensor.special_sess_id_list;
+            [~,m_,sp_] = DecodeTensor.special_sess_id_list;<>
             show_filter = ismember(m_, show_mice);
             sp_ = sp_(show_filter);
             m_ = m_(show_filter);
@@ -1442,9 +1449,10 @@ classdef PanelGenerator
             
             show_mice = {'Mouse2022', 'Mouse2024', 'Mouse2028'};
             
-            [~,m_,sp_] = DecodeTensor.special_sess_id_list;
-            show_filter = ismember(m_, show_mice);
-            sp_ = sp_(show_filter);
+            %[~,m_,sp_] = DecodeTensor.special_sess_id_list;<>
+            %show_filter = ismember(m_, show_mice);
+            %sp_ = sp_(show_filter);
+            sp_ = SessManager.special_sessions_usable_index(show_mice);
             %[md2_slopes, ~] = cellfun(full_line, {res.n_sizes}, medify({res.md2}), 'UniformOutput', false);
             n_f_ = @(x) Utils.cf_(@(y,z)y./z, medify(x), m2_d_slopes);
             MultiSessionVisualizer.plot_single_filtered({res.n_sizes}, {n_f_({res.m2_d}), n_f_({res.nv_d}), n_f_({res.nv_s})}, {'k', 'b', 'r'}, sp_);
@@ -1583,9 +1591,10 @@ classdef PanelGenerator
             end
             show_mice = {'Mouse2022', 'Mouse2024', 'Mouse2028'};
             
-            [~,m_,sp_] = DecodeTensor.special_sess_id_list;
-            show_filter = ismember(m_, show_mice);
-            sp_ = sp_(show_filter);
+            %[~,m_,sp_] = DecodeTensor.special_sess_id_list;<>
+            %show_filter = ismember(m_, show_mice);
+            %sp_ = sp_(show_filter);
+            sp_ = SessManager.special_sessions_usable_index(show_mice);
             MultiSessionVisualizer.plot_single_filtered(n_sizes_full, series([1 3 2]), series_colors([1 3 2]), sp_);
             xlabel 'Number of cells'
             if normed

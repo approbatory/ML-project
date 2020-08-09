@@ -6,6 +6,7 @@ classdef Pub < handle
         ylabs;
         titles;
         subplots;
+        start_char = 'a';
     end
     methods
         function o = Pub(varargin)
@@ -22,11 +23,13 @@ classdef Pub < handle
             p.addParameter('layout', []);
             p.addParameter('rows', 1, @isscalar);
             p.addParameter('columns', 1, @isscalar);
+            p.addParameter('start_char', 'a', @ischar);
             p.parse(varargin{:});
             r = p.Results;
             o.Q = ComputeSubplotPositions(r.rows, r.columns, r.layout,...
                 r.hmarginl, r.hmarginr, r.hspacing,...
                 r.vmargint, r.vmarginb, r.vspacing);
+            o.start_char = r.start_char;
             o.h = figure;
             ResizeFigure(o.h, r.width, r.height, r.units);
             set(o.h, 'Color', 'white');
@@ -36,7 +39,7 @@ classdef Pub < handle
         function panel(o, index, varargin)
             p = inputParser;
             p.addRequired('index', @isnumeric);
-            p.addParameter('letter', char('a' + index - 1), @ischar);
+            p.addParameter('letter', char(o.start_char + index - 1), @ischar);
             p.addParameter('xlab', '', @ischar);
             p.addParameter('ylab', '', @ischar);
             p.addParameter('title', '', @ischar);
@@ -63,6 +66,9 @@ classdef Pub < handle
         function format(o)
             for index = 1:numel(o.subplots)
                 ax = o.subplots{index};
+                if isempty(ax)
+                    continue;
+                end
                 panel_format(ax);
                 xlabel(ax, o.xlabs{index}, 'Interpreter', 'tex');
                 ylabel(ax, o.ylabs{index}, 'Interpreter', 'tex');
@@ -70,9 +76,12 @@ classdef Pub < handle
             end
         end
         
-        function print(o, dest, fname)
+        function print(o, dest, fname, also_png)
+            if ~exist('also_png', 'var')
+                also_png = false;
+            end
             figure(o.h);
-            Utils.printto(dest, fname);
+            Utils.printto(dest, fname, also_png);
         end
         
         function preview(o)

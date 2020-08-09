@@ -1,8 +1,8 @@
-function eigen_snr_crossval_aggregation(org)
+function eigen_snr_crossval_aggregation(org, just_snr)
 
 load eigen_snr_crossval_save.mat
 
-filt = org.default_filt;
+filt = org.default_filt(true);
 mouse_ = org.mouse(filt);
 dp2_test = dp2_test(filt);
 dp2_train = dp2_train(filt);
@@ -41,27 +41,43 @@ noise_train_agg_mean_sem = squeeze(sqrt(mean(noise_train_agg_sem.^2,1) + (std(no
 noise_test_agg_mean = squeeze(mean(noise_test_agg,1));
 noise_test_agg_mean_sem = squeeze(sqrt(mean(noise_test_agg_sem.^2,1) + (std(noise_test_agg,0,1)./sqrt(size(noise_test_agg,1))).^2));
 %% dp2
-figure;
+if ~just_snr
+    figure;
+end
 H_TR = serrorbar(median(dp2_train_agg_mean), median(dp2_train_agg_mean_sem) * 1.96, 'k:');
 hold on;
 H_TE = serrorbar(median(dp2_test_agg_mean), median(dp2_test_agg_mean_sem) * 1.96, 'b');
 xlabel 'PC index'
 ylabel 'Eigen SNR [All sessions]'
 
+if just_snr
+    yl_ = [-0.1 0.3];
+else
+    yl_ = ylim;
+end
 [~, argmax_pc_snr] = max(median(dp2_test_agg_mean));
-l_ = line([argmax_pc_snr argmax_pc_snr], ylim, 'Color', 'r');
+l_ = line([argmax_pc_snr argmax_pc_snr], yl_, 'Color', 'r');
 
 x_ = median(dp2_test_agg_mean);
 cum_x_ = cumsum(x_) ./ sum(x_);
 ix_most = find(cum_x_ >= 0.95, 1);
-l2_ = line([ix_most ix_most], ylim, 'Color', 'g');
+l2_ = line([ix_most ix_most], yl_, 'Color', 'g');
 
-legend([H_TR.mainLine, H_TE.mainLine, l_, l2_], 'Train', 'Test',...
-    sprintf('Max SNR (PC%d)', argmax_pc_snr),...
-    sprintf('95%% SNR (PC1-%d)', ix_most));
+if just_snr
+    legend([l_, l2_],...
+        sprintf('Max SNR (PC%d)', argmax_pc_snr),...
+        sprintf('95%% SNR (PC1-%d)', ix_most));
+else
+    legend([H_TR.mainLine, H_TE.mainLine, l_, l2_], 'Train', 'Test',...
+        sprintf('Max SNR (PC%d)', argmax_pc_snr),...
+        sprintf('95%% SNR (PC1-%d)', ix_most));
+end
 legend boxoff
 legend location north
 
+if just_snr
+    return;
+end
 %% signal
 figure;
 H_TR = serrorbar(median(signal_train_agg_mean), median(signal_train_agg_mean_sem) * 1.96, 'k:');

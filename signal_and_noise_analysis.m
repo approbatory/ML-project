@@ -1,6 +1,7 @@
 recompute = false;
 
-load adjacent_metrics_agg_191202-163306_0.mat
+%load adjacent_metrics_agg_191202-163306_0.mat
+load adjacent_metrics_agg_200801-184941_0.mat
 
 fit_savefile = 'decoding_curves_fits.mat';
 if recompute || ~exist(fit_savefile, 'file')
@@ -8,10 +9,10 @@ if recompute || ~exist(fit_savefile, 'file')
 end
 load(fit_savefile);
 
-good_fit_filter = (I0_conf < 0.5*I0_fit) &...
-    (I0_conf_s < 0.5*I0_fit_s) &...
-    (N_conf < 0.5*N_fit);% & (N_fit < 500) & (cellfun(@max, {res.n_sizes}) >= 300); %200
-g_ = good_fit_filter;
+%good_fit_filter = (I0_conf < 0.5*I0_fit) &...
+%    (I0_conf_s < 0.5*I0_fit_s) &...
+%    (N_conf < 0.5*N_fit);% & (N_fit < 500) & (cellfun(@max, {res.n_sizes}) >= 300); %200
+%g_ = good_fit_filter;
 
 %% precompute single cell dp2
 save_fname = 'single_cell_dp2.mat';
@@ -46,7 +47,7 @@ show_mice = {'Mouse2022'};%, 'Mouse2024', 'Mouse2028'};
 filt_sess_indices = select_from_mice(show_mice);
 
 %middle
-mouse_names = Utils.cf_(@(x)x(17:25), {res.source});
+mouse_names = Utils.cf_(@(x)x(51:59), {res.source});
 n = {res.n_sizes};
 
 save_fname = 'summarized_adjacent_metrics.mat';
@@ -153,6 +154,7 @@ nsr_shuf = cellfun(@rdivide, noise_shuf, signal, 'UniformOutput', false);
 % % 
 % % snr = cellfun(@rdivide, signal, noise, 'UniformOutput', false);
 % % snr_shuf = cellfun(@rdivide, signal, noise_shuf, 'UniformOutput', false);
+save asymp_snr_values.mat mouse_names asymp_snr asymp_snr_shuf asymp_snr_conf asymp_snr_shuf_conf
 %% plotting
 filt_sess_indices = select_from_mice({'Mouse2022', 'Mouse2019', 'Mouse2026'});%, 'Mouse2024', 'Mouse2028'});
 
@@ -203,8 +205,8 @@ set(gca, 'YScale', 'log');
 
 p.panel(5, 'xlab', 'Single cell signal / Single cell noise',...
     'ylab', sprintf('{\\itI}_0 fit value (cm^{-2}%sneuron^{-1})', Utils.dot), 'y_shift', y_sh);
-PanelGenerator.plot_regress_averaged(single_dp2(g_), I0_fit_s(g_),...
-    1.96.*single_dp2_sem(g_), I0_conf_s(g_), mouse_names(g_), 'r', 'text_coord', [0.028 0.15e-3]);
+PanelGenerator.plot_regress_averaged(single_dp2, I0_fit_s,...
+    1.96.*single_dp2_sem, I0_conf_s, mouse_names, 'r', 'text_coord', [0.028 0.15e-3]);
 xlim([0 Inf]);
 ylim([0 1e-3]);
 p.format;
@@ -213,8 +215,8 @@ Utils.fix_exponent(gca , 'y', 0);
 p.panel(6, 'xlab', 'Signal slope / Noise slope', 'ylab', '{\itI}_0{\itN} fit value (cm^{-2})', 'y_shift', y_sh);
 InfoLimit = N_fit.*I0_fit;
 InfoLimit_conf = abs(InfoLimit).*sqrt((N_conf./N_fit).^2 + (I0_conf./I0_fit).^2);
-PanelGenerator.plot_regress_averaged(asymp_snr(g_), InfoLimit(g_),...
-    asymp_snr_conf(g_), InfoLimit_conf(g_), mouse_names(g_), 'b',...
+PanelGenerator.plot_regress_averaged(asymp_snr, InfoLimit,...
+    asymp_snr_conf, InfoLimit_conf, mouse_names, 'b',...
     'text_coord', [2.4 0.022]);
 xlim([0 Inf]);
 ylim([0 0.15]);
@@ -238,12 +240,12 @@ MultiSessionVisualizer.plot_series(n, {snr_shuf, snr}, {'r', 'b'}, mouse_names, 
             Utils.printto('supplements_pdf/decoding_curves', 'multi_snr_curves.pdf');
 %%
 figure;
-Utils.bns_groupings(asymp_nsr, asymp_nsr_shuf, asymp_nsr_conf, asymp_nsr_shuf_conf, mouse_names, false);
-ylim([-0.5 12]);
-ylabel(sprintf('Noise slope / Signal slope'));
+Utils.bns_groupings(asymp_snr, asymp_snr_shuf, asymp_snr_conf, asymp_snr_shuf_conf, mouse_names, false);
+ylim([min(min(asymp_snr), min(asymp_snr_shuf)),  max(max(asymp_snr), max(asymp_snr_shuf))]);
+ylabel(sprintf('Signal slope / Noise slope'));
 xlabel 'Mouse index'
 Utils.specific_format('MBNS');
-Utils.printto('supplements_pdf/decoding_curves', 'multi_asymp_nsr.pdf');
+Utils.printto('supplements_pdf/decoding_curves', 'multi_asymp_snr.pdf');
 %% path analysis: splash zone
 dm_asnr = get_asnr(res, s_, 'm', false)'; dm_asnr = zscore(dm_asnr(g_));
 w_asnr = get_asnr(res, s_, 'f', false)'; w_asnr = zscore(w_asnr(g_));
@@ -307,10 +309,9 @@ end
 
 function filt_indices = select_from_mice(mice_to_show)
 
-[~, m_, sp_] = DecodeTensor.special_sess_id_list;
+[s_id_, m_, ~] = DecodeTensor.special_sess_id_list;
 show_filter = ismember(m_, mice_to_show);
-filt_indices = sp_(show_filter);
-
+filt_indices = SessManager.usable_index(m_(show_filter), s_id_(show_filter));
 end
 
 
