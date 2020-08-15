@@ -1,39 +1,136 @@
+ERR_TRIAL_CUTOFF_LENGTH = 5.9; %cm
+
 sm = SessManager;
 progressbar('Usable sessions...');
-[excursions, found_trials, fraction_found_trials] = deal(zeros(1,sm.num_usable));
+[number_of_slow_trials, number_of_turnaround_trials,...
+    number_of_error_trials, number_of_correct_trials,...
+    performance] = deal(zeros(1,sm.num_usable));
+
 for i = 1:sm.num_usable
-data_file = sm.data_path(i, 'Usable');
-
-load(data_file, 'tracesEvents');
-
-opt = DecodeTensor.default_opt;
-track_coord = tracesEvents.position(:,1);
-track_begin = prctile(track_coord, opt.cutoff_p);
-track_end = prctile(track_coord, 100 - opt.cutoff_p);
-
-right_quarter = track_begin + 0.25 * (track_end - track_begin);
-left_quarter = track_begin + 0.75 * (track_end - track_begin);
-
-crossed_right_quarter = diff(track_coord > right_quarter) == 1;
-crossed_left_quarter = diff(track_coord < left_quarter) == 1;
-excursions(i) = sum(crossed_right_quarter) + sum(crossed_left_quarter);
-found_trials(i) = numel(sm.cons_usable(i).tr_dir);
-fraction_found_trials(i) = found_trials(i) ./ excursions(i);
-fprintf('Usable session #%d\tExcursions R:%d L:%d total:%d found_tr:%d ratio:%f\n',...
-    i, sum(crossed_right_quarter), sum(crossed_left_quarter), excursions(i),...
-    found_trials(i), fraction_found_trials(i));
-
-if false
-figure;
-plot(track_coord, '-ok');
-ylim([track_begin track_end]);
-hold on;
-plot(track_begin + crossed_right_quarter .* (track_end - track_begin), 'r');
-plot(track_begin + crossed_left_quarter .* (track_end - track_begin), 'b');
-end
-progressbar(i/sm.num_usable);
+    data_file = sm.data_path(i, 'Usable');
+    
+    load(data_file, 'tracesEvents');
+    
+    opt = DecodeTensor.default_opt;
+    [cpp, vel, trial_start, trial_end, tr_dir, track_bins, track_dir_bins] = ...
+        DecodeTensor.new_sel(tracesEvents.position, opt);
+    
+    track_coord = tracesEvents.position(:,1);
+    track_begin = prctile(track_coord, opt.cutoff_p);
+    track_end = prctile(track_coord, 100 - opt.cutoff_p);
+    
+    cm_position = (track_coord - track_begin) .* cpp;
+    cm_position(cm_position < 0) = 0;
+    s_time = (1:numel(cm_position)) / 20;
+    
+    right_milestone = ERR_TRIAL_CUTOFF_LENGTH;
+    left_milestone = (track_end - track_begin) .* cpp - ERR_TRIAL_CUTOFF_LENGTH;
+    
+    crossed_right_milestone = diff(cm_position > right_milestone) == 1;
+    crossed_left_milestone = diff(cm_position < left_milestone) == 1;
+    
+    interim = cm_position > right_milestone & cm_position < left_milestone;
+    
+    right_run_end = [0;diff(sign(vel))] == -2;
+    left_run_end = [0;diff(sign(vel))] == 2;
+    
+    turn_around_point_right = right_run_end & interim;
+    turn_around_point_left  = left_run_end & interim;
+    any_turn_around_point = turn_around_point_right | turn_around_point_left;
+    total_turn_around_errors = sum(turn_around_point_right) +...
+        sum(turn_around_point_left);
+    
+    %turn around at right side comes right before turn around at left side,
+    %but there was slowness in between
+    slowness = abs(vel) < 4; %cm/s
+    states = (cm_position > left_milestone).*10 ...
+        + (cm_position < right_milestone).*1 + slowness.*100;
+    
+    %figure;
+    %plot(cm_position);
+    %hold on
+    %plot(10*(states - 100), '-o');
+    %ylim([0 120]);
+    
+    %101 for start on right, 110 for start on left 100 for slowness
+    n_frames = numel(cm_position);
+    [slow_trials, turnaround_trials] = deal(false(size(cm_position)));
+    my_state = 'none';
+    was_slow = 0;
+    for j = 1:n_frames
+        s = states(j);
+        if s == 101
+            if strcmp(my_state, 'leftward') && was_slow~=0
+                slow_trials(was_slow) = true;
+            elseif strcmp(my_state, 'rightward') && was_slow~=0
+                turnaround_trials(was_slow) = true;
+            end
+            my_state = 'rightward';
+            was_slow = 0;
+        elseif s == 110
+            if strcmp(my_state, 'rightward') && was_slow~=0
+                slow_trials(was_slow) = true;
+            elseif strcmp(my_state, 'leftward') && was_slow~=0
+                turnaround_trials(was_slow) = true;
+            end
+            my_state = 'leftward';
+            was_slow = 0;
+        elseif s == 100
+            was_slow = j;
+        end 
+    end
+    
+    %plot(slow_trials*50, 'kx');
+    
+    number_of_slow_trials(i) = sum(slow_trials);
+    number_of_turnaround_trials(i) = sum(turnaround_trials);
+    number_of_error_trials(i) = number_of_slow_trials(i) +...
+        number_of_turnaround_trials(i);
+    number_of_correct_trials(i) = numel(tr_dir);
+    performance(i) = number_of_correct_trials(i) ./...
+        (number_of_correct_trials(i) + number_of_error_trials(i));
+    
+    if false
+        figure;
+        plot(cm_position);
+        slow_pos_only = cm_position;
+        slow_pos_only(abs(vel) > 4) = nan;
+        hold on
+        plot(slow_pos_only, 'm*');
+        plot(slow_trials*60, 'kx');
+        plot(turnaround_trials*60, 'ro');
+        refline(0, left_milestone);
+        refline(0, right_milestone);
+        ylim([0.1 120]);
+    end
+    
+    progressbar(i/sm.num_usable);
+    continue;
+    right_quarter = track_begin + 0.25 * (track_end - track_begin);
+    left_quarter = track_begin + 0.75 * (track_end - track_begin);
+    
+    crossed_right_quarter = diff(track_coord > right_quarter) == 1;
+    crossed_left_quarter = diff(track_coord < left_quarter) == 1;
+    excursions(i) = sum(crossed_right_quarter) + sum(crossed_left_quarter);
+    found_trials(i) = numel(sm.cons_usable(i).tr_dir);
+    fraction_found_trials(i) = found_trials(i) ./ excursions(i);
+    fprintf('Usable session #%d\tExcursions R:%d L:%d total:%d found_tr:%d ratio:%f\n',...
+        i, sum(crossed_right_quarter), sum(crossed_left_quarter), excursions(i),...
+        found_trials(i), fraction_found_trials(i));
+    
+    if false
+        figure;
+        plot(track_coord, '-ok');
+        ylim([track_begin track_end]);
+        hold on;
+        plot(track_begin + crossed_right_quarter .* (track_end - track_begin), 'r');
+        plot(track_begin + crossed_left_quarter .* (track_end - track_begin), 'b');
+    end
+    
 end
 
 message = 'Generated by error_trial_counter.m for 110 usable sessions';
 
-save excursions.mat excursions found_trials fraction_found_trials message
+save performance.mat number_of_slow_trials number_of_turnaround_trials...
+    number_of_error_trials number_of_correct_trials...
+    performance message

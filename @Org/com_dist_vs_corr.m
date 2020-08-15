@@ -1,4 +1,20 @@
-function com_dist_vs_corr(o)
+function com_dist_vs_corr(org)
+ncd_r = cell2mat(org.fetch('nc_by_dist_r')');
+r_h = serrorbar(0:19, mean(ncd_r), sem(ncd_r).*1.96, 'lineprops', {'-', 'Color', [0 0.5 0]});
+hold on;
+ncd_l = cell2mat(org.fetch('nc_by_dist_l')');
+l_h = serrorbar(0:19, mean(ncd_l), sem(ncd_l).*1.96, 'lineprops', {'-', 'Color', [0.8 0.5 0]});
+
+l_ = refline(0,0); l_.Color = 'k';
+xlabel 'RFs peak distance'
+ylabel 'Pairwise noise correlations'
+legend([r_h.mainLine l_h.mainLine], 'Running right', 'Running left');
+legend boxoff
+
+figure_format([1.3 1.3]);
+set(gca, 'XTick', [0 10 20]);
+set(gca, 'XTickLabel', {'0', 'L/2', 'L'});
+return;
 
 agg = @(x) cell2mat(Utils.cf_(@get_pairs, o.fetch(x)'));
 

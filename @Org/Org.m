@@ -324,6 +324,8 @@ classdef Org < handle
         eigen_snr_crossval_aggregation(org, just_snr);
         area_between_cos2(o, MAX_DIM, lean);
         sigdens_plots(o);
+        
+        change_over_days(o, varname, highqual);
     end
     
     methods(Static)

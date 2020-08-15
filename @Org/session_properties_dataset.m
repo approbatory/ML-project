@@ -3,7 +3,7 @@ function [mean_table, conf_table] = session_properties_dataset(o)
 load asymp_snr_values.mat
 load single_cell_dp2.mat
 load decoding_curves_fits.mat
-load excursions.mat
+load performance.mat
 
 [mat, sem_, varnames, mat_agg, sem_agg] = o.predictor_matrix;
 
@@ -55,15 +55,15 @@ single_dp2_conf = 1.96 * single_dp2_sem;
 %make tables from the variables:
 
 mean_table = array2table([mat, asymp_ratio', inv_asymp_ratio', invN50', N50',...
-    invN50_ratio', N50_ratio', I0N_ratio', IMSE_150_ratio', I0N', asymp_snr', N_fit_s', I0_fit', I0_fit_s', I0N_s', asymp_snr_shuf', single_dp2', fraction_found_trials'],...
+    invN50_ratio', N50_ratio', I0N_ratio', IMSE_150_ratio', I0N', asymp_snr', N_fit_s', I0_fit', I0_fit_s', I0N_s', asymp_snr_shuf', single_dp2', performance'],...
     'VariableNames', [varnames, {'asymp_ratio', 'inv_asymp_ratio', 'invN50', 'N50',...
-    'invN50_ratio', 'N50_ratio', 'I0N_ratio', 'IMSE_150_ratio', 'I0N', 'asymp_snr', 'N50_s', 'I0', 'I0_s', 'I0N_s', 'asymp_snr_shuf', 'single_dp2', 'fraction_found_trials'}]);
+    'invN50_ratio', 'N50_ratio', 'I0N_ratio', 'IMSE_150_ratio', 'I0N', 'asymp_snr', 'N50_s', 'I0', 'I0_s', 'I0N_s', 'asymp_snr_shuf', 'single_dp2', 'performance'}]);
 mean_table = [table(mouse_names', 'VariableNames', {'Mouse'}), mean_table];
 
 conf_table = array2table([1.96*sem_, asymp_ratio_conf', inv_asymp_ratio_conf', invN50_conf', N50_conf',...
-    invN50_ratio_conf', N50_ratio_conf', I0N_ratio_conf', IMSE_150_ratio_conf', I0N_c', asymp_snr_conf', N_conf_s', I0_conf', I0_conf_s', I0N_c_s', asymp_snr_shuf_conf', single_dp2_conf', fraction_found_trials'.*0],...
+    invN50_ratio_conf', N50_ratio_conf', I0N_ratio_conf', IMSE_150_ratio_conf', I0N_c', asymp_snr_conf', N_conf_s', I0_conf', I0_conf_s', I0N_c_s', asymp_snr_shuf_conf', single_dp2_conf', performance'.*0],...
     'VariableNames', [varnames, {'asymp_ratio', 'inv_asymp_ratio', 'invN50', 'N50',...
-    'invN50_ratio', 'N50_ratio', 'I0N_ratio', 'IMSE_150_ratio', 'I0N', 'asymp_snr', 'N50_s', 'I0', 'I0_s', 'I0N_s', 'asymp_snr_shuf', 'single_dp2', 'fraction_found_trials'}]);
+    'invN50_ratio', 'N50_ratio', 'I0N_ratio', 'IMSE_150_ratio', 'I0N', 'asymp_snr', 'N50_s', 'I0', 'I0_s', 'I0N_s', 'asymp_snr_shuf', 'single_dp2', 'performance'}]);
 conf_table = [table(mouse_names', 'VariableNames', {'Mouse'}), conf_table];
 
 

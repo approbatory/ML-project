@@ -32,7 +32,7 @@ else
     x = varargin{1};
     y = varargin{2};
     e = varargin{3};
-    extra = varargin{4:end};
+    extra = varargin(4:end);
     if isempty(color)
         H = shadedErrorBar(x,y,e,extra{:});
     else
