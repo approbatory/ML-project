@@ -11,7 +11,7 @@ else
 end
 
 n_sess = sum(filt_sess);
-assert(n_sess > 1, 'no sessions, or just 1');
+assert(n_sess >= 1, 'no sessions');
 
 %sess_indices = find(filt_sess);
 
