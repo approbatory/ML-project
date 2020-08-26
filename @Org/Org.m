@@ -55,7 +55,7 @@ classdef Org < handle
         [res, res_sem] = all_by_bins(o, varname, restrict)
         [res, res_sem] = all_med_bins(o, varname, restrict)
         
-        [res, res_sem] = per_sess(o, varname)
+        [res, res_sem] = per_sess(o, varname, restrict)
         
         function make_derived(o, varname, varlist, func, saveit)
             o.derived.(varname).v = varlist;

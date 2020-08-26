@@ -306,6 +306,9 @@ org.make_var_per_sess('nc_by_dist_l', {'noise_corr_avg_left', 'mode_dist_left'},
 
 org.make_var_per_sess('avg_nc', {'noise_corr_avg_right', 'noise_corr_avg_left'},...
     @(nc_r, nc_l) mean([get_pairs(nc_r) ; get_pairs(nc_l)]));
+
+org.make_var_per_sess('abs_avg_nc', {'noise_corr_avg_right', 'noise_corr_avg_left'},...
+    @(nc_r, nc_l) mean([abs(get_pairs(nc_r)) ; abs(get_pairs(nc_l))]));
 end
 
 

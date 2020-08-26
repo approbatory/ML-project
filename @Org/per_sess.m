@@ -1,6 +1,10 @@
-function [res, res_sem] = per_sess(o, varname)
+function [res, res_sem] = per_sess(o, varname, restrict)
 
-res_list = o.mouse_all_sess(varname, []);
+if ~exist('restrict', 'var')
+    restrict = [];
+end
+
+res_list = o.mouse_all_sess(varname, restrict);
 
 notnan = ~isnan(res_list);
 
