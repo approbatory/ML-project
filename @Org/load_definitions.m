@@ -298,6 +298,17 @@ org.make_derived('avg_signal', {'dmus'},...
 
 org.make_derived('total_signal', {'dmus'},...
     @(dm) sum(dm.^2));
+
+org.make_var_per_sess('nc_by_dist_r', {'noise_corr_avg_right', 'mode_dist_right'},...
+    @(nc, d)show_vars(get_pairs(d),get_pairs(nc),0,20,20));
+org.make_var_per_sess('nc_by_dist_l', {'noise_corr_avg_left', 'mode_dist_left'},...
+    @(nc, d)show_vars(get_pairs(d),get_pairs(nc),0,20,20));
+
+org.make_var_per_sess('avg_nc', {'noise_corr_avg_right', 'noise_corr_avg_left'},...
+    @(nc_r, nc_l) mean([get_pairs(nc_r) ; get_pairs(nc_l)]));
+
+org.make_var_per_sess('abs_avg_nc', {'noise_corr_avg_right', 'noise_corr_avg_left'},...
+    @(nc_r, nc_l) mean([abs(get_pairs(nc_r)) ; abs(get_pairs(nc_l))]));
 end
 
 
@@ -342,4 +353,41 @@ end
 function r = up_to(a, n)
 n = min(n, numel(a));    
 r = sum(a(1:n));
+end
+
+
+%function [edge_mids, mean_vals, sems] = show_vars(X, Y, low, high, count)
+function mean_vals = show_vars(X, Y, low, high, count)
+    %[~, edges] = histcounts(X);
+    edges = linspace(low, high, count + 1);
+    [mean_vals, sems] = avg_bins(X,Y,edges);
+    edge_mids = (edges(1:end-1) + edges(2:end))/2;
+end
+
+
+function [mean_vals, sems] = avg_bins(X, Y, Xbins)
+[X, ord] = sort(X);
+Y = Y(ord);
+max_X = max(X);
+
+n_bins = numel(Xbins)-1;
+[mean_vals, sems] = deal(zeros(1,n_bins));
+
+for i = 1:n_bins
+    bin_start = Xbins(i);
+    bin_end = Xbins(i+1);
+    
+    ind_start = find(X >= bin_start, 1);
+    assert(~isempty(ind_start), 'could not find start');
+    if bin_end >= max_X
+        ind_end = numel(X);
+    else
+        ind_end = find(X > bin_end, 1) - 1;
+        assert(~isempty(ind_end), 'could not find end');
+    end
+    
+    selection = Y(ind_start:ind_end);
+    mean_vals(i) = mean(selection);
+    sems(i) = sem(selection);
+end
 end

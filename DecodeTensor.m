@@ -259,7 +259,27 @@ classdef DecodeTensor < handle
             % opt.neural_data_type = 'rawTraces' OR 'rawProbs' OR
             %   'spikeDeconv'
             % opt.n_bins = number of bins to use, e.g. 20
+            
+            
             load(source_path);
+            
+            [~,w_] = fileparts(source_path);
+            if strcmp(w_, 'Mouse-2026-20150329_115639-linear-track-TracesAndEvents')
+                % special_74_cut_350 = true;
+                tracesEvents.position = tracesEvents.position(351:end,:);
+                tracesEvents.velocity = tracesEvents.velocity(351:end,:);
+                tracesEvents.rawProb = tracesEvents.rawProb(351:end,:);
+                tracesEvents.rawTraces = tracesEvents.rawTraces(351:end,:);
+                tracesEvents.zTraces = tracesEvents.zTraces(351:end,:);
+                tracesEvents.zProb = tracesEvents.zProb(351:end,:);
+                tracesEvents.tresholdEvents = tracesEvents.tresholdEvents(351:end,:);
+                tracesEvents.spikeDeconvTrace = tracesEvents.spikeDeconvTrace(351:end,:);
+                tracesEvents.spikeDeconv = tracesEvents.spikeDeconv(351:end,:);
+                tracesEvents.spikeML = tracesEvents.spikeML(351:end,:);
+            end
+            
+            
+            
             track_coord = tracesEvents.position(:,1);
             if any(strcmp(opt.neural_data_type, {'FST_events', 'FST_filled', 'FST_padded', 'IED'}))
                 fieldname = 'rawTraces';
@@ -1085,7 +1105,7 @@ classdef DecodeTensor < handle
             if ~exist('f_val', 'var')
                 f_val = @(x)x;
             end
-            figure;
+            %figure;
             if ~exist('w', 'var')
                 w = 8;
             end
