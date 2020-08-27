@@ -39,11 +39,13 @@ for r_ix = 1:reps
                 %key_events(i,j) = st + closest_frame - 1;
                 ms_begin = milestones(j); ms_end = milestones(j+1);
                 frames_within = pos_segment >= ms_begin & pos_segment < ms_end;
-                assert(any(frames_within), 'No frames found in bin interval.');
-                
-                num_frames_within = sum(frames_within);
-                random_frame = find(frames_within,1) + randi(num_frames_within) - 1;
-                key_events(i,j) = st + random_frame - 1;
+                if ~any(frames_within)
+                    key_events(i,j) = nan;
+                else
+                    num_frames_within = sum(frames_within);
+                    random_frame = find(frames_within,1) + randi(num_frames_within) - 1;
+                    key_events(i,j) = st + random_frame - 1;
+                end
             end
         end
         
@@ -60,20 +62,26 @@ for r_ix = 1:reps
             for k_i = 1:K
                 for t_i = 1:T
                     frame = key_events(t_i, k_i);
-                    frame_range = frame + selector;
-                    frame_range = min(max_frame, frame_range);
-                    frame_range = max(1, frame_range);
-                    %ind = sub2ind([K T], k_i, t_i);
-                    neural_features(:,k_i, t_i) = mean(tracesEvents.rawTraces(frame_range,:),1);
-                    position_target(k_i, t_i) = cm_position(frame);
-                    bin_target(k_i, t_i) = 2*k_i - (tr_dir(t_i)==1);
+                    if isnan(frame)
+                        neural_features(:,k_i, t_i) = nan;
+                        position_target(k_i, t_i) = nan;
+                        bin_target(k_i, t_i) = nan;
+                    else
+                        frame_range = frame + selector;
+                        frame_range = min(max_frame, frame_range);
+                        frame_range = max(1, frame_range);
+                        %ind = sub2ind([K T], k_i, t_i);
+                        neural_features(:,k_i, t_i) = mean(tracesEvents.rawTraces(frame_range,:),1);
+                        position_target(k_i, t_i) = cm_position(frame);
+                        bin_target(k_i, t_i) = 2*k_i - (tr_dir(t_i)==1);
+                    end
                 end
             end
             
             ideal_bin_position = zeros(2*K,1);
             for k_val = 1:2*K
                 x_ = position_target(bin_target==k_val);
-                ideal_bin_position(k_val) = mean(x_(:));
+                ideal_bin_position(k_val) = nanmean(x_(:));
             end
             
             %%
@@ -90,9 +98,15 @@ for r_ix = 1:reps
             
             [sup_X1, sup_ks1] = DecodeTensor.tensor2dataset(T1, d1);
             sup_pos1 = pos_1(:);
+            [sup_X1, f_x1] = denan_rows(sup_X1);
+            sup_ks1 = sup_ks1(f_x1);
+            sup_pos1 = sup_pos1(f_x1);
             
             [sup_X2, sup_ks2] = DecodeTensor.tensor2dataset(T2, d2);
             sup_pos2 = pos_2(:);
+            [sup_X2, f_x2] = denan_rows(sup_X2);
+            sup_ks2 = sup_ks2(f_x2);
+            sup_pos2 = sup_pos2(f_x2);
             
             binsize = opt.total_length/n_divs;
             binwise_err_func = @(ks, ps) mean(abs(ceil(ks/2) - ceil(ps/2))) * binsize;
@@ -127,6 +141,11 @@ end
 time_taken = toc(t_);
 fprintf('Took %d s to complete\n', time_taken);
 
+x_ = mean(coordwise_error,3);
+if isvector(x_) || isscalar(x_)
+    return;
+end
+
 figure;
 %[NN, II] = meshgrid(n_divs_array, integration_frames_array);
 surf(integration_frames_array, n_divs_array, mean(coordwise_error,3));
@@ -143,3 +162,10 @@ xlabel 'Integration frames'
 ylabel 'Number of bins'
 zlabel 'Mean error (cm)'
 title 'Binwise error'
+
+end
+
+function [x, f] = denan_rows(x)
+    f = ~any(isnan(x),2);
+    x = x(f,:);
+end
