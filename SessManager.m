@@ -56,7 +56,7 @@ classdef SessManager
         end
         
         function dispatch_usable(o, dispatch_index, data_type)
-            %index is from 1 to ???
+            %index is from 1 to 110
             d = o.cons_usable(dispatch_index, true);
             opt = DecodeTensor.default_opt;
             if exist('data_type', 'var')
@@ -103,7 +103,7 @@ classdef SessManager
     
     methods(Static)
         function dispatch_base(dispatch_index, data_type)
-            %index is from 1 to ???
+            %index is from 1 to 239
             d = DecodeTensor.cons(dispatch_index, true);
             opt = DecodeTensor.default_opt;
             if exist('data_type', 'var')
