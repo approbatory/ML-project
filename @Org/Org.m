@@ -13,7 +13,10 @@ classdef Org < handle
     end
     
     methods
-        function o = Org
+        function o = Org(stor_file)
+            if exist('stor_file', 'var')
+                o.storage_file = stor_file;
+            end
             sm = SessManager;
             o.total_sessions = sm.num_usable;
             if ~exist(o.storage_file, 'file')
