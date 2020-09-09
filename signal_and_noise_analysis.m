@@ -240,13 +240,16 @@ MultiSessionVisualizer.plot_series(n, {snr_shuf, snr}, {'r', 'b'}, mouse_names, 
             Utils.printto('supplements_pdf/decoding_curves', 'multi_snr_curves.pdf');
 %%
 figure;
-Utils.bns_groupings(asymp_snr, asymp_snr_shuf, asymp_snr_conf, asymp_snr_shuf_conf, mouse_names, false);
-ylim([min(min(asymp_snr), min(asymp_snr_shuf)),  max(max(asymp_snr), max(asymp_snr_shuf))]);
+Utils.bns_groupings(asymp_snr, asymp_snr_shuf, asymp_snr_conf, asymp_snr_shuf_conf, mouse_names, false, {'Real', 'Shuffled'}, true);
+%ylim([min(min(asymp_snr), min(asymp_snr_shuf)),  max(max(asymp_snr), max(asymp_snr_shuf))]);
+ylim([1e-4, 1e4]);
+set(gca, 'YTick', [0.01 1 100]);
 ylabel(sprintf('Signal slope / Noise slope'));
 xlabel 'Mouse index'
 Utils.specific_format('MBNS');
 Utils.printto('supplements_pdf/decoding_curves', 'multi_asymp_snr.pdf');
 %% path analysis: splash zone
+g_ = SessManager.highqual_filt_from_usable;
 dm_asnr = get_asnr(res, s_, 'm', false)'; dm_asnr = zscore(dm_asnr(g_));
 w_asnr = get_asnr(res, s_, 'f', false)'; w_asnr = zscore(w_asnr(g_));
 wd_asnr = get_asnr(res, s_, 'd', false)'; wd_asnr = zscore(wd_asnr(g_));

@@ -179,7 +179,8 @@ classdef DecodeTensor < handle
             opt.cutoff_p = 5; %percentile
             opt.samp_freq = 20; %Hz
             opt.v_thresh = 4; %cm/s
-            opt.n_bins = 20;
+            opt.n_bins = 50; % was 20
+            opt.leeway_frac = 1/20;
             opt.d_neurons = 10;%30;
             opt.restrict_trials = -1;
             opt.neural_data_type = 'rawTraces';
@@ -190,7 +191,7 @@ classdef DecodeTensor < handle
             opt.d_trials = 10;
             opt.first_half = false;
             opt.pad_seconds = 0.8;
-            opt.discard_incomplete_trials = true;
+            opt.discard_incomplete_trials = false;% was true
             opt.restrict_cell_distance = 0;
             opt.interactive = false;
         end
@@ -518,12 +519,15 @@ classdef DecodeTensor < handle
         function err_res = decode_all(data_tensor, tr_dir, binsize, alg, num_neurons, num_trials)
             [data_tensor, tr_dir] = DecodeTensor.cut_tensor(data_tensor, tr_dir, num_neurons, num_trials);
             [T1, d1, T2, d2, ~] = DecodeTensor.holdout_half(data_tensor, tr_dir);
-            T1s = DecodeTensor.shuffle_tensor(T1, d1);
-            T2s = DecodeTensor.shuffle_tensor(T2, d2);
+            %T1s = DecodeTensor.shuffle_tensor(T1, d1);
+            %T2s = DecodeTensor.shuffle_tensor(T2, d2);
             [sup_X1, sup_ks1] = DecodeTensor.tensor2dataset(T1, d1);
             [sup_X2, sup_ks2] = DecodeTensor.tensor2dataset(T2, d2);
-            [sup_X1s, sup_ks1s] = DecodeTensor.tensor2dataset(T1s, d1);
-            [sup_X2s, sup_ks2s] = DecodeTensor.tensor2dataset(T2s, d2);
+            %[sup_X1s, sup_ks1s] = DecodeTensor.tensor2dataset(T1s, d1);
+            sup_X1s = shuffle(sup_X1, sup_ks1); sup_ks1s = sup_ks1;
+            %[sup_X2s, sup_ks2s] = DecodeTensor.tensor2dataset(T2s, d2);
+            sup_X2s = shuffle(sup_X2, sup_ks2); sup_ks2s = sup_ks2;
+            
             mean_err_func = @(ks, ps) mean(abs(ceil(ks/2) - ceil(ps/2))) * binsize;
             MSE_func = @(ks, ps) mean((ceil(ks/2) - ceil(ps/2)).^2) * binsize.^2;
             model1 = alg.train(sup_X1, sup_ks1);
@@ -774,7 +778,8 @@ classdef DecodeTensor < handle
             samp_freq = opt.samp_freq; %Hz
             v_thresh = opt.v_thresh; %cm/s
             n_bins = opt.n_bins;
-            leeway_frac = 1/n_bins;
+            %leeway_frac = 1/n_bins;
+            leeway_frac = opt.leeway_frac;
             
             track_coord = XY(:,1);
             %define the track distance in pixels to be between 5 and 95
@@ -918,7 +923,7 @@ classdef DecodeTensor < handle
                     counts_mat(b, tr_i) = size(trial_data(trial_bins == b,:),1);
                 end
             end
-            assert(all(counts_mat(:)~=0), 'some trial(s) have zero samples in a place bin, consider using fewer place bins');
+            %assert(all(counts_mat(:)~=0), 'some trial(s) have zero samples in a place bin, consider using fewer place bins');
         end
         
         function shuf_tensor = shuffle_tensor(data_tensor, tr_dir)
@@ -1016,6 +1021,9 @@ classdef DecodeTensor < handle
                     sup_ks((t-1)*n_bins + b) = 2*b - (tr_dir(t) == 1);
                 end
             end
+            nanfilt = ~any(isnan(sup_X),2);
+            sup_X = sup_X(nanfilt,:);
+            sup_ks = sup_ks(nanfilt);
         end
         
         function [T_cut, d_cut, neuron_subset, total_trials_subset] = cut_tensor(data_tensor, tr_dir, num_neurons, num_trials)

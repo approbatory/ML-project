@@ -35,7 +35,7 @@ for m_i = 1:numel(hq_mice)
     permouse_corr_len(m_i) = locate_negative(mean_nc_dist, 20);
     %[permouse_avg_nc(m_i), permouse_avg_nc_sem(m_i)] = org.mouse_by_bins('avg_nc', {hq_mice{m_i}, 'restrict'});
     %[permouse_sig_dens(m_i), permouse_sig_dens_sem(m_i)] = org.mouse_med_bins('signal_density', {hq_mice{m_i}, 'restrict'});
-    [permouse_avg_nc(m_i), permouse_avg_nc_sem(m_i)] = msem(org.per_sess('abs_avg_nc', {hq_mice{m_i}, 'restrict'}));
+    [permouse_abs_avg_nc(m_i), permouse_abs_avg_nc_sem(m_i)] = msem(org.per_sess('abs_avg_nc', {hq_mice{m_i}, 'restrict'}));
     [permouse_sig_dens(m_i), permouse_sig_dens_sem(m_i)] = msem(org.per_sess('signal_density', {hq_mice{m_i}, 'restrict'}));
     %[permouse_asymp_rat(m_i), permouse_asymp_rat_sem(m_i)] = msem(org.per_sess('asymp_ratio', {hq_mice{m_i}, 'restrict'}));
     %[permouse_I0N(m_i), permouse_I0N_sem(m_i)] = msem(org.per_sess('I0N', {hq_mice{m_i}, 'restrict'}));
@@ -50,12 +50,15 @@ PanelGenerator.plot_regress(permouse_corr_len, permouse_sig_dens, permouse_corr_
 xlabel 'Noise corr. length';
 ylabel 'Signal density';
 axis square;
+report_corrs(permouse_corr_len, permouse_sig_dens, 'corr_len', 'signal_density');
+
 subplot(3,2,2);
-PanelGenerator.plot_regress(permouse_avg_nc, permouse_sig_dens, permouse_avg_nc_sem.*1.96, permouse_sig_dens_sem.*1.96,...
+PanelGenerator.plot_regress(permouse_abs_avg_nc, permouse_sig_dens, permouse_abs_avg_nc_sem.*1.96, permouse_sig_dens_sem.*1.96,...
     hq_mice, 'k');
 xlabel 'Abs. Avg. noise corr.';
 ylabel 'Signal density';
 axis square;
+report_corrs(permouse_abs_avg_nc, permouse_sig_dens, 'abs_avg_nc', 'signal_density');
 
 subplot(3,2,3);
 PanelGenerator.plot_regress(permouse_corr_len, permouse_asymp_rat, permouse_corr_len.*0, permouse_asymp_rat_sem.*1.96,...
@@ -63,12 +66,15 @@ PanelGenerator.plot_regress(permouse_corr_len, permouse_asymp_rat, permouse_corr
 xlabel 'Noise corr. length';
 ylabel 'Asymp. ratio';
 axis square;
+report_corrs(permouse_corr_len, permouse_asymp_rat, 'corr_len', 'asymp_ratio');
+
 subplot(3,2,4);
-PanelGenerator.plot_regress(permouse_avg_nc, permouse_asymp_rat, permouse_avg_nc_sem.*1.96, permouse_asymp_rat_sem.*1.96,...
+PanelGenerator.plot_regress(permouse_abs_avg_nc, permouse_asymp_rat, permouse_abs_avg_nc_sem.*1.96, permouse_asymp_rat_sem.*1.96,...
     hq_mice, 'k');
 xlabel 'Abs. Avg. noise corr.';
 ylabel 'Asymp. ratio';
 axis square;
+report_corrs(permouse_abs_avg_nc, permouse_asymp_rat, 'abs_avg_nc', 'asymp_ratio');
 
 subplot(3,2,5);
 PanelGenerator.plot_regress(permouse_corr_len, permouse_I0N, permouse_corr_len.*0, permouse_I0N_sem.*1.96,...
@@ -76,12 +82,15 @@ PanelGenerator.plot_regress(permouse_corr_len, permouse_I0N, permouse_corr_len.*
 xlabel 'Noise corr. length';
 ylabel 'I0N';
 axis square;
+report_corrs(permouse_corr_len, permouse_I0N, 'corr_len', 'I0N');
+
 subplot(3,2,6);
-PanelGenerator.plot_regress(permouse_avg_nc, permouse_I0N, permouse_avg_nc_sem.*1.96, permouse_I0N_sem.*1.96,...
+PanelGenerator.plot_regress(permouse_abs_avg_nc, permouse_I0N, permouse_abs_avg_nc_sem.*1.96, permouse_I0N_sem.*1.96,...
     hq_mice, 'k');
 xlabel 'Abs. Avg. noise corr.';
 ylabel 'I0N';
 axis square;
+report_corrs(permouse_abs_avg_nc, permouse_I0N, 'abs_avg_nc', 'I0N');
 %%
 return;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -257,4 +266,12 @@ end
 function [m_, s_] = msem(x)
     m_ = mean(x);
     s_ = sem(x);
+end
+
+function report_corrs(v1_agg, v2_agg, var1, var2)
+[p,pp,s,sp,k,kp,adjr2] = Org.corr_check(v1_agg, v2_agg);
+fprintf('Mouse-aggregated correlations %s vs. %s: adj. R^2 = %.3f\n', var1, var2, adjr2);
+fprintf('Pearson: %.3f, p = %e, %s\n', p, pp, Utils.pstar(pp));
+fprintf('Spearman: %.3f, p = %e, %s\n', s, sp, Utils.pstar(sp));
+fprintf('Kendall: %.3f, p = %e, %s\n', k, kp, Utils.pstar(kp));
 end
