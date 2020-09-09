@@ -14,7 +14,9 @@ try
     %DecodeTensor.dispatch(str2double(source), is_padded, distance_cutoff);
     %DecodeTensor.dispatch_filt(str2double(source), 'IED');
     %%DecodeTensor.dispatch_datasize_filt(str2double(source));
-    SessManager.dispatch_base(str2double(source));
+    %SessManager.dispatch_base(str2double(source));
+    sm = SessManager;
+    sm.dispatch_usable(str2double(source));
 catch me
     fprintf('%s / %s\n', me.identifier, me.message);
 end
