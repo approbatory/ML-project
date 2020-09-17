@@ -3,10 +3,15 @@ t_ = tic;
 
 [coordwise_error, binwise_error] = deal(zeros(numel(n_divs_array), numel(integration_frames_array), reps));
 
-sm = SessManager;
+
 %i_usable = 69;
-data_file = sm.data_path(i_usable, 'Usable');
-load(data_file, 'tracesEvents');
+if isstruct(i_usable)
+    tracesEvents = i_usable;
+else
+    sm = SessManager;
+    data_file = sm.data_path(i_usable, 'Usable');
+    load(data_file, 'tracesEvents');
+end
 opt = DecodeTensor.default_opt;
 [cpp, ~, trial_start, trial_end, tr_dir, track_bins, track_dir_bins] = ...
     DecodeTensor.new_sel(tracesEvents.position, opt);
@@ -130,8 +135,8 @@ for r_ix = 1:reps
             binwise_error(n_ix, i_ix, r_ix) = mean([binwise_error1 binwise_error2]);
             coordwise_error(n_ix, i_ix, r_ix) = mean([coordwise_error1 coordwise_error2]);
             
-            fprintf('Coordwise error:\t%.2f cm\nBinwise error:\t%.2f cm\n\n',...
-                coordwise_error(n_ix, i_ix, r_ix), binwise_error(n_ix, i_ix, r_ix));
+            fprintf('ndivs=%d frames=%d\nCoordwise error:\t%.2f cm\nBinwise error:\t%.2f cm\n\n',...
+                n_divs, integration_frames, coordwise_error(n_ix, i_ix, r_ix), binwise_error(n_ix, i_ix, r_ix));
             progressbar([], [], i_ix / numel(integration_frames_array));
         end
         progressbar([], n_ix / numel(n_divs_array), []);
@@ -145,6 +150,7 @@ x_ = mean(coordwise_error,3);
 if isvector(x_) || isscalar(x_)
     return;
 end
+
 
 figure;
 %[NN, II] = meshgrid(n_divs_array, integration_frames_array);
