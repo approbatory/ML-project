@@ -1382,14 +1382,14 @@ classdef DecodeTensor < handle
                 conn = sqlite(dbfile);
                 cleaner = onCleanup(@()conn.close);
             end
-            progressbar('file', 'row');
+            progressbar('file');
             for i = 1:numel(S)
                 if ~S(i).isdir
                     L = load(fullfile(S(i).folder, S(i).name));
                     db_queue = L.(p.Results.save_varname);
                     for j = 1:numel(db_queue)
                         conn.insert(table_name, field_names, db_queue{j});
-                        progressbar([], j/numel(db_queue));
+                        %progressbar([], j/numel(db_queue));
                     end
                 end
                 progressbar(i/numel(S));
