@@ -706,7 +706,7 @@ classdef PanelGenerator
             
             p.parse(varargin{:});
             
-            savedir = 'figure1_pdf/decoding_curves';
+            savedir = 'figure1_pdf/decoding_curves_50';
             if ~exist(savedir, 'dir')
                 mkdir(savedir);
             end
@@ -714,11 +714,11 @@ classdef PanelGenerator
             ap = @(x) fullfile(savedir, x);
             
             
-            save_file = 'decoding_curves_fits.mat';
+            save_file = 'decoding_curves_fits_50.mat';
             if p.Results.recompute || ~exist(save_file, 'file')
-                dbfile = 'decoding_all_sess.db';
+                dbfile = 'decoding_50_bins_partial_take4.db';
                 conn = sqlite(dbfile);
-                samp_size = 80;
+                samp_size = 20;
                 %[sess, mouse_names] = DecodeTensor.filt_sess_id_list;
                 [sess, mouse_names] = SessManager.usable_sess_id_list;
                 [n_sizes, imse] = PanelGenerator.db_imse_reader(conn, 'unshuffled', sess, samp_size);
