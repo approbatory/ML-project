@@ -1,4 +1,8 @@
-function [coordwise_error, binwise_error] = bin_integration_time_checker(i_usable, n_divs_array, integration_frames_array, reps)
+function res = bin_integration_time_checker(i_usable, n_divs_array, integration_frames_array, reps, alg)
+if ~exist('alg', 'var')
+    alg = my_algs('ecoclin');
+end
+
 t_ = tic;
 
 [coordwise_error, binwise_error] = deal(zeros(numel(n_divs_array), numel(integration_frames_array), reps));
@@ -101,29 +105,33 @@ for r_ix = 1:reps
             pos_1 = position_target(:, division);
             pos_2 = position_target(:,~division);
             
-            [sup_X1, sup_ks1] = DecodeTensor.tensor2dataset(T1, d1);
+            [sup_X1, sup_ks1, f_x1] = DecodeTensor.tensor2dataset(T1, d1);
             sup_pos1 = pos_1(:);
-            [sup_X1, f_x1] = denan_rows(sup_X1);
-            sup_ks1 = sup_ks1(f_x1);
+            %[sup_X1, f_x1] = denan_rows(sup_X1);
+            %sup_ks1 = sup_ks1(f_x1);
             sup_pos1 = sup_pos1(f_x1);
             
-            [sup_X2, sup_ks2] = DecodeTensor.tensor2dataset(T2, d2);
+            [sup_X2, sup_ks2, f_x2] = DecodeTensor.tensor2dataset(T2, d2);
             sup_pos2 = pos_2(:);
-            [sup_X2, f_x2] = denan_rows(sup_X2);
-            sup_ks2 = sup_ks2(f_x2);
+            %[sup_X2, f_x2] = denan_rows(sup_X2);
+            %sup_ks2 = sup_ks2(f_x2);
             sup_pos2 = sup_pos2(f_x2);
             
             binsize = opt.total_length/n_divs;
-            binwise_err_func = @(ks, ps) mean(abs(ceil(ks/2) - ceil(ps/2))) * binsize;
-            coordwise_err_func = @(pos, ideal_pred_pos) mean(abs(pos - ideal_pred_pos));
+            binwise_err_func = @(ks, ps) sqrt(mean((ceil(ks/2) - ceil(ps/2)).^2) * binsize.^2);%mean(abs(ceil(ks/2) - ceil(ps/2))) * binsize;
+            coordwise_err_func = @(pos, ideal_pred_pos) sqrt(mean((pos - ideal_pred_pos).^2));%mean(abs(pos - ideal_pred_pos));
             
-            alg = my_algs('ecoclin');
+            %alg = my_algs('ecoclin');
             
             %train on part 1
             model = alg.train(sup_X1, sup_ks1);
             sup_ps2 = alg.test(model, sup_X2);
             binwise_error2 = binwise_err_func(sup_ks2, sup_ps2);
             coordwise_error2 = coordwise_err_func(sup_pos2, ideal_bin_position(sup_ps2));
+            
+            if any(isnan(coordwise_error2(:)))
+                keyboard;
+            end
             
             
             %train on part 2
@@ -132,17 +140,29 @@ for r_ix = 1:reps
             binwise_error1 = binwise_err_func(sup_ks1, sup_ps1);
             coordwise_error1 = coordwise_err_func(sup_pos1, ideal_bin_position(sup_ps1));
             
+            if any(isnan(coordwise_error1(:)))
+                keyboard;
+            end
+            
             binwise_error(n_ix, i_ix, r_ix) = mean([binwise_error1 binwise_error2]);
             coordwise_error(n_ix, i_ix, r_ix) = mean([coordwise_error1 coordwise_error2]);
             
-            fprintf('ndivs=%d frames=%d\nCoordwise error:\t%.2f cm\nBinwise error:\t%.2f cm\n\n',...
-                n_divs, integration_frames, coordwise_error(n_ix, i_ix, r_ix), binwise_error(n_ix, i_ix, r_ix));
+            fprintf('ndivs=%d frames=%d reps=%d\nCoordwise RMS error:\t%.2f cm\nBinwise RMS error:\t%.2f cm\n\n',...
+                n_divs, integration_frames, r_ix, coordwise_error(n_ix, i_ix, r_ix), binwise_error(n_ix, i_ix, r_ix));
             progressbar([], [], i_ix / numel(integration_frames_array));
         end
         progressbar([], n_ix / numel(n_divs_array), []);
     end
     progressbar(r_ix/reps, [], []);
 end
+
+res.c_err = coordwise_error;
+res.b_err = binwise_error;
+res.nbins = n_divs_array;
+res.nframes = integration_frames_array;
+res.reps = reps;
+
+
 time_taken = toc(t_);
 fprintf('Took %d s to complete\n', time_taken);
 
@@ -168,6 +188,8 @@ xlabel 'Integration frames'
 ylabel 'Number of bins'
 zlabel 'Mean error (cm)'
 title 'Binwise error'
+
+
 
 end
 

@@ -1000,7 +1000,7 @@ classdef DecodeTensor < handle
             end
         end
         
-        function [sup_X, sup_ks] = tensor2dataset(data_tensor, tr_dir)
+        function [sup_X, sup_ks, nanfilt] = tensor2dataset(data_tensor, tr_dir)
             %%Converting the tensor to a dataset for supervised learning:
             % The bin and trial dimensions of the tensor are unrolled into
             % a data matrix of samples by neurons, and each sample is
