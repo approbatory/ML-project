@@ -29,10 +29,12 @@ cm_position = (track_coord - track_begin) .* cpp;
 cm_position(cm_position < 0) = 0;
 s_time = (1:numel(cm_position)) / 20;
 
+NUM_NDIVS = numel(n_divs_array);
+NUM_INT_FRAMES = numel(integration_frames_array);
 %n_divs = 5;
-progressbar('#Reps', '#Bins', '#Integration frames');
-for r_ix = 1:reps
-    for n_ix = 1:numel(n_divs_array)
+%progressbar('#Reps', '#Bins', '#Integration frames');
+parfor r_ix = 1:reps
+    for n_ix = 1:NUM_NDIVS
         n_divs = n_divs_array(n_ix);
         milestones = linspace(0,opt.total_length, n_divs+1);
         %milestones = opt.total_length./n_divs .* (0.5:1:n_divs);
@@ -59,7 +61,7 @@ for r_ix = 1:reps
         end
         
         %integration_frames = 4;
-        for i_ix = 1:numel(integration_frames_array)
+        for i_ix = 1:NUM_INT_FRAMES
             integration_frames = integration_frames_array(i_ix);
             N = size(tracesEvents.rawTraces,2);
             K = n_divs;
@@ -149,11 +151,11 @@ for r_ix = 1:reps
             
             fprintf('ndivs=%d frames=%d reps=%d\nCoordwise RMS error:\t%.2f cm\nBinwise RMS error:\t%.2f cm\n\n',...
                 n_divs, integration_frames, r_ix, coordwise_error(n_ix, i_ix, r_ix), binwise_error(n_ix, i_ix, r_ix));
-            progressbar([], [], i_ix / numel(integration_frames_array));
+            %progressbar([], [], i_ix / numel(integration_frames_array));
         end
-        progressbar([], n_ix / numel(n_divs_array), []);
+        %progressbar([], n_ix / numel(n_divs_array), []);
     end
-    progressbar(r_ix/reps, [], []);
+    %progressbar(r_ix/reps, [], []);
 end
 
 res.c_err = coordwise_error;
@@ -161,6 +163,7 @@ res.b_err = binwise_error;
 res.nbins = n_divs_array;
 res.nframes = integration_frames_array;
 res.reps = reps;
+res.usable_index = i_usable;
 
 
 time_taken = toc(t_);
