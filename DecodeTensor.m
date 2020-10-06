@@ -179,7 +179,7 @@ classdef DecodeTensor < handle
             opt.cutoff_p = 5; %percentile
             opt.samp_freq = 20; %Hz
             opt.v_thresh = 4; %cm/s
-            opt.n_bins = 50; % was 20
+            opt.n_bins = 20; % was temporarily 50
             opt.leeway_frac = 1/20;
             opt.d_neurons = 10;%30;
             opt.restrict_trials = -1;

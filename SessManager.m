@@ -66,6 +66,21 @@ classdef SessManager
         end
         
         
+        function dispatch_usable_trial_restricted(o, dispatch_index, data_type, num_trials)
+            if ~exist('num_trials', 'var')
+                num_trials = 30;
+            end
+            
+            %index is from 1 to 110
+            d = o.cons_usable(dispatch_index, true);
+            opt = DecodeTensor.default_opt;
+            opt.restrict_trials = num_trials;
+            if exist('data_type', 'var')
+                opt.neural_data_type = data_type;
+            end
+            DecodeTensor.decode_series(d{1}, d{2}, opt);
+        end
+        
         
         function u_i = usable_index_alias(o, base_i)
             for u_i = 1:o.num_usable

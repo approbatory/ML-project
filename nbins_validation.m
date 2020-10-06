@@ -25,4 +25,5 @@ lowest_err_bins = nbins(i);
 fprintf('Minimum at %d bins:\n%.2f cm\n', lowest_err_bins, lowest_err);
 
 p = signrank(mean_cerr(:,i-1), mean_cerr(:,i));
-fprintf('At %d bins, p = %.3f signrank test over sessions compared to %d bins\n%.2f cm error\n', nbins(i-1), p, nbins(i), grand_mean_cerr(i-1));
+p_rs = ranksum(mean_cerr(:,i-1), mean_cerr(:,i));
+fprintf('At %d bins, p = %.3e signrank, p = %.3f ranksum test over sessions compared to %d bins\n%.2f cm error\n', nbins(i-1), p, p_rs, nbins(i), grand_mean_cerr(i-1));
