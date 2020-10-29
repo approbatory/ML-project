@@ -1,6 +1,7 @@
 function res = confusion_mat_runner(index)
 tic
-D_T = DecodeTensor.cons_filt(index);
+sm = SessManager;
+D_T = sm.cons_usable(index);%DecodeTensor.cons_filt(index);
 n_reps = 20;
 num_trials = D_T.n_one_dir_trials;
 for j = 1:n_reps

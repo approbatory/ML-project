@@ -636,6 +636,7 @@ classdef PanelGenerator
             if remake || ~exist(fname, 'file')
                 figure('FileName', fname);
                 PanelGenerator.plot_confusion(C_pct, 'Confusion (%)');
+                colormap gray
                 Utils.printto;
             end
             
@@ -643,6 +644,7 @@ classdef PanelGenerator
             if remake || ~exist(fname, 'file')
                 figure('FileName', fname);
                 PanelGenerator.plot_confusion(C_s_pct, 'Confusion (%)');
+                colormap gray
                 Utils.printto;
             end
             
@@ -651,6 +653,7 @@ classdef PanelGenerator
                 disp('making diagonal');
                 figure('FileName', fname);
                 PanelGenerator.plot_confusion(C_d_pct, 'Confusion (%)');
+                colormap gray
                 Utils.printto;
             end
             
