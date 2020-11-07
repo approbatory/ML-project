@@ -114,6 +114,7 @@ classdef Cloud
         
         [dp2_train, dp2_test] = pls_demo(o)
         varargout = eigen_snr_crossval(o)
+        varargout = eigen_snr_pls(o, my_dims, color)
     end
     
     methods(Static)
