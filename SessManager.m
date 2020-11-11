@@ -134,6 +134,25 @@ classdef SessManager
             mouse_names = cellfun(@(x)['Mouse' x], mouse_names,...
                 'UniformOutput', false);
         end
+        
+        function [sess, mouse_names] = highqual_sess_id_list
+            sm = SessManager;
+            sess = sm.meta.Session(sm.meta.HighQual)';
+            mouse_names = sm.meta.Mouse(sm.meta.HighQual)';
+            mouse_names = cellfun(@(x)['Mouse' x], mouse_names,...
+                'UniformOutput', false);
+        end
+        
+        function mouse_names = usable_mice
+            [~, mouse_names] = SessManager.usable_sess_id_list;
+            mouse_names = unique(mouse_names);
+        end
+        
+        function mouse_names = highqual_mice
+            [~, mouse_names] = SessManager.highqual_sess_id_list;
+            mouse_names = unique(mouse_names);
+        end
+        
         function i = usable_index(mouse_name, sess_id)
             sm = SessManager;
             assert(numel(mouse_name) == numel(sess_id), 'Unequal numbers');
@@ -142,7 +161,20 @@ classdef SessManager
                 i(j) = sm.lookup_usable(mouse_name{j}, sess_id{j});
             end
         end
+        
         function ix = special_sessions_usable_index(mouse_names)
+            if ischar(mouse_names)
+                ix = SessManager.special_sessions_usable_index_single(mouse_names);
+            elseif iscell(mouse_names)
+                ix = zeros(1,numel(mouse_names));
+                for i = 1:numel(mouse_names)
+                    ix(i) = SessManager.special_sessions_usable_index_single(mouse_names{i});
+                end
+            end
+        end
+        
+        function ix = special_sessions_usable_index_single(mouse_names)
+            assert(ischar(mouse_names));
             [sess_ids,m_,~] = DecodeTensor.special_sess_id_list;
             show_filter = ismember(m_, mouse_names);
             ix = SessManager.usable_index(m_(show_filter), sess_ids(show_filter));

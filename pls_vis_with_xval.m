@@ -41,3 +41,50 @@ set(gca, 'YTick', []);
 figure_format('boxsize', [1 1.2], 'fontsize', 6);
 print('-dpng', '-r1800', 'figure2_pdf/demo/PLS_adjacent_shuf_XVAL.png');
 
+%% 3d version
+
+sm = SessManager;
+d = sm.cons_usable(69);
+[T1, d1, T2, d2] = DecodeTensor.holdout_half(d.data_tensor, d.tr_dir);
+[X1, ks1] = DecodeTensor.tensor2dataset(T1, d1);
+[X2, ks2] = DecodeTensor.tensor2dataset(T2, d2);
+X2_shuf = shuffle(X2, ks2);
+
+X1z = zscore(X1);
+X2z = zscore(X2);
+X2z_shuf = zscore(X2_shuf);
+
+[XS1, stats, origin] = Utils.pls_short(X1z, [ceil(ks1/2), mod(ks1,2)], 3);
+
+apply_proj = @(x) (x - mean(x)) * stats.W;
+
+XS2 = apply_proj(X2z);
+origin2 = -mean(X2z) * stats.W;
+XS2_shuf = apply_proj(X2z_shuf);
+origin2_shuf = -mean(X2z_shuf) * stats.W;
+
+figure;
+scatter3(XS2(:,1), XS2(:,2), XS2(:,3), 18, Utils.colorcode(ceil(ks2/2)), 'filled', 'MarkerFaceAlpha', 0.08); hold on;
+scatter3(origin2(1), origin2(2), origin2(3), 30, 'k');
+xlabel PLS1; ylabel PLS2; zlabel PLS3
+axis equal; axis tight;
+xl_ = xlim;
+yl_ = ylim;
+zl_ = zlim;
+set(gca, 'XTick', []);
+set(gca, 'YTick', []);
+set(gca, 'ZTick', []);
+%figure_format('boxsize', [1 1.2], 'fontsize', 6);
+%print('-dpng', '-r1800', 'figure2_pdf/demo/PLS_adjacent_XVAL.png');
+
+figure;
+scatter3(XS2_shuf(:,1), XS2_shuf(:,2),  XS2_shuf(:,3), 18, Utils.colorcode(ceil(ks2/2)), 'filled', 'MarkerFaceAlpha', 0.08); hold on;
+scatter3(origin2_shuf(1), origin2_shuf(2), origin2_shuf(3), 30, 'k');
+xlabel PLS1; ylabel PLS2; zlabel PLS3;
+axis equal; axis tight;
+xlim(xl_); ylim(yl_); zlim(zl_);
+set(gca, 'XTick', []);
+set(gca, 'YTick', []);
+set(gca, 'ZTick', []);
+%figure_format('boxsize', [1 1.2], 'fontsize', 6);
+%print('-dpng', '-r1800', 'figure2_pdf/demo/PLS_adjacent_shuf_XVAL.png');
