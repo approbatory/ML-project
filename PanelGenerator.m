@@ -637,6 +637,7 @@ classdef PanelGenerator
                 figure('FileName', fname);
                 PanelGenerator.plot_confusion(C_pct, 'Confusion (%)');
                 colormap gray
+                colormap(flipud(colormap(gca)));
                 Utils.printto;
             end
             
@@ -645,6 +646,7 @@ classdef PanelGenerator
                 figure('FileName', fname);
                 PanelGenerator.plot_confusion(C_s_pct, 'Confusion (%)');
                 colormap gray
+                colormap(flipud(colormap(gca)));
                 Utils.printto;
             end
             
@@ -654,6 +656,7 @@ classdef PanelGenerator
                 figure('FileName', fname);
                 PanelGenerator.plot_confusion(C_d_pct, 'Confusion (%)');
                 colormap gray
+                colormap(flipud(colormap(gca)));
                 Utils.printto;
             end
             

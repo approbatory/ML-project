@@ -56,6 +56,8 @@ else
     yl_ = ylim;
 end
 [~, argmax_pc_snr] = max(median(dp2_test_agg_mean));
+med_dp2_test = median(dp2_test_agg_mean);
+fprintf('Sum of dp2 from 1 to %d (the max) = %f\n which is %f%% of the total %f\n', argmax_pc_snr, sum(med_dp2_test(1:argmax_pc_snr)), 100 * sum(med_dp2_test(1:argmax_pc_snr))/sum(med_dp2_test), sum(med_dp2_test));
 l_ = line([argmax_pc_snr argmax_pc_snr], yl_, 'Color', 'r');
 
 x_ = median(dp2_test_agg_mean);

@@ -1093,8 +1093,8 @@ classdef DecodeTensor < handle
     
     methods(Static) %visualization tools
         function tensor_vis(data_tensor, tr_dir, f_val, w)
-            right_tensor = data_tensor(:,:,tr_dir == 1);
-            left_tensor = data_tensor(:,:,tr_dir == -1);
+            right_tensor = f_val(data_tensor(:,:,tr_dir == 1));
+            left_tensor = f_val(data_tensor(:,:,tr_dir == -1));
             flatten = @(t) reshape(t, [size(t,1), size(t,2)*size(t,3)]);
             
             right_meanact = mean(right_tensor, 3);
@@ -1121,6 +1121,9 @@ classdef DecodeTensor < handle
             subplot(2,w,1 ); imagesc(left_meanact);
             subplot(2,w,w+1); imagesc(right_meanact); xlabel 'Bin index'; ylabel 'Ordered cells'
             
+            if w < 2
+                return;
+            end
             subplot(2,w,2:w); imagesc(f_val(flatten(left_tensor)));
             xlim([1 sub_t*size(left_tensor,2)]);
             title 'Neural activity for leftward trials'
