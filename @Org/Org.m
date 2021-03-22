@@ -329,6 +329,13 @@ classdef Org < handle
         sigdens_plots(o);
         
         change_over_days(o, varname, highqual);
+    
+        function T = permouse_props(o, varname, highqual)
+            [v, v_conf, mice] = o.fetch_filt(varname, highqual);
+            [r, rc] = Org.agg(mice, v, v_conf);
+            my_mice = unique(mice);
+            T = table(my_mice(:), r, rc, 'VariableNames', {'Mouse', varname, [varname '_Conf']});
+        end
     end
     
     methods(Static)
