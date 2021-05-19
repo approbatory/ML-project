@@ -572,7 +572,7 @@ classdef PanelGenerator
             ylabel 'Position (cm)';
             legend(h, 'Real', 'Shuffled', 'Place bin');
             legend boxoff
-            figure_format('boxsize', [0.8 0.7]*1.05); box on;
+            figure_format('boxsize', [1 0.7]*1.05); box on;
             if p.Results.make_fig
                 Utils.printto;
             end
@@ -724,9 +724,10 @@ classdef PanelGenerator
             if p.Results.recompute || ~exist(save_file, 'file')
                 dbfile = 'decoding_all_sess.db';
                 conn = sqlite(dbfile);
-                samp_size = 20;
+                samp_size = 80;
                 %[sess, mouse_names] = DecodeTensor.filt_sess_id_list;
                 [sess, mouse_names] = SessManager.usable_sess_id_list;
+                sess = cellfun(@(a,b) {a,b}, mouse_names, sess, 'UniformOutput', false);
                 [n_sizes, imse] = PanelGenerator.db_imse_reader(conn, 'unshuffled', sess, samp_size);
                 [n_sizes_s, imse_s] = PanelGenerator.db_imse_reader(conn, 'shuffled', sess, samp_size);
                 [n_sizes_d, imse_d] = PanelGenerator.db_imse_reader(conn, 'diagonal', sess, samp_size);
