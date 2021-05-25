@@ -190,7 +190,7 @@ classdef DecodeTensor < handle
             %extra
             opt.d_trials = 10;
             opt.first_half = false;
-            opt.pad_seconds = 0.8;
+            opt.pad_seconds = 0.4;%0.8;
             opt.discard_incomplete_trials = false;% was true
             opt.restrict_cell_distance = 0;
             opt.interactive = false;
@@ -282,7 +282,7 @@ classdef DecodeTensor < handle
             
             
             track_coord = tracesEvents.position(:,1);
-            if any(strcmp(opt.neural_data_type, {'FST_events', 'FST_filled', 'FST_padded', 'IED'}))
+            if any(strcmp(opt.neural_data_type, {'FST_events', 'FST_filled', 'FST_padded', 'IED', 'WED'}))
                 fieldname = 'rawTraces';
             else
                 fieldname = opt.neural_data_type;
@@ -311,6 +311,16 @@ classdef DecodeTensor < handle
             end
             if strcmp(opt.neural_data_type, 'IED')
                 X = iterative_event_detection(X);
+            end
+            if strcmp(opt.neural_data_type, 'WED')
+                if isfield(opt, 'WED_base')
+                    fprintf('Using saved WED\n');
+                    X_ = conv2(opt.WED_base, ones(round(opt.pad_seconds*20),1), 'full');
+                    X_ = X_(1:size(X,1),:);
+                    X = X_;
+                else
+                    X = wavelet_event_detection(X, 'z_val', 1, 'Progress', true, 'fps', 20, 'OutType', 'onset', 'KernelWidth', max(1,round(opt.pad_seconds*20)));
+                end
             end
             
             if opt.first_half
@@ -1093,6 +1103,10 @@ classdef DecodeTensor < handle
     
     methods(Static) %visualization tools
         function tensor_vis(data_tensor, tr_dir, f_val, w)
+            if ~exist('f_val', 'var')
+                f_val = @(x)x;
+            end
+            
             right_tensor = f_val(data_tensor(:,:,tr_dir == 1));
             left_tensor = f_val(data_tensor(:,:,tr_dir == -1));
             flatten = @(t) reshape(t, [size(t,1), size(t,2)*size(t,3)]);
@@ -1110,9 +1124,7 @@ classdef DecodeTensor < handle
             left_meanact = left_meanact(o_left,:);
             left_tensor = left_tensor(o_left,:,:);
             
-            if ~exist('f_val', 'var')
-                f_val = @(x)x;
-            end
+            
             %figure;
             if ~exist('w', 'var')
                 w = 8;
