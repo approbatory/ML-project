@@ -190,7 +190,7 @@ classdef DecodeTensor < handle
             %extra
             opt.d_trials = 10;
             opt.first_half = false;
-            opt.pad_seconds = 0.4;%0.8;
+            opt.pad_seconds = 0.5;%0.8;
             opt.discard_incomplete_trials = false;% was true
             opt.restrict_cell_distance = 0;
             opt.interactive = false;
@@ -282,7 +282,7 @@ classdef DecodeTensor < handle
             
             
             track_coord = tracesEvents.position(:,1);
-            if any(strcmp(opt.neural_data_type, {'FST_events', 'FST_filled', 'FST_padded', 'IED', 'WED'}))
+            if any(strcmp(opt.neural_data_type, {'FST_events', 'FST_filled', 'FST_padded', 'IED', 'WED', 'HD'}))
                 fieldname = 'rawTraces';
             else
                 fieldname = opt.neural_data_type;
@@ -321,6 +321,20 @@ classdef DecodeTensor < handle
                 else
                     X = wavelet_event_detection(X, 'z_val', 1, 'Progress', true, 'fps', 20, 'OutType', 'onset', 'KernelWidth', max(1,round(opt.pad_seconds*20)));
                 end
+            end
+            if strcmp(opt.neural_data_type, 'HD')
+                if isfield(opt, 'WED_base')
+                    fprintf('Using saved WED\n');
+                    X_ = conv2(opt.WED_base, ones(round(opt.pad_seconds*20),1), 'full');
+                    X_ = X_(1:size(X,1),:);
+                    X = X_;
+                else
+                    X = hyperdetect(X, 'z_val', 3, 'Progress', false, 'OutType', 'onset');
+                    X_ = conv2(X, ones(round(opt.pad_seconds*20),1), 'full');
+                    X_ = X_(1:size(X,1),:);
+                    X = X_;
+                end
+                X = X ./ std(X);
             end
             
             if opt.first_half
