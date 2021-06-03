@@ -16,9 +16,9 @@ try
     %%DecodeTensor.dispatch_datasize_filt(str2double(source));
     %SessManager.dispatch_base(str2double(source));
     sm = SessManager;
-    %sm.dispatch_usable(str2double(source));
+    sm.dispatch_usable(str2double(source), 'HD');
     %running only 30 trials
-    sm.dispatch_usable_trial_restricted(str2double(source));
+    %sm.dispatch_usable_trial_restricted(str2double(source));
 catch me
     fprintf('%s / %s\n', me.identifier, me.message);
 end
