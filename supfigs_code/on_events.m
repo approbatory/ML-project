@@ -252,7 +252,7 @@ load(save_file);
 %TODO make the graphs onto the Pub, then copy all graphs over into the 
 % new pres (based on the old pres). 
 % Include a couple slides at the end about LTM extraction
-%%
+
 cutoff = 100;
 asymp_line = @(n,m) Utils.fitaline(n,m,cutoff);
 

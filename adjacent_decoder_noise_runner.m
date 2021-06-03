@@ -10,7 +10,7 @@ tic
 sm = SessManager;
 o_ = sm.cons_usable(index, true);
 d_ = DecodeTensor(o_, n_type);
-n_reps = 20;
+n_reps = 80;
 [N, K, T] = size(d_.data_tensor);
 n_sizes = unique([2, 10:10:N, N]);
 for j = 1:n_reps
