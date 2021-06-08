@@ -9,9 +9,9 @@ field_std = 3;
 x = 0:0.1:track_len; % cm
 m = sort(rand(n_cells, 1) * track_len);
 
-R = g_field(x, m, field_std);
+%R = g_field(x, m, field_std);
 
-rate_func = @(x) g_field(x, m, field_std);
+rate_func = @(x) g_field(single(x), single(m), single(field_std));
 response_sample = @(x) poissrnd(rate_func(x));
 
 t = seconds(seconds(0):seconds(1/20):hours(0.5)); %s
@@ -21,13 +21,14 @@ x_traj = track_len .* sin(max_v./track_len .* t).^2;
 noise_sigma = 10;
 input_noise = noise_sigma*randn(size(x_traj));
 
-X_noise = response_sample(x_traj + input_noise);
+X_noise = uint8(response_sample(x_traj + input_noise));
 
 tracesEvents.simulated_noise = X_noise.';
 tracesEvents.position = [x_traj(:), 0*x_traj(:)];
 savefile = 'Mouse-2099-20210606_000000-linear-track-TracesAndEvents.mat';
 save(savefile, 'tracesEvents');
 
+%{
 d_sim_noise = DecodeTensor({savefile, 'Mouse2099'}, 'simulated_noise');
 
 %%
@@ -48,3 +49,12 @@ plot(n_neu, 1./mse_sh);
 xlabel 'Num neurons'
 ylabel '1/MSE (cm^{-2})'
 toc(t_);
+%}
+
+%{
+function X = sim_X(n_cells,...
+    track_len, field_std, max_rate, noise_sigma)
+    
+%X = zeros(n_cells, 
+end
+%}
