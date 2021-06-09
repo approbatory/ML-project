@@ -14,3 +14,5 @@ session_filterer_res.txt_OLD_68
 *#
 .*
 pipeline/work
+!session_metadata.mat
+FN.txt
