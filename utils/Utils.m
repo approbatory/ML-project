@@ -476,7 +476,7 @@ classdef Utils %Common utilities for dealing with neural data
             if ispc
                 r = [base, '·10^{', sprintf('%d', expo_num), '}'];
             else
-                r = [base, 'Â·10^{', sprintf('%d', expo_num), '}'];
+                r = [base, '·10^{', sprintf('%d', expo_num), '}'];
             end
         end
         
@@ -484,7 +484,7 @@ classdef Utils %Common utilities for dealing with neural data
             if ispc
                 d = 'ï¿½';
             else
-                d = 'Â·';
+                d = '·';
             end
         end
         

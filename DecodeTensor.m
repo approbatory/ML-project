@@ -334,7 +334,7 @@ classdef DecodeTensor < handle
                     X_ = X_(1:size(X,1),:);
                     X = X_;
                 end
-                X = X ./ std(X);
+                X = X ./ (std(X) + eps);
             end
             
             if opt.first_half
