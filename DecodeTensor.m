@@ -917,7 +917,7 @@ classdef DecodeTensor < handle
             else
                 keep_trial = true(size(trial_start));
             end
-            fprintf('Total trials: %d\tThrowing away %d\tkeeping %d\n', numel(keep_trial), sum(~keep_trial), sum(keep_trial));
+            %fprintf('Total trials: %d\tThrowing away %d\tkeeping %d\n', numel(keep_trial), sum(~keep_trial), sum(keep_trial));
         end
         
         function [data_tensor, counts_mat] = construct_tensor(X, tr_bins, n_bins, tr_s, tr_e)
