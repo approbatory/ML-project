@@ -134,6 +134,14 @@ end
 
 % If task completed, close figure and clear vars, then exit
 if input{1} == 1
+    old_title = progdata(1).proglabel.String;
+    divider = ' || ';
+    divider_idx = strfind(old_title, divider);
+    if ~isempty(divider_idx)
+        old_title = old_title(1:divider_idx-1);
+    end
+    set(progdata(1).proglabel, 'String', [old_title ' || Completed.']);
+    drawnow
     if ishandle(progfig)
         delete(progfig) % Close progress bar
     end
@@ -290,6 +298,13 @@ else
     titlebarstr = ' 0%';
 end
 set(progfig, 'Name', titlebarstr)
+old_title = progdata(1).proglabel.String;
+divider = ' || ';
+divider_idx = strfind(old_title, divider);
+if ~isempty(divider_idx)
+    old_title = old_title(1:divider_idx-1);
+end
+set(progdata(1).proglabel, 'String', [old_title ' || ' titlebarstr]);
 
 % Force redraw to show changes
 drawnow
