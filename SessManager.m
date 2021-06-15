@@ -190,5 +190,15 @@ classdef SessManager
             end
             filt = logical(filt);
         end
+        
+        function d = load_special(mouse_name, ntype)
+            if ~exist('ntype', 'var')
+                ntype = 'rawTraces';
+            end
+            ix = SessManager.special_sessions_usable_index(mouse_name);
+            sm = SessManager;
+            d = sm.cons_usable(ix, true);
+            d = DecodeTensor(d, ntype);
+        end
     end
 end

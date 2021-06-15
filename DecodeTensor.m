@@ -190,7 +190,7 @@ classdef DecodeTensor < handle
             %extra
             opt.d_trials = 10;
             opt.first_half = false;
-            opt.pad_seconds = 0.5;%0.8;
+            opt.pad_seconds = -1;%0.8;
             opt.discard_incomplete_trials = false;% was true
             opt.restrict_cell_distance = 0;
             opt.interactive = false;
@@ -282,7 +282,7 @@ classdef DecodeTensor < handle
             
             
             track_coord = tracesEvents.position(:,1);
-            if any(strcmp(opt.neural_data_type, {'FST_events', 'FST_filled', 'FST_padded', 'IED', 'WED', 'HD'}))
+            if any(strcmp(opt.neural_data_type, {'FST_events', 'FST_filled', 'FST_padded', 'IED', 'WED', 'HD', 'HD_gamma'}))
                 fieldname = 'rawTraces';
             else
                 fieldname = opt.neural_data_type;
@@ -304,7 +304,9 @@ classdef DecodeTensor < handle
             end
             if strcmp(opt.neural_data_type, 'FST_padded')
                 X = Utils.event_detection(X);
-                %pad_seconds = 2;
+                if opt.pad_seconds < 0
+                    opt.pad_seconds = 0.5;
+                end
                 X_bin_full_padded = conv2(X, ones(opt.pad_seconds*20,1), 'full');
                 X_bin_full_padded = X_bin_full_padded(1:size(X,1),:);
                 X = X_bin_full_padded;
@@ -313,6 +315,9 @@ classdef DecodeTensor < handle
                 X = iterative_event_detection(X);
             end
             if strcmp(opt.neural_data_type, 'WED')
+                if opt.pad_seconds < 0
+                    opt.pad_seconds = 0.5;
+                end
                 if isfield(opt, 'WED_base')
                     fprintf('Using saved WED\n');
                     X_ = conv2(opt.WED_base, ones(round(opt.pad_seconds*20),1), 'full');
@@ -322,15 +327,34 @@ classdef DecodeTensor < handle
                     X = wavelet_event_detection(X, 'z_val', 1, 'Progress', true, 'fps', 20, 'OutType', 'onset', 'KernelWidth', max(1,round(opt.pad_seconds*20)));
                 end
             end
-            if strcmp(opt.neural_data_type, 'HD')
+            if strcmp(opt.neural_data_type, 'HD') || strcmp(opt.neural_data_type, 'HD_gamma')
+                use_default_paddings = opt.pad_seconds < 0;
+                if strcmp(opt.neural_data_type, 'HD')
+                    if use_default_paddings
+                        opt.pad_seconds = 0.5;
+                    end
+                    transient_profile = ones(round(opt.pad_seconds*20),1);
+                else
+                    if use_default_paddings
+                        opt.pad_seconds = 1;
+                    end
+                    T = opt.pad_seconds;
+                    Fs = 20;
+                    gamma_sample_times = linspace(0,5,T * Fs + 1);
+                    gamma_sample_times = gamma_sample_times(2:end);
+                    gamma = @(t) t.*exp(1-t);
+                    transient_profile = gamma(gamma_sample_times);
+                    transient_profile = transient_profile(:);
+                end
+                
                 if isfield(opt, 'WED_base')
                     fprintf('Using saved WED\n');
-                    X_ = conv2(opt.WED_base, ones(round(opt.pad_seconds*20),1), 'full');
+                    X_ = conv2(opt.WED_base, transient_profile, 'full');
                     X_ = X_(1:size(X,1),:);
                     X = X_;
                 else
                     X = hyperdetect(X, 'z_val', 3, 'Progress', false, 'OutType', 'onset');
-                    X_ = conv2(X, ones(round(opt.pad_seconds*20),1), 'full');
+                    X_ = conv2(X, transient_profile, 'full');
                     X_ = X_(1:size(X,1),:);
                     X = X_;
                 end
