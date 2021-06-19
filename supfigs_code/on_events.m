@@ -1,4 +1,4 @@
-ntype = 'WED'; % 'spikeDeconvTrace', 'IED'
+ntype = 'HD'; % 'spikeDeconvTrace', 'IED'
 
 %cd ~/ML-project/
 d = DecodeTensor(6, ntype);
@@ -7,7 +7,7 @@ p = Pub(14, 16, 'rows', 4, 'columns', 4, 'vspacing', 0.08,...
     'vmargint', 0.05, 'vmarginb', 0.05, 'hspacing', 0.11);
 %p.preview;
 %%
-alpha = 1;%0.02;
+alpha = 0.02;
 
 [X, ks] = d.get_dataset;
 X_shuf = shuffle(X, ks);
@@ -90,7 +90,7 @@ if ~exist(save_file, 'file')
         'imse', 'imse_s', 'imse_d', 'series_fits', 'series_gof', 'I0_fit', 'I0_conf',...
         'I0_fit_s', 'I0_conf_s', 'N_fit', 'N_conf',...
         'N_fit_s', 'N_conf_s', 'series_exp_fits', 'series_exp_gof',...
-        'I0_fit_d', 'I0_conf_d', 'N_fit_d', 'N_conf_d');
+        'I0_fit_d', 'I0_conf_d', 'N_fit_d', 'N_conf_d', 'mask');
 else
     load(save_file);
 end
@@ -237,7 +237,7 @@ legend off
 %% 
 save_file = sprintf('adjacent_metrics_no_decoder_%s.mat', ntype);
 if ~exist(save_file, 'file')
-    parfor i_s_i = 1:numel(selected_indices)
+    for i_s_i = 1:numel(selected_indices)
         my_ticker = tic;
         s_i = selected_indices(i_s_i);
         res__(i_s_i) = adjacent_decoder_noise_runner(s_i, true, ntype);
@@ -274,7 +274,7 @@ snr_shuf = cellfun(@rdivide, signal, noise_shuf, 'UniformOutput', false);
 
 
 
-dff2_lim = [0 1.5];
+dff2_lim = [0 24];
 
 p.panel([11 12], 'y_shift', 0.04, 'letter', 'i', 'xlab', 'Number of cells', 'ylab', 'Signal ([event rate]^2)');
 MultiSessionVisualizer.plot_single_filtered(n, {signal}, {'k'}, [true true true]);
@@ -283,8 +283,8 @@ ylim(dff2_lim);
 p.panel([13 14], 'y_shift', 0.04, 'letter', 'j', 'xlab', 'Number of cells', 'ylab', 'Noise ([event rate]^2)');
 MultiSessionVisualizer.plot_single_filtered(n, {noise_shuf, noise}, {'r', 'b'}, [true true true]);
 %ylim(dff2_lim);
-text(100, 1/3, 'Real', 'Color', 'b');
-text(300, 0.3/3, 'Shuffled', 'Color', 'r');
+%text(100, 1/3, 'Real', 'Color', 'b');
+%text(300, 0.3/3, 'Shuffled', 'Color', 'r');
 p.format;
 
 p.panel([15 16], 'y_shift', 0.04, 'letter', 'k', 'xlab', 'Number of cells', 'ylab', 'Signal / Noise');
@@ -293,8 +293,8 @@ p.panel([15 16], 'y_shift', 0.04, 'letter', 'k', 'xlab', 'Number of cells', 'yla
 %    hold on;
 %end
 MultiSessionVisualizer.plot_single_filtered(n, {snr, snr_shuf}, {'b', 'r'}, [true true true]);
-text(250, 6.2, 'Shuffled', 'Color', 'r');
-text(400, 2, 'Real', 'Color', 'b');
+%text(250, 6.2, 'Shuffled', 'Color', 'r');
+%text(400, 2, 'Real', 'Color', 'b');
 hold on;
 %l_ = refline(0, asymp_snr); l_.Color = 'b';
 
