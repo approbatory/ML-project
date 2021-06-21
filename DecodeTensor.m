@@ -518,10 +518,10 @@ classdef DecodeTensor < handle
                     %progressbar([], [], [], 2/2);
                     %progressbar([], [], 2/2);
                     
-                    beta1_normed = model1.Beta ./ norm(model1.Beta);
-                    beta2_normed = model2.Beta ./ norm(model2.Beta);
-                    beta1s_normed = model1s.Beta ./ norm(model1s.Beta);
-                    beta2s_normed = model2s.Beta ./ norm(model2s.Beta);
+                    beta1_normed = model1.Beta ./ (norm(model1.Beta) + eps);
+                    beta2_normed = model2.Beta ./ (norm(model2.Beta) + eps);
+                    beta1s_normed = model1s.Beta ./ (norm(model1s.Beta) + eps);
+                    beta2s_normed = model2s.Beta ./ (norm(model2s.Beta) + eps);
                     
                     sc2_neg = X2_neg * beta1_normed;
                     sc2_pos = X2_pos * beta1_normed;
@@ -537,6 +537,10 @@ classdef DecodeTensor < handle
                     sc2d_pos = X2_pos * beta1s_normed;
                     sc1d_neg = X1_neg * beta2s_normed;
                     sc1d_pos = X1_pos * beta2s_normed;
+                    
+                    %if any(isnan(sc2_neg(:))) || any(isnan(sc2_pos(:))) || any(isnan(sc1_neg(:))) || any(isnan(sc2_pos(:)))
+                    %    keyboard;
+                    %end
                     
                     noise_var(k, d_i) = ...
                         mean([var(sc2_neg) var(sc2_pos)...
