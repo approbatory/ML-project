@@ -336,11 +336,11 @@ classdef DecodeTensor < handle
                     transient_profile = ones(round(opt.pad_seconds*20),1);
                 else
                     if use_default_paddings
-                        opt.pad_seconds = 1;
+                        opt.pad_seconds = 1.5;
                     end
                     T = opt.pad_seconds;
                     Fs = 20;
-                    gamma_sample_times = linspace(0,5,T * Fs + 1);
+                    gamma_sample_times = linspace(0,7.5,T * Fs + 1);
                     gamma_sample_times = gamma_sample_times(2:end);
                     gamma = @(t) t.*exp(1-t);
                     transient_profile = gamma(gamma_sample_times);
@@ -573,6 +573,13 @@ classdef DecodeTensor < handle
             [T1, d1, T2, d2, ~] = DecodeTensor.holdout_half(data_tensor, tr_dir);
             %T1s = DecodeTensor.shuffle_tensor(T1, d1);
             %T2s = DecodeTensor.shuffle_tensor(T2, d2);
+            
+            %no_dir_shuf = true;
+            %if no_dir_shuf
+            %    d1 = d1.^2;
+            %    d2 = d2.^2;
+            %end
+            
             [sup_X1, sup_ks1] = DecodeTensor.tensor2dataset(T1, d1);
             [sup_X2, sup_ks2] = DecodeTensor.tensor2dataset(T2, d2);
             %[sup_X1s, sup_ks1s] = DecodeTensor.tensor2dataset(T1s, d1);

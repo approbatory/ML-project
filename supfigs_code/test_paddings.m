@@ -28,7 +28,7 @@ end
 figure;
 serrorbar(paddings, mean(mean_err,2), std(mean_err,[],2) ./ sqrt(size(mean_err,2)));
 xlabel 'Padding (s)'
-ylabel 'Mean err (cm)' % 0.5 s is optimal % 1s is optimal for gamma
+ylabel 'Mean err (cm)' % 0.5 s is optimal % 1.5s is optimal for gamma
 
 %%
 sm = SessManager;
