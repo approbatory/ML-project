@@ -568,17 +568,21 @@ classdef DecodeTensor < handle
             end
         end
         
-        function err_res = decode_all(data_tensor, tr_dir, binsize, alg, num_neurons, num_trials)
+        function err_res = decode_all(data_tensor, tr_dir, binsize, alg, num_neurons, num_trials, no_dir_shuf)
+            if ~exist('no_dir_shuf', 'var')
+                no_dir_shuf = false;
+            end
+            
             [data_tensor, tr_dir] = DecodeTensor.cut_tensor(data_tensor, tr_dir, num_neurons, num_trials);
             [T1, d1, T2, d2, ~] = DecodeTensor.holdout_half(data_tensor, tr_dir);
             %T1s = DecodeTensor.shuffle_tensor(T1, d1);
             %T2s = DecodeTensor.shuffle_tensor(T2, d2);
             
             %no_dir_shuf = true;
-            %if no_dir_shuf
-            %    d1 = d1.^2;
-            %    d2 = d2.^2;
-            %end
+            if no_dir_shuf
+                d1 = d1.^2;
+                d2 = d2.^2;
+            end
             
             [sup_X1, sup_ks1] = DecodeTensor.tensor2dataset(T1, d1);
             [sup_X2, sup_ks2] = DecodeTensor.tensor2dataset(T2, d2);
@@ -1010,6 +1014,33 @@ classdef DecodeTensor < handle
             shuf_tensor(:,:, tr_dir == -1) = left_tensor;
         end
         
+        function shuf_tensor = shuffle_tensor_common(data_tensor, tr_dir)
+            %%Shuffling data tensor:
+            % The data tensor is trial-shuffled, meaning that neuron
+            % index and bin index are kept constant while trial indices
+            % are randomly shuffled. This shuffle is done separately for
+            % rightward and leftward trials.
+            % Source: DecodeTensor.shuffle_tensor :
+            % (data tensor, trial direction) → shuffled tensor
+            
+            right_tensor = data_tensor(:,:,tr_dir == 1);
+            num_right_trials = sum(tr_dir == 1);
+            left_tensor = data_tensor(:,:,tr_dir == -1);
+            num_left_trials = sum(tr_dir == -1);
+            
+            [n_neurons, n_bins, ~] = size(data_tensor);
+            for n = 1:n_neurons
+                common_right_perm = randperm(num_right_trials);
+                common_left_perm = randperm(num_left_trials);
+                for b = 1:n_bins
+                    right_tensor(n,b,:) = right_tensor(n,b, common_right_perm);
+                    left_tensor(n,b,:) = left_tensor(n,b, common_left_perm);
+                end
+            end
+            shuf_tensor(:,:, tr_dir == 1) = right_tensor;
+            shuf_tensor(:,:, tr_dir == -1) = left_tensor;
+        end
+        
         function [T1, d1, T2, d2, division] = holdout_half(data_tensor, tr_dir)
             %%Holdout cross-validation:
             % The data tensor is split by trials into two data tensors of
@@ -1151,9 +1182,12 @@ classdef DecodeTensor < handle
     end
     
     methods(Static) %visualization tools
-        function tensor_vis(data_tensor, tr_dir, f_val, w)
+        function tensor_vis(data_tensor, tr_dir, f_val, w, clim)
             if ~exist('f_val', 'var')
                 f_val = @(x)x;
+            end
+            if ~exist('clim', 'var')
+                clim = [0 4];
             end
             
             right_tensor = f_val(data_tensor(:,:,tr_dir == 1));
@@ -1178,29 +1212,35 @@ classdef DecodeTensor < handle
             if ~exist('w', 'var')
                 w = 8;
             end
-            sub_t = 20;
-            subplot(2,w,1 ); imagesc(left_meanact);
-            subplot(2,w,w+1); imagesc(right_meanact); xlabel 'Bin index'; ylabel 'Ordered cells'
+            sub_t = 10; start_at = 15;
+            subplot(2,w,1 ); imagesc(left_meanact, clim); 
+            set(gca, 'XTick', []);
+            subplot(2,w,w+1); imagesc(right_meanact, clim); xlabel 'Position'; ylabel 'Ordered cells'
+            set(gca, 'XTick', []);
             
             if w < 2
                 return;
             end
-            subplot(2,w,2:w); imagesc(f_val(flatten(left_tensor)));
-            xlim([1 sub_t*size(left_tensor,2)]);
-            title 'Neural activity for leftward trials'
+            subplot(2,w,2:w); imagesc(f_val(flatten(left_tensor)), clim);
+            xlim([1 sub_t*size(left_tensor,2)] + start_at*size(left_tensor,2));
+            title 'Leftward trials'
             for i = 1:sum(tr_dir == -1)
                 hold on;
                 l_ = line([20*i 20*i]+0.5, ylim);
                 l_.Color = 'r';
             end
-            subplot(2,w,w+2:2*w); imagesc(f_val(flatten(right_tensor))); xlabel 'Bin, trials (concatenated)'
-            xlim([1 sub_t*size(right_tensor,2)]);
-            title 'Neural activity for rightward trials'
+            set(gca, 'XTick', []);
+            set(gca, 'YTick', []);
+            subplot(2,w,w+2:2*w); imagesc(f_val(flatten(right_tensor)), clim); xlabel 'Position, trials (concatenated)'
+            xlim([1 sub_t*size(right_tensor,2)] + start_at*size(right_tensor,2));
+            title 'Rightward trials'
             for i = 1:sum(tr_dir == 1)
                 hold on;
                 l_ = line([20*i 20*i]+0.5, ylim);
                 l_.Color = 'r';
             end
+            set(gca, 'XTick', []);
+            set(gca, 'YTick', []);
         end
     end
     

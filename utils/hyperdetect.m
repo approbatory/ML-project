@@ -15,7 +15,7 @@ if opt.Progress
     fprintf('Detecting %d cells\n', n_cells);
 end
 
-for c_ix = 1:n_cells
+parfor c_ix = 1:n_cells
     events(:,c_ix) = hyperdetect_onecell(traces(:,c_ix), opt.OutType, opt.z_val);
     if opt.Progress
         %progressbar(c_ix/n_cells);

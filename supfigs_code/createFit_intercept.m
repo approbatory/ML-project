@@ -26,13 +26,13 @@ opts.StartPoint = [0.001 50 0];
 % Fit model to data.
 [fitresult, gof] = fit( xData, yData, ft, opts );
 
-% Plot fit with data.
-figure( 'Name', 'linimse' );
-h = plot( fitresult, xData, yData );
-legend( h, 'q vs. n_neu', 'linimse', 'Location', 'NorthEast', 'Interpreter', 'none' );
-% Label axes
-xlabel( 'n_neu', 'Interpreter', 'none' );
-ylabel( 'q', 'Interpreter', 'none' );
-grid on
+%% Plot fit with data.
+%figure( 'Name', 'linimse' );
+%h = plot( fitresult, xData, yData );
+%legend( h, 'q vs. n_neu', 'linimse', 'Location', 'NorthEast', 'Interpreter', 'none' );
+%% Label axes
+%xlabel( 'n_neu', 'Interpreter', 'none' );
+%ylabel( 'q', 'Interpreter', 'none' );
+%grid on
 
 
