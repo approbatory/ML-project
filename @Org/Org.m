@@ -76,6 +76,10 @@ classdef Org < handle
                     %invar{j} = o.vars.(my_var){i};
                     t_ = o.fetch(my_var);
                     invar{j} = t_{i};
+                    %if any(cellfun(@(x) any(isnan(x(:))), invar{j}))
+                    %    %keyboard
+                    %    error('nans in data');
+                    %end
                 end
                 outvar{i} = func(invar{:});
             end

@@ -267,16 +267,20 @@ classdef DecodeTensor < handle
             [~,w_] = fileparts(source_path);
             if strcmp(w_, 'Mouse-2026-20150329_115639-linear-track-TracesAndEvents')
                 % special_74_cut_350 = true;
-                tracesEvents.position = tracesEvents.position(351:end,:);
-                tracesEvents.velocity = tracesEvents.velocity(351:end,:);
-                tracesEvents.rawProb = tracesEvents.rawProb(351:end,:);
-                tracesEvents.rawTraces = tracesEvents.rawTraces(351:end,:);
-                tracesEvents.zTraces = tracesEvents.zTraces(351:end,:);
-                tracesEvents.zProb = tracesEvents.zProb(351:end,:);
-                tracesEvents.tresholdEvents = tracesEvents.tresholdEvents(351:end,:);
-                tracesEvents.spikeDeconvTrace = tracesEvents.spikeDeconvTrace(351:end,:);
-                tracesEvents.spikeDeconv = tracesEvents.spikeDeconv(351:end,:);
-                tracesEvents.spikeML = tracesEvents.spikeML(351:end,:);
+%                 tracesEvents.position = tracesEvents.position(351:end,:);
+%                 tracesEvents.velocity = tracesEvents.velocity(351:end,:);
+%                 tracesEvents.rawProb = tracesEvents.rawProb(351:end,:);
+%                 tracesEvents.rawTraces = tracesEvents.rawTraces(351:end,:);
+%                 tracesEvents.zTraces = tracesEvents.zTraces(351:end,:);
+%                 tracesEvents.zProb = tracesEvents.zProb(351:end,:);
+%                 tracesEvents.tresholdEvents = tracesEvents.tresholdEvents(351:end,:);
+%                 tracesEvents.spikeDeconvTrace = tracesEvents.spikeDeconvTrace(351:end,:);
+%                 tracesEvents.spikeDeconv = tracesEvents.spikeDeconv(351:end,:);
+%                 tracesEvents.spikeML = tracesEvents.spikeML(351:end,:);
+                F = fields(tracesEvents);
+                for f_i = 1:numel(F)
+                    tracesEvents.(F{f_i}) = tracesEvents.(F{f_i})(351:end,:);
+                end
             end
             
             
@@ -2311,6 +2315,9 @@ classdef DecodeTensor < handle
             assert(bin_index >= 1 && bin_index <= max_bin);
             assert(direction == 1 || direction == -1);
             X = squeeze(o.data_tensor(:, bin_index, o.tr_dir==direction));
+            nan_trials = isnan(mean(X, 1));
+            X = X(:, ~nan_trials); %filter out the nans
+            assert(~any(isnan(X(:))));
         end
     end
 end

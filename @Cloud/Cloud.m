@@ -29,7 +29,7 @@ classdef Cloud
             end
             
             if ~exist('use_events', 'var')
-                use_events = false;
+                use_events = true;
             end
             
             if isa(i, 'DecodeTensor')
@@ -37,7 +37,7 @@ classdef Cloud
             else
                 sm = SessManager;
                 if use_events
-                    o.dt = DecodeTensor(sm.cons_usable(i,true), 'IED');
+                    o.dt = DecodeTensor(sm.cons_usable(i,true), 'events_transients');
                 else
                     o.dt = sm.cons_usable(i);
                 end
