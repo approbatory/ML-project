@@ -426,9 +426,13 @@ classdef Utils %Common utilities for dealing with neural data
             if ~exist('intercept', 'var')
                 intercept = false;
             end
-            m = mean(s,1);
+            m = mean(s,1,'omitnan');
             m = m(n >= min_n);
             n = n(n >= min_n);
+            if any(isnan(m(:)))
+                keyboard
+            end
+            assert(~any(isnan(n(:))));
             [fitresult, gof] = fit(n(:), m(:), 'poly1');
             if intercept
                 res = fitresult.p2;

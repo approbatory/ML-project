@@ -1,7 +1,8 @@
 recompute = false;
 
 %load adjacent_metrics_agg_191202-163306_0.mat
-load adjacent_metrics_agg_200801-184941_0.mat
+%load adjacent_metrics_agg_200801-184941_0.mat
+load adjacent_metrics_HD_gamma_agg_210622-180228_0.mat
 
 fit_savefile = 'decoding_curves_fits.mat';
 if recompute || ~exist(fit_savefile, 'file')
@@ -74,6 +75,7 @@ else
 end
 s_ = summarized_adjacent_metrics;
 %% checking all options:
+%{
 filt_sess_indices = select_from_mice({'Mouse2022'});
 
 p = Pub(9, 14, 'rows', 3, 'columns', 2);
@@ -113,7 +115,8 @@ MultiSessionVisualizer.plot_single_filtered(n, {s_.mur, s_.dur, s_.fur},...
 %ylim(dff2_lim);
 
 p.format;
-p.print('supplements_pdf', 'dm_w_wd_comparison');
+p.print('events_figs/f3_supplements', 'dm_w_wd_comparison');
+%}
 %%
 n_minus_one = Utils.cf_(@(x)x-1, n);
 
@@ -223,7 +226,7 @@ ylim([0 0.15]);
 
 
 p.format;
-p.print('figure3_pdf', 'SignalNoise');
+p.print('events_figs/f3_events', 'SignalNoise');
 
 %% showing for all sessions
 % [sess, mouse_names] = DecodeTensor.filt_sess_id_list;
@@ -237,7 +240,7 @@ MultiSessionVisualizer.plot_series(n, {snr_shuf, snr}, {'r', 'b'}, mouse_names, 
             xlabel 'Number of cells'
             ylabel 'Signal / Noise'
             multi_figure_format;
-            Utils.printto('supplements_pdf/decoding_curves', 'multi_snr_curves.pdf');
+            Utils.printto('events_figs/f3_supplements', 'multi_snr_curves.pdf');
 %%
 figure;
 Utils.bns_groupings(asymp_snr, asymp_snr_shuf, asymp_snr_conf, asymp_snr_shuf_conf, mouse_names, false, {'Real', 'Shuffled'}, true);
@@ -247,7 +250,7 @@ set(gca, 'YTick', [0.01 1 100]);
 ylabel(sprintf('Signal slope / Noise slope'));
 xlabel 'Mouse index'
 Utils.specific_format('MBNS');
-Utils.printto('supplements_pdf/decoding_curves', 'multi_asymp_snr.pdf');
+Utils.printto('events_figs/f3_supplements', 'multi_asymp_snr.pdf');
 %% path analysis: splash zone
 g_ = SessManager.highqual_filt_from_usable;
 dm_asnr = get_asnr(res, s_, 'm', false)'; dm_asnr = zscore(dm_asnr(g_));

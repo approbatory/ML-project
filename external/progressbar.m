@@ -134,6 +134,9 @@ end
 
 % If task completed, close figure and clear vars, then exit
 if input{1} == 1
+    if isempty(progdata)
+        return;
+    end
     old_title = progdata(1).proglabel.String;
     divider = ' || ';
     divider_idx = strfind(old_title, divider);

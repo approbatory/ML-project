@@ -397,7 +397,7 @@ classdef DecodeTensor < handle
                 'VariableNames', {'se', 'ce', 'ue', 'sr', 'cr', 'ur'},...
                 'RowNames', {'f', 'd', 'm'});
             
-            n_ize = @(x) x./norm(x);
+            n_ize = @(x) x./(norm(x) + eps);
             ndir = @(x, S) dot(x, S * x(:));
             alg = my_algs('linsvm');
             for k = 1:K-1
@@ -425,7 +425,7 @@ classdef DecodeTensor < handle
                         model = alg.train(X1, ks1);
                         model_d = alg.train(X1s, ks1);
                     end
-                    model_mu = mean(X1_pos) - mean(X1_neg);
+                    model_mu = mean(X1_pos, 'omitnan') - mean(X1_neg, 'omitnan');
                     
                     if ~no_decoding
                         w_normed = n_ize(model.Beta);
@@ -457,17 +457,17 @@ classdef DecodeTensor < handle
                         %my_sigma_s = (cov(Xs_pos) + cov(Xs_neg))/2;
                         switch code(1)
                             case 's'
-                                my_dmu = mean(X_pos) - mean(X_neg);
+                                my_dmu = mean(X_pos, 'omitnan') - mean(X_neg, 'omitnan');
                                 results_table{'f', code}(2*(k-1)+d_i) = dot(w_normed, my_dmu).^2;
                                 results_table{'d', code}(2*(k-1)+d_i) = dot(wd_normed, my_dmu).^2;
                                 results_table{'m', code}(2*(k-1)+d_i) = dot(dmu_normed, my_dmu).^2;
                             case 'c'
-                                my_sigma = (cov(X_pos) + cov(X_neg))/2;
+                                my_sigma = (cov(X_pos, 'omitrows') + cov(X_neg, 'omitrows'))/2;
                                 results_table{'f', code}(2*(k-1)+d_i) = ndir(w_normed, my_sigma);
                                 results_table{'d', code}(2*(k-1)+d_i) = ndir(wd_normed, my_sigma);
                                 results_table{'m', code}(2*(k-1)+d_i) = ndir(dmu_normed, my_sigma);
                             case 'u'
-                                my_sigma_s = (cov(Xs_pos) + cov(Xs_neg))/2;
+                                my_sigma_s = (cov(Xs_pos, 'omitrows') + cov(Xs_neg, 'omitrows'))/2;
                                 results_table{'f', code}(2*(k-1)+d_i) = ndir(w_normed, my_sigma_s);
                                 results_table{'d', code}(2*(k-1)+d_i) = ndir(wd_normed, my_sigma_s);
                                 results_table{'m', code}(2*(k-1)+d_i) = ndir(dmu_normed, my_sigma_s);
