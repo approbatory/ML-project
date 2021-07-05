@@ -193,7 +193,7 @@ classdef SessManager
         
         function d = load_special(mouse_name, ntype)
             if ~exist('ntype', 'var')
-                ntype = 'rawTraces';
+                ntype = 'events_transients';
             end
             ix = SessManager.special_sessions_usable_index(mouse_name);
             sm = SessManager;

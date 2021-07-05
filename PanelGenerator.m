@@ -357,7 +357,7 @@ classdef PanelGenerator
             if fix_expo
                 Utils.fix_exponent(gca, 'Y', 0);
             end
-            Utils.printto('supplements_pdf/param_bns', ['multi_' fn ext]);
+            Utils.printto('events_figs/f2_supplements/param_bns', ['multi_' fn ext]);
         end
         
         function aux_many_regress(x_cell, y_cell, x_conf_cell, y_conf_cell, mouse_list, x_lab_cell, y_lab_cell)
@@ -472,18 +472,15 @@ classdef PanelGenerator
         function decode_demo(varargin) %temporal_mixing
             p = inputParser;
             p.addParameter('temporal_mixing', true, @islogical);
-            p.addParameter('ied', false, @islogical);
             p.addParameter('make_fig', true, @islogical);
-            p.addParameter('pls', false, @islogical);
             p.parse(varargin{:});
             
-            data_source = DecodeTensor.cons_filt(70, true); %was 70, 10, 34
+            %data_source = DecodeTensor.cons_filt(70, true); %was 70, 10, 34
+            data_source = SessionManager.load_default('Mouse2022', true);
             opt = DecodeTensor.default_opt;
             load(data_source{1});
-            traces = tracesEvents.rawTraces;
-            if p.Results.ied
-                traces = iterative_event_detection(traces);
-            end
+            traces = tracesEvents.events_transients;%tracesEvents.rawTraces;
+            
             [~, ~, trial_start, trial_end, trial_dir, ~, ks] =...
                 DecodeTensor.new_sel(tracesEvents.position, opt);
             within_trial = zeros(size(ks));
@@ -712,7 +709,7 @@ classdef PanelGenerator
             
             p.parse(varargin{:});
             
-            savedir = 'figure1_pdf/decoding_curves';
+            savedir = 'events_figs/f2_events/decoding_curves';
             if ~exist(savedir, 'dir')
                 mkdir(savedir);
             end
@@ -722,7 +719,7 @@ classdef PanelGenerator
             
             save_file = 'decoding_curves_fits.mat';
             if p.Results.recompute || ~exist(save_file, 'file')
-                dbfile = 'decoding_all_sess.db';
+                dbfile = 'decoding_all_sess_HD_gamma.db';
                 conn = sqlite(dbfile);
                 samp_size = 80;
                 %[sess, mouse_names] = DecodeTensor.filt_sess_id_list;
@@ -1377,7 +1374,8 @@ classdef PanelGenerator
             if ~exist('recompute', 'var')
                 recompute = false;
             end
-            load('adjacent_agg_190725-194911_0.mat');
+            %load('adjacent_agg_190725-194911_0.mat');
+            load('adjacent_metrics_HD_gamma_agg_210622-180228_0.mat');
             %keyboard
             n_cutoff = 100;
             medify = @(z) Utils.cf_(@(y)cellfun(@(x)median(x(:)), y), z);

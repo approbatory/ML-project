@@ -183,7 +183,7 @@ classdef DecodeTensor < handle
             opt.leeway_frac = 1/20;
             opt.d_neurons = 10;%30;
             opt.restrict_trials = -1;
-            opt.neural_data_type = 'rawTraces';
+            opt.neural_data_type = 'events_transients';
             
             opt.bin_width = opt.total_length/opt.n_bins;
             
