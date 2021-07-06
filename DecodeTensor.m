@@ -191,7 +191,7 @@ classdef DecodeTensor < handle
             opt.d_trials = 10;
             opt.first_half = false;
             opt.pad_seconds = -1;%0.8;
-            opt.discard_incomplete_trials = false;% was true
+            opt.discard_incomplete_trials = true;% was true
             opt.restrict_cell_distance = 0;
             opt.interactive = false;
         end
