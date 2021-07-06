@@ -2280,21 +2280,21 @@ classdef DecodeTensor < handle
         
         function [mean_cell_snr, sem_cell_snr] = single_cell_d_primes2(o)
             %[N, K, T] = size(o.data_tensor);
-            signal_leftward = diff(mean(o.data_tensor(:,:,o.tr_dir==-1), 3), 1, 2).^2;
-            signal_rightward = diff(mean(o.data_tensor(:,:,o.tr_dir==1), 3), 1, 2).^2;
+            signal_leftward = diff(mean(o.data_tensor(:,:,o.tr_dir==-1), 3, 'omitnan'), 1, 2).^2;
+            signal_rightward = diff(mean(o.data_tensor(:,:,o.tr_dir==1), 3, 'omitnan'), 1, 2).^2;
             
             
-            noise_leftward = var(o.data_tensor(:,:,o.tr_dir==-1), [], 3);
+            noise_leftward = var(o.data_tensor(:,:,o.tr_dir==-1), [], 3, 'omitnan');
             noise_leftward = (noise_leftward(:, 1:end-1) + noise_leftward(:, 2:end))/2;
             
-            noise_rightward = var(o.data_tensor(:,:,o.tr_dir==1), [], 3);
+            noise_rightward = var(o.data_tensor(:,:,o.tr_dir==1), [], 3, 'omitnan');
             noise_rightward = (noise_rightward(:, 1:end-1) + noise_rightward(:, 2:end))/2;
             
             dp2_leftward = signal_leftward ./ noise_leftward;
             dp2_rightward = signal_rightward ./ noise_rightward;
             
-            mean_over_bins = mean([dp2_leftward dp2_rightward], 2); %used to be median
-            mean_cell_snr = mean(mean_over_bins);
+            mean_over_bins = mean([dp2_leftward dp2_rightward], 2, 'omitnan'); %used to be median
+            mean_cell_snr = mean(mean_over_bins, 'omitnan');
             sem_cell_snr = sem(mean_over_bins);
         end
         

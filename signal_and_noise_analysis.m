@@ -2,7 +2,8 @@ recompute = false;
 
 %load adjacent_metrics_agg_191202-163306_0.mat
 %load adjacent_metrics_agg_200801-184941_0.mat
-load adjacent_metrics_HD_gamma_agg_210622-180228_0.mat
+%load adjacent_metrics_HD_gamma_agg_210622-180228_0.mat
+load adjacent_metrics_events_transients_agg_210706-144126_0.mat
 
 fit_savefile = 'decoding_curves_fits.mat';
 if recompute || ~exist(fit_savefile, 'file')

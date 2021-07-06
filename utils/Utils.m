@@ -561,12 +561,15 @@ classdef Utils %Common utilities for dealing with neural data
                 end
                 res_index = res_index + 1;
                 res(res_index) = load(fullfile(s.folder, s.name));
+                fprintf('Done %d of %d\n', i, numel(S));
             end
             fname = sprintf('%s_agg_%s.mat', name, timestring);
+            fprintf('Saving... ');
             save(fname, 'res');
             if cleanup
                 rmdir(dname, 's');
             end
+            fprintf('Done.\n');
         end
         
         function fname = ffetch(pattern)

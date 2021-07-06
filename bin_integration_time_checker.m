@@ -3,6 +3,8 @@ if ~exist('alg', 'var')
     alg = my_algs('ecoclin');
 end
 
+ntype = 'events_transients';
+
 t_ = tic;
 
 [coordwise_error, binwise_error] = deal(zeros(numel(n_divs_array), numel(integration_frames_array), reps));
@@ -63,13 +65,13 @@ parfor r_ix = 1:reps
         %integration_frames = 4;
         for i_ix = 1:NUM_INT_FRAMES
             integration_frames = integration_frames_array(i_ix);
-            N = size(tracesEvents.rawTraces,2);
+            N = size(tracesEvents.(ntype),2);
             K = n_divs;
             T = numel(trial_start);
             neural_features = zeros(N,K,T);
             [position_target, bin_target] = deal(zeros(K,T));
             selector = (1:integration_frames) - floor(integration_frames/2) - 1;
-            max_frame = size(tracesEvents.rawTraces,1);
+            max_frame = size(tracesEvents.(ntype),1);
             for k_i = 1:K
                 for t_i = 1:T
                     frame = key_events(t_i, k_i);
@@ -82,7 +84,7 @@ parfor r_ix = 1:reps
                         frame_range = min(max_frame, frame_range);
                         frame_range = max(1, frame_range);
                         %ind = sub2ind([K T], k_i, t_i);
-                        neural_features(:,k_i, t_i) = mean(tracesEvents.rawTraces(frame_range,:),1);
+                        neural_features(:,k_i, t_i) = mean(tracesEvents.(ntype)(frame_range,:),1);
                         position_target(k_i, t_i) = cm_position(frame);
                         bin_target(k_i, t_i) = 2*k_i - (tr_dir(t_i)==1);
                     end
