@@ -359,9 +359,13 @@ classdef Org < handle
         
         function [p,pp,s,sp,k,kp,adjr2] = corr_check(x,y)
             x = x(:); y = y(:);
+            assert(~any(isnan(x)));
+            assert(~any(isnan(y)));
+            
             [p,pp]=corr(x,y,'type','Pearson');
             [s,sp]=corr(x,y,'type','Spearman');
             [k,kp]=corr(x,y,'type','Kendall');
+            
             [~,adjr2]=Utils.regress_line(x,y);
         end
         

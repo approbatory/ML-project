@@ -22,9 +22,9 @@ xlabel 'PC index'
 ylabel 'cos^2(PC_i, \Delta\mu)'
 
 
-text(20,0.045,'Real data', 'Color', 'b');
-text(20,0.035,'Shuffled', 'Color', 'r');
-text(20, 0.025,...
+text(20,0.045/3,'Real data', 'Color', 'b');
+text(20,0.035/3,'Shuffled', 'Color', 'r');
+text(20, 0.025/3,...
     sprintf('Area between PC_{[1-%d]}', MAX_DIM), 'Color', [1 1 1]*0.4);
 
 %figure_format([4 3]/2.5);

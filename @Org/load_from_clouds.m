@@ -14,11 +14,12 @@ basic_vars = {...
     'corr_lambda',...
     'corr_lambda_shuf',...
     'corr_loadings',...
-    'corr_loadings_shuf',...
+    'corr_loadings_shuf'
     };
 
 
-progressbar('sess...');
+%progressbar('sess...');
+WaitMessage = parfor_wait(o.total_sessions);
 for sess_idx = 1:o.total_sessions
     C = Cloud(sess_idx);
     o.mouse{sess_idx} = C.dt.mouse_name;
@@ -32,7 +33,9 @@ for sess_idx = 1:o.total_sessions
         %progressbar([], i/numel(basic_vars));
     end
     
-    progressbar(sess_idx ./ o.total_sessions);
+    %progressbar(sess_idx ./ o.total_sessions);
+    WaitMessage.Send;
 end
+WaitMessage.Destroy;
 
 o.save_me;

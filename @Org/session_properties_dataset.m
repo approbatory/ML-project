@@ -1,6 +1,6 @@
 function [mean_table, conf_table] = session_properties_dataset(o)
 
-load asymp_snr_values.mat%
+load asymp_snr_values.mat
 load single_cell_dp2.mat
 load decoding_curves_fits.mat
 load performance.mat
