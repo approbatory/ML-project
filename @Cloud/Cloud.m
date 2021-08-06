@@ -23,13 +23,17 @@ classdef Cloud
     end
     
     methods
-        function o = Cloud(i, use_corr, use_events)
+        function o = Cloud(i, use_corr, use_events, use_binary_spikes)
             if ~exist('use_corr', 'var')
                 use_corr = false;
             end
             
             if ~exist('use_events', 'var')
-                use_events = true;
+                use_events = false;
+            end
+            
+            if ~exist('use_binary_spikes', 'var')
+                use_binary_spikes = false;
             end
             
             if isa(i, 'DecodeTensor')
@@ -38,6 +42,8 @@ classdef Cloud
                 sm = SessManager;
                 if use_events
                     o.dt = DecodeTensor(sm.cons_usable(i,true), 'events_transients');
+                elseif use_binary_spikes
+                    o.dt = DecodeTensor(sm.cons_usable(i, true), 'binary_spikes');
                 else
                     o.dt = sm.cons_usable(i);
                 end

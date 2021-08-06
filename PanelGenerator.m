@@ -298,7 +298,7 @@ classdef PanelGenerator
             xlabel 'Number of cells'
             ylabel '1/MSE (cm^{-2})'
             multi_figure_format;
-            Utils.printto('supplements_pdf/decoding_curves', ['multi_' fn ext]);
+            Utils.printto('events_figs/f2_supplements', ['multi_' fn ext]);
         end
         
         function aux_param_bns(fname, param, param_alt, param_conf, param_conf_alt,...

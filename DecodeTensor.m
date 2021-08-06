@@ -288,6 +288,8 @@ classdef DecodeTensor < handle
             track_coord = tracesEvents.position(:,1);
             if any(strcmp(opt.neural_data_type, {'FST_events', 'FST_filled', 'FST_padded', 'IED', 'WED', 'HD', 'HD_gamma'}))
                 fieldname = 'rawTraces';
+            elseif strcmp(opt.neural_data_type, 'binary_spikes')
+                fieldname = 'HD_spikes';
             else
                 fieldname = opt.neural_data_type;
             end
@@ -363,6 +365,9 @@ classdef DecodeTensor < handle
                     X = X_;
                 end
                 X = X ./ (std(X) + eps);
+            end
+            if strcmp(opt.neural_data_type, 'binary_spikes')
+                X = X ~= 0;
             end
             
             if opt.first_half

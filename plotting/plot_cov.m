@@ -1,4 +1,4 @@
-function plot_cov(m, S, varargin)
+function angle = plot_cov(m, S, varargin)
 S = squeeze(S);
 
 [vec, val] = eig(S);
