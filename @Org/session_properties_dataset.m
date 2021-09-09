@@ -36,6 +36,9 @@ N50 = N_fit; N50_conf = N_conf;
 [I0N_s, I0N_c_s] = uncertain_multiply(I0_fit_s, I0_conf_s, N_fit_s, N_conf_s);
 [I0N_ratio, I0N_ratio_conf] = uncertain_divide(I0N, I0N_c, I0N_s, I0N_c_s);
 
+log_I0N = log10(I0N);
+log_I0N_c = I0N_c ./ I0N ./ log(10);
+
 %target: IMSE_150_ratio
 chosen_size = 150;
 for i = 1:numel(sess)
@@ -61,15 +64,15 @@ perf_slow_only = (number_of_correct_trials + number_of_turnaround_trials) ./ (nu
 
 
 mean_table = array2table([mat, asymp_ratio', inv_asymp_ratio', invN50', N50',...
-    invN50_ratio', N50_ratio', I0N_ratio', IMSE_150_ratio', I0N', asymp_snr', N_fit_s', I0_fit', I0_fit_s', I0N_s', asymp_snr_shuf', single_dp2', performance', perf_turnaround_only', perf_slow_only', zero_nc_length'],...
+    invN50_ratio', N50_ratio', I0N_ratio', IMSE_150_ratio', I0N', asymp_snr', N_fit_s', I0_fit', I0_fit_s', I0N_s', asymp_snr_shuf', single_dp2', performance', perf_turnaround_only', perf_slow_only', zero_nc_length', log_I0N'],...
     'VariableNames', [varnames, {'asymp_ratio', 'inv_asymp_ratio', 'invN50', 'N50',...
-    'invN50_ratio', 'N50_ratio', 'I0N_ratio', 'IMSE_150_ratio', 'I0N', 'asymp_snr', 'N50_s', 'I0', 'I0_s', 'I0N_s', 'asymp_snr_shuf', 'single_dp2', 'performance', 'perf_turnaround_only', 'perf_slow_only', 'zero_nc_length'}]);
+    'invN50_ratio', 'N50_ratio', 'I0N_ratio', 'IMSE_150_ratio', 'I0N', 'asymp_snr', 'N50_s', 'I0', 'I0_s', 'I0N_s', 'asymp_snr_shuf', 'single_dp2', 'performance', 'perf_turnaround_only', 'perf_slow_only', 'zero_nc_length', 'log_I0N'}]);
 mean_table = [table(mouse_names', 'VariableNames', {'Mouse'}), mean_table];
 
 conf_table = array2table([1.96*sem_, asymp_ratio_conf', inv_asymp_ratio_conf', invN50_conf', N50_conf',...
-    invN50_ratio_conf', N50_ratio_conf', I0N_ratio_conf', IMSE_150_ratio_conf', I0N_c', asymp_snr_conf', N_conf_s', I0_conf', I0_conf_s', I0N_c_s', asymp_snr_shuf_conf', single_dp2_conf', performance'.*0, perf_turnaround_only'.*0, perf_slow_only'.*0, zero_nc_length'.*0],...
+    invN50_ratio_conf', N50_ratio_conf', I0N_ratio_conf', IMSE_150_ratio_conf', I0N_c', asymp_snr_conf', N_conf_s', I0_conf', I0_conf_s', I0N_c_s', asymp_snr_shuf_conf', single_dp2_conf', performance'.*0, perf_turnaround_only'.*0, perf_slow_only'.*0, zero_nc_length'.*0, log_I0N_c.'],...
     'VariableNames', [varnames, {'asymp_ratio', 'inv_asymp_ratio', 'invN50', 'N50',...
-    'invN50_ratio', 'N50_ratio', 'I0N_ratio', 'IMSE_150_ratio', 'I0N', 'asymp_snr', 'N50_s', 'I0', 'I0_s', 'I0N_s', 'asymp_snr_shuf', 'single_dp2', 'performance', 'perf_turnaround_only', 'perf_slow_only', 'zero_nc_length'}]);
+    'invN50_ratio', 'N50_ratio', 'I0N_ratio', 'IMSE_150_ratio', 'I0N', 'asymp_snr', 'N50_s', 'I0', 'I0_s', 'I0N_s', 'asymp_snr_shuf', 'single_dp2', 'performance', 'perf_turnaround_only', 'perf_slow_only', 'zero_nc_length', 'log_I0N'}]);
 conf_table = [table(mouse_names', 'VariableNames', {'Mouse'}), conf_table];
 
 

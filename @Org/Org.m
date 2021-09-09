@@ -362,9 +362,24 @@ classdef Org < handle
             assert(~any(isnan(x)));
             assert(~any(isnan(y)));
             
-            [p,pp]=corr(x,y,'type','Pearson');
-            [s,sp]=corr(x,y,'type','Spearman');
-            [k,kp]=corr(x,y,'type','Kendall');
+            [p,pp]=corr(x,y,'type','Pearson', 'rows', 'complete');
+            [s,sp]=corr(x,y,'type','Spearman', 'rows', 'complete');
+            [k,kp]=corr(x,y,'type','Kendall', 'rows', 'complete');
+            
+            [~,adjr2]=Utils.regress_line(x,y);
+        end
+        
+        function [p,pp,s,sp,k,kp,adjr2] = corr_check_nan(x,y)
+            x = x(:); y = y(:);
+            %assert(~any(isnan(x)));
+            %assert(~any(isnan(y)));
+            nan_locs = isnan(x) | isnan(y);
+            x(nan_locs) = [];
+            y(nan_locs) = [];
+            
+            [p,pp]=corr(x,y,'type','Pearson', 'rows', 'complete');
+            [s,sp]=corr(x,y,'type','Spearman', 'rows', 'complete');
+            [k,kp]=corr(x,y,'type','Kendall', 'rows', 'complete');
             
             [~,adjr2]=Utils.regress_line(x,y);
         end

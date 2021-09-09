@@ -420,6 +420,9 @@ classdef Utils %Common utilities for dealing with neural data
         end
         
         function [res, res_conf] = fitaline(n, s, min_n, intercept)
+            if isvector(s) && iscolumn(s)
+                error('s must be a row vector if it is a vector');
+            end
             if ~exist('min_n', 'var')
                 min_n = min(n);
             end

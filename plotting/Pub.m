@@ -33,13 +33,14 @@ classdef Pub < handle
             o.h = figure;
             ResizeFigure(o.h, r.width, r.height, r.units);
             set(o.h, 'Color', 'white');
+            set(o.h, 'Renderer', 'painters');
             orient landscape
         end
         
         function panel(o, index, varargin)
             p = inputParser;
             p.addRequired('index', @isnumeric);
-            p.addParameter('letter', char(o.start_char + index - 1), @ischar);
+            p.addParameter('letter', char(o.start_char + index(1) - 1), @ischar);
             p.addParameter('xlab', '', @ischar);
             p.addParameter('ylab', '', @ischar);
             p.addParameter('title', '', @ischar);
