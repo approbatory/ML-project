@@ -2021,7 +2021,8 @@ classdef DecodeTensor < handle
                 data_path = p;
             elseif isempty(data_path) && isa(data_path, 'double')
                 if ispc
-                    data_path = 'D:\Box Sync\share';
+                    %data_path = 'D:\Box Sync\share';
+                    data_path = 'D:\lintrack_home';
                 else
                     data_path = '../linear_track';
                 end

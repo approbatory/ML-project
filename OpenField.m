@@ -10,10 +10,15 @@ classdef OpenField
         box_dims;
         bin_nums = [5 9];
         min_speed = 2; %cm/s
+        tau = 2.2;
     end
     
     methods
-        function o = OpenField(b, n)
+        function o = OpenField(b, n, tau)
+            if exist('tau', 'var')~=0
+                o.tau = tau;
+            end
+            
             o.behavior = readtable(b);
             
             [~, ~, ext] = fileparts(n);
@@ -45,8 +50,10 @@ classdef OpenField
             X_shuf = o.convolve(S_shuf.').';
         end
         
-        function C = convolve(~, S)
-            transient = exp(-(0:50)/11);
+        function C = convolve(o, S)
+            n_frame_div = o.tau * 5;
+            assert(n_frame_div > 0);
+            transient = exp(-(0:50)/n_frame_div);
             C = conv2(S, transient, 'full');
             C = C(:, 1:size(S,2));
         end
@@ -56,7 +63,8 @@ classdef OpenField
         end
         
         function t = traces(o)
-            t = o.neural_data.C;
+            %t = o.neural_data.C;
+            t = o.convolve(full(o.spike_traces));
         end
         
         function n = n_cells(o)
@@ -382,6 +390,7 @@ classdef OpenField
                 X_test = X(test_filt, :);
                 ks_test = ks(test_filt);
                 
+                y_test = 0;
                 if cont
                     %y_train = y_cont(train_filt,:);
                     y_test = y_cont(test_filt,:);
