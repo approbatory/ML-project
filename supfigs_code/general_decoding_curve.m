@@ -73,6 +73,7 @@ data_tensor = DecodeTensor.construct_tensor(X_noise.', tr_bins, dt_opts.n_bins, 
 
 
 n_neu = unique(round(logspace(log10(n_min),log10(n_cells),approx_samp)));
+%n_neu = unique([1,opt.approx_samp:opt.approx_samp:n_cells,n_cells]);
 NN = numel(n_neu);
 
 if progress
@@ -119,6 +120,7 @@ if linear_only
     
     if any(~good_vals)
         warning('Removed some values.');
+        disp(n_neu(~good_vals));
     end
     
     n_neu = n_neu(good_vals);
@@ -136,6 +138,7 @@ end
 
 if numel(n_neu) > 2    
     [fr, gof] = createFit_intercept(n_neu, mean(1./mse, 1));
+    %[fr, gof] = createFit_infoSaturation(n_neu, mean(1./mse, 1));
 else
     fr = [];
     gof = [];
