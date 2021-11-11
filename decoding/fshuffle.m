@@ -1,6 +1,9 @@
-function X_shuf = fshuffle(X, ks, auto)
+function X_shuf = fshuffle(X, ks, auto, with_rep)
 if ~exist('auto', 'var')
     auto = false;
+end
+if ~exist('with_rep', 'var')
+    with_rep = false;
 end
 
 X_shuf = nan(size(X));
@@ -13,12 +16,18 @@ for k_ix = 1:K
     K_val = K_vals(k_ix);
     [pass_s, pass_e] = get_passes(ks == K_val);
     n_passes = numel(pass_s);
+    if with_rep
+        reassigned = randi(n_passes, 1, n_passes);
+    else
+        reassigned = randperm(n_passes);
+    end
     for p_ix = 1:P
         for pass_ix = 1:n_passes
             if auto
                 other_pass = pass_ix;
             else
-                other_pass = randi(n_passes);
+                %other_pass = randi(n_passes);
+                other_pass = reassigned(pass_ix);
             end
             other_pass_data = X(pass_s(other_pass):pass_e(other_pass),p_ix);
             current_pass_length = pass_e(pass_ix) - pass_s(pass_ix) + 1;

@@ -517,7 +517,7 @@ classdef Utils %Common utilities for dealing with neural data
             elseif p < 0.05
                 signif_text = '*';
             else
-                signif_text = 'n.s';
+                signif_text = 'n.s.';
             end
         end
         

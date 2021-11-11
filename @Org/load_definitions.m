@@ -18,6 +18,9 @@ org.make_derived('dmu_ipr', {'dmus'},...
 org.make_derived('signal_density', {'dmus'},...
     @(dmu) (sum(dmu.^2).^2 ./ sum(dmu.^4)) ./ length(dmu));
 
+org.make_derived('fixed_pss', {'dmus'},...
+    @(dmu) fixed_size_pss(dmu, 200, 100));
+
 org.make_derived('signal_var', {'dmus'},...
     @(dmu) var(dmu.^2));
 
@@ -259,6 +262,13 @@ efn_func = @(x) sum(x.^2,1).^2 ./ sum(x.^4,1);
 org.make_var_per_sess('hd_efn', {'mus'},...
     @(mus) num2cell(efn_func(cell2mat(mus(21:40)) - cell2mat(mus(1:20)))));
 
+org.make_var_per_sess('hd_pss_fixed', {'mus'},...
+    @(mus) num2cell(fixed_size_pss_percol(cell2mat(mus(21:40)) - cell2mat(mus(1:20)), 200, 100)));
+
+snv_func = @(x) var(x.^2./sum(x.^2,1),0,1);
+org.make_var_per_sess('hd_svn', {'mus'},...
+    @(mus) num2cell(snv_func(cell2mat(mus(21:40)) - cell2mat(mus(1:20)))));
+
 org.make_derived('noise_cov', {'evecs', 'lambda'}, ...
     @(evecs, lambda) evecs .* lambda.' * evecs.');
 
@@ -468,4 +478,28 @@ for i = 1:n_bins
     mean_vals(i) = mean(selection);
     sems(i) = sem(selection);
 end
+end
+
+function ps = fixed_size_pss_percol(ms, sz, n_reps)
+n_cols = size(ms,2);
+ps = zeros(1, n_cols);
+for i = 1:n_cols
+    m = ms(:,i);
+    ps(i) = fixed_size_pss(m, sz, n_reps);
+end
+end
+
+function p = fixed_size_pss(m, sz, n_reps)
+pss = zeros(n_reps,1);
+n = numel(m);
+for i = 1:n_reps
+    select = randperm(n) <= sz;
+    m_sub = m(select);
+    pss(i) = compute_pss(m_sub);
+end
+p = mean(pss);
+end
+
+function p = compute_pss(dmu)
+p = (sum(dmu.^2).^2 ./ sum(dmu.^4)) ./ length(dmu);
 end
