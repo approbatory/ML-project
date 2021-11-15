@@ -456,7 +456,7 @@ classdef OpenField
             K = 10;
             
             %[X, y_cont, ks] = o.get_continuous_dataset;
-            X_shuf = fshuffle(X, ks);
+            %X_shuf = fshuffle(X, ks);
             
             fold = floor((0:numel(ks)-1) ./ numel(ks) * K) + 1;
             [res.dec_error_real, res.dec_error_shuf, res.dec_error_diag] = ...
@@ -466,44 +466,44 @@ classdef OpenField
                 test_filt = fold == i;
                 
                 X_train = X(train_filt, :);
-                X_shuf_train = X_shuf(train_filt, :);
+                %X_shuf_train = X_shuf(train_filt, :);
                 ks_train = ks(train_filt);
                 
                 X_test = X(test_filt, :);
-                X_shuf_test = X_shuf(test_filt, :);
-                ks_test = ks(test_filt);
+                %X_shuf_test = X_shuf(test_filt, :);
+                %ks_test = ks(test_filt);
                 %y_train = y_cont(train_filt,:);
                 y_test = y_cont(test_filt,:);
                 
                 mdl_real = alg.train(X_train, ks_train);
-                mdl_shuf = alg.train(X_shuf_train, ks_train);
-                mdl_diag = alg.train(fshuffle(X_train, ks_train), ks_train);
+                %mdl_shuf = alg.train(X_shuf_train, ks_train);
+                %mdl_diag = alg.train(fshuffle(X_train, ks_train), ks_train);
                 
                 ps_test_real = alg.test(mdl_real, X_test);
-                ps_test_shuf = alg.test(mdl_shuf, X_shuf_test);
-                ps_test_diag = alg.test(mdl_diag, X_test);
+                %ps_test_shuf = alg.test(mdl_shuf, X_shuf_test);
+                %ps_test_diag = alg.test(mdl_diag, X_test);
                 
                 
                 err_f = @(y,p) sqrt(sum((y - OpenField.ks2centers_general(bin_nums, box_dims, p)).^2, 2));
                 fold_err_real{i} = err_f(y_test, ps_test_real);
-                fold_err_shuf{i} = err_f(y_test, ps_test_shuf);
-                fold_err_diag{i} = err_f(y_test, ps_test_diag);
+                %fold_err_shuf{i} = err_f(y_test, ps_test_shuf);
+                %fold_err_diag{i} = err_f(y_test, ps_test_diag);
                 test_filt_fold{i} = test_filt;
             end
             [res.fs_metric_real, res.fs_metric_shuf, res.fs_metric_diag] = ...
                 deal(zeros(K,1));
             for i = 1:K
                 res.dec_error_real(test_filt_fold{i}) = fold_err_real{i};
-                res.dec_error_shuf(test_filt_fold{i}) = fold_err_shuf{i};
-                res.dec_error_diag(test_filt_fold{i}) = fold_err_diag{i};
+                %res.dec_error_shuf(test_filt_fold{i}) = fold_err_shuf{i};
+                %res.dec_error_diag(test_filt_fold{i}) = fold_err_diag{i};
                 
                 res.fs_metric_real(i) = median(fold_err_real{i});
-                res.fs_metric_shuf(i) = median(fold_err_shuf{i});
-                res.fs_metric_diag(i) = median(fold_err_diag{i});
+                %res.fs_metric_shuf(i) = median(fold_err_shuf{i});
+                %res.fs_metric_diag(i) = median(fold_err_diag{i});
             end
             res.fs_metric_real_mean = mean(res.fs_metric_real);
-            res.fs_metric_shuf_mean = mean(res.fs_metric_shuf);
-            res.fs_metric_diag_mean = mean(res.fs_metric_diag);
+            %res.fs_metric_shuf_mean = mean(res.fs_metric_shuf);
+            %res.fs_metric_diag_mean = mean(res.fs_metric_diag);
         end
         
         function dpos = ks2dpos_general(bin_nums, ks)

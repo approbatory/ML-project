@@ -16,12 +16,13 @@ for k_ix = 1:K
     K_val = K_vals(k_ix);
     [pass_s, pass_e] = get_passes(ks == K_val);
     n_passes = numel(pass_s);
-    if with_rep
-        reassigned = randi(n_passes, 1, n_passes);
-    else
-        reassigned = randperm(n_passes);
-    end
+    
     for p_ix = 1:P
+        if with_rep
+            reassigned = randi(n_passes, 1, n_passes);
+        else
+            reassigned = randperm(n_passes);
+        end
         for pass_ix = 1:n_passes
             if auto
                 other_pass = pass_ix;
