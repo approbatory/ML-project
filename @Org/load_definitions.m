@@ -21,6 +21,9 @@ org.make_derived('signal_density', {'dmus'},...
 org.make_derived('fixed_pss', {'dmus'},...
     @(dmu) fixed_size_pss(dmu, 200, 100));
 
+org.make_derived('fixed_nsv', {'dmus'},...
+    @(dmu) fixed_size_nsv(dmu, 200, 100));
+
 org.make_derived('signal_var', {'dmus'},...
     @(dmu) var(dmu.^2));
 
@@ -246,6 +249,12 @@ org.make_derived('corr_cos2_area_per_neuron', {'corr_cos2_area', 'num_neurons'},
 org.make_derived('intersect', {'loadings', 'loadings_shuf'},...
     @(a,b)find(a<b,1));
 
+org.make_var_per_sess('overlap_metric', {'mus'},...
+    @overlap_metric);
+
+org.make_var_per_sess('var_fwhm_cm', {'mus'},...
+    @(mus) calc_var_hwhm(mus) .* (2*5.9).^2);
+
 org.make_var_per_sess('place_field_mode_right', {'mus'},...
     @(mus) argmax(cell2mat(mus(1:20)),[],2));
 
@@ -264,6 +273,9 @@ org.make_var_per_sess('hd_efn', {'mus'},...
 
 org.make_var_per_sess('hd_pss_fixed', {'mus'},...
     @(mus) num2cell(fixed_size_pss_percol(cell2mat(mus(21:40)) - cell2mat(mus(1:20)), 200, 100)));
+
+org.make_var_per_sess('hd_nsv_fixed', {'mus'},...
+    @(mus) num2cell(fixed_size_nsv_percol(cell2mat(mus(21:40)) - cell2mat(mus(1:20)), 200, 100)));
 
 snv_func = @(x) var(x.^2./sum(x.^2,1),0,1);
 org.make_var_per_sess('hd_svn', {'mus'},...
@@ -489,17 +501,111 @@ for i = 1:n_cols
 end
 end
 
+function nsv = fixed_size_nsv_percol(ms, sz, n_reps)
+n_cols = size(ms,2);
+nsv = zeros(1, n_cols);
+for i = 1:n_cols
+    m = ms(:,i);
+    nsv(i) = fixed_size_nsv(m, sz, n_reps);
+end
+end
+
 function p = fixed_size_pss(m, sz, n_reps)
-pss = zeros(n_reps,1);
+% pss = zeros(n_reps,1);
+% n = numel(m);
+% for i = 1:n_reps
+%     select = randperm(n) <= sz;
+%     m_sub = m(select);
+%     pss(i) = compute_pss(m_sub);
+% end
+% p = mean(pss);
+p = fixed_size_quantity(m, sz, n_reps, @compute_pss);
+end
+
+function nsv = fixed_size_nsv(m, sz, n_reps)
+nsv = fixed_size_quantity(m, sz, n_reps, @compute_nsv);
+end
+
+function v = fixed_size_quantity(m, sz, n_reps, compute_func)
+vs = zeros(n_reps,1);
 n = numel(m);
 for i = 1:n_reps
     select = randperm(n) <= sz;
     m_sub = m(select);
-    pss(i) = compute_pss(m_sub);
+    vs(i) = compute_func(m_sub);
 end
-p = mean(pss);
+v = mean(vs);
 end
 
 function p = compute_pss(dmu)
 p = (sum(dmu.^2).^2 ./ sum(dmu.^4)) ./ length(dmu);
+end
+
+function nsv = compute_nsv(dmu)
+nsv = var(dmu.^2 ./ sum(dmu.^2));
+end
+
+function r = overlap_metric(mus)
+mus = cell2mat(mus);
+r = (mean_corr(corr(mus(:,1:20).')) + mean_corr(corr(mus(:,21:40).')))/2;
+end
+function r = mean_corr(C)
+keep = ~isnan(diag(C));
+C = C(keep, keep);
+n = size(C,1);
+r = (sum(C, 'all') - n)./(n^2-n);
+end
+
+function var_hwhm = calc_var_hwhm(mus)
+mus = cell2mat(mus);
+[n_cells, n_bins] = size(mus);
+assert(n_bins == 40);
+[hwhm_r, hwhm_l] = deal(zeros(1, n_cells));
+for i = 1:n_cells
+    mu_r = mus(i, 1:20);
+    mu_l = mus(i, 21:40);
+    
+    if all(mu_r == mu_r(1))
+        hwhm_r(i) = nan;
+    else
+        hwhm_r(i) = one_hwhm(mu_r);
+    end
+    
+    if all(mu_l == mu_l(1))
+        hwhm_l(i) = nan;
+    else
+        hwhm_l(i) = one_hwhm(mu_l);
+    end
+end
+var_hwhm = var([hwhm_r hwhm_l], 'omitnan');
+end
+
+function hwhm = one_hwhm(x)
+x = x - min(x);
+[mx, ix_max] = max(x);
+hmx = mx/2;
+
+pre_x = x(1:ix_max);
+post_x = x(ix_max:end);
+
+left_bound = find(pre_x < hmx, 1, "last");
+if isempty(left_bound)
+    left_hw = -inf;
+else
+    left_hw = ix_max - left_bound;
+end
+
+right_bound = find(post_x < hmx, 1, "first");
+if isempty(right_bound)
+    right_hw = -inf;
+else
+    right_hw = right_bound - 1;
+end
+
+hwhm = max(left_hw, right_hw);
+if hwhm < 0
+    assert(all(x >= hmx));
+    warning('Value never dipped below half max.');
+    hwhm = round(numel(x)/2);
+end
 end
