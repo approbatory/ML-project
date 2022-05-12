@@ -14,7 +14,14 @@ for i = 1:n_fields
     fname = F{i};
     x = data.(fname);
     x = x(:);
+    c_ = iscell(x);
+    if c_
+        x = string(x);
+    end
     y = nan(max_elems, 1);
+    if c_
+        y = string(y);
+    end
     y(1:numel(x)) = x;
     data.(fname) = y;
 end
