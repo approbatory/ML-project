@@ -80,7 +80,7 @@ classdef Cloud
                 o.corr_loadings_shuf{j} = abs(n(o.dmus{j})' * o.corr_evecs_shuf{j});
             end
             
-            %%% VERY SNEAKY
+            
             if use_corr
                 o.evecs = o.corr_evecs;
                 o.evecs_shuf = o.corr_evecs_shuf;
