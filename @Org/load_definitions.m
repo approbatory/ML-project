@@ -253,7 +253,16 @@ org.make_var_per_sess('overlap_metric', {'mus'},...
     @overlap_metric);
 
 org.make_var_per_sess('var_fwhm_cm', {'mus'},...
-    @(mus) calc_var_hwhm(mus) .* (2*5.9).^2);
+    @(mus) calc_var_fwhm(mus) .* 5.9.^2);
+
+org.make_var_per_sess('var_fwhm_cm_pj', {'mus'},...
+    @(mus) calc_var_fwhm(mus, @fwhm_pj) .* 5.9.^2);
+
+org.make_var_per_sess('var_fwhm_cm_filt', {'mus'},...
+    @(mus) calc_var_fwhm(mus, @(x)2*one_hwhm(x), 25) .* 5.9.^2);
+
+org.make_var_per_sess('var_fwhm_cm_pj_filt', {'mus'},...
+    @(mus) calc_var_fwhm(mus, @fwhm_pj, 25) .* 5.9.^2);
 
 org.make_var_per_sess('place_field_mode_right', {'mus'},...
     @(mus) argmax(cell2mat(mus(1:20)),[],2));
@@ -556,28 +565,38 @@ n = size(C,1);
 r = (sum(C, 'all') - n)./(n^2-n);
 end
 
-function var_hwhm = calc_var_hwhm(mus)
+function var_fwhm = calc_var_fwhm(mus, fwhm_func, filt_val)
+if ~exist('fwhm_func', 'var')
+    fwhm_func = @(x) 2*one_hwhm(x);
+end
+if ~exist('filt_val', 'var')
+    filt_val = [];
+end
 mus = cell2mat(mus);
 [n_cells, n_bins] = size(mus);
 assert(n_bins == 40);
-[hwhm_r, hwhm_l] = deal(zeros(1, n_cells));
+[fwhm_r, fwhm_l] = deal(zeros(1, n_cells));
 for i = 1:n_cells
     mu_r = mus(i, 1:20);
     mu_l = mus(i, 21:40);
     
     if all(mu_r == mu_r(1))
-        hwhm_r(i) = nan;
+        fwhm_r(i) = nan;
     else
-        hwhm_r(i) = one_hwhm(mu_r);
+        fwhm_r(i) = fwhm_func(mu_r);
     end
     
     if all(mu_l == mu_l(1))
-        hwhm_l(i) = nan;
+        fwhm_l(i) = nan;
     else
-        hwhm_l(i) = one_hwhm(mu_l);
+        fwhm_l(i) = fwhm_func(mu_l);
     end
 end
-var_hwhm = var([hwhm_r hwhm_l], 'omitnan');
+fwhm_all = [fwhm_r fwhm_l];
+if ~isempty(filt_val)
+    fwhm_all = fwhm_all(fwhm_all < filt_val);
+end
+var_fwhm = var(fwhm_all, 'omitnan');
 end
 
 function hwhm = one_hwhm(x)
@@ -607,5 +626,42 @@ if hwhm < 0
     assert(all(x >= hmx));
     warning('Value never dipped below half max.');
     hwhm = round(numel(x)/2);
+end
+end
+
+function var_fwhm = calc_var_fwhm_pj(mus)
+mus = cell2mat(mus);
+[n_cells, n_bins] = size(mus);
+assert(n_bins == 40);
+[fwhm_r, fwhm_l] = deal(zeros(1, n_cells));
+for i = 1:n_cells
+    mu_r = mus(i, 1:20);
+    mu_l = mus(i, 21:40);
+    
+    if all(mu_r == mu_r(1))
+        fwhm_r(i) = nan;
+    else
+        fwhm_r(i) = fwhm_pj(mu_r);
+    end
+    
+    if all(mu_l == mu_l(1))
+        fwhm_l(i) = nan;
+    else
+        fwhm_l(i) = fwhm_pj(mu_l);
+    end
+end
+var_fwhm = var([fwhm_r fwhm_l], 'omitnan');
+end
+
+function fwhm = fwhm_pj(x)
+SmoothRF = x;
+RF = [];
+ResampleRate = 1;
+
+try
+    [peak,positPeak,TopW,HW,Slopes1090,INFR,OUTFR]=slopeAndHalfWidthFinderNEW(RF,SmoothRF,ResampleRate);
+    fwhm = HW;
+catch
+    fwhm = nan;
 end
 end
